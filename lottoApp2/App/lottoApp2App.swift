@@ -6,12 +6,15 @@
 //
 
 import SwiftUI
+import ComposableArchitecture
 
 @main
 struct lottoApp2App: App {
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            StartPage(store: Store(initialState: StartPageFeature.State()) {
+                StartPageFeature()
+            })
         }
     }
 }
