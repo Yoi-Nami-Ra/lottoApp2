@@ -12,8 +12,8 @@ import ComposableArchitecture
 struct lottoApp2App: App {
     var body: some Scene {
         WindowGroup {
-            StartPage(store: Store(initialState: StartPageFeature.State()) {
-                StartPageFeature()
+            StartPageView(store: Store(initialState: StartPage.State()) {
+                StartPage()
             })
         }
     }

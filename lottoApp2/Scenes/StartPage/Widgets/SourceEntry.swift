@@ -9,8 +9,17 @@ import ComposableArchitecture
 import Dependencies
 import SwiftUI
 
-struct SourceEntry: View {
-    struct DisplayData: Equatable {
+@Reducer
+struct SourceEntry {
+    enum SyncSeverity {
+        case low
+        case medium
+        case high
+    }
+
+    @ObservableState
+    struct State: Equatable, Identifiable {
+        var id: String { name }
         let name: String
         let lastSync: String
         let lastSyncSeverity: SyncSeverity
@@ -18,64 +27,26 @@ struct SourceEntry: View {
         let lastRecordDate: String
         let recordsCount: String
     }
+}
 
-    enum SyncSeverity {
-        case low
-        case medium
-        case high
-    }
+struct SourceEntryView: View {
+    @Environment(\.colorScheme) var colorScheme
 
-    let data: DisplayData
+    let store: StoreOf<SourceEntry>
 
     var body: some View {
         VStack(alignment: .leading, spacing: .headerDataSpacing) {
             headerRow
             details
         }
-        .padding(8)
-        .background(.background)
-        .cornerRadius(.cardCorners)
-        .shadow(color: .shadow, radius: .shadowRadius, x: .shadowXOffset, y: .shadowYOffset)
-    }
-
-    private var details: some View {
-        VStack {
-            HStack {
-                Image(.firstRecord)
-                    .foregroundStyle(Color.firstRecordImage)
-                VStack(alignment: .leading, spacing: .detailsSpacing) {
-                    Text(.firstRecordTitle)
-                        .font(.firstlastRecordTitle)
-                        .foregroundStyle(Color.firstlastRecordTitle)
-                    Text(data.firstRecordDate)
-                        .font(.firstlastRecordDate)
-                        .fontWeight(.firstlastRecordDate)
-                        .foregroundStyle(Color.firstlastRecordDate)
-                }
-            }
-            HStack {
-                Image(.lastRecord)
-                    .foregroundStyle(Color.lastRecordImage)
-                VStack(alignment: .leading, spacing: .detailsSpacing) {
-                    Text(.lastRecord)
-                        .font(.firstlastRecordTitle)
-                        .foregroundStyle(Color.firstlastRecordTitle)
-                    Text(data.lastRecordDate)
-                        .font(.firstlastRecordDate)
-                        .fontWeight(.firstlastRecordDate)
-                        .foregroundStyle(Color.firstlastRecordDate)
-                }
-            }
-        }
+        .modifier(.sourceCardStyle)
     }
 
     private var headerRow: some View {
         HStack(alignment: .top) {
             VStack(alignment: .leading, spacing: .headerVSpacing) {
-                Text(data.name)
-                    .font(.sourceTitle)
-                    .fontWeight(.sourceTitle)
-                    .foregroundStyle(Color.sourceTitle)
+                SourceTitle(title: store.name)
+
                 syncStatusBadge
             }
 
@@ -84,15 +55,15 @@ struct SourceEntry: View {
             VStack(alignment: .trailing) {
                 HStack(spacing: .headerVSpacing) {
                     Image(.records)
-                        .foregroundStyle(.primary)
-                    Text(data.recordsCount)
+                        .foregroundStyle(.textPrimary)
+                    Text(store.recordsCount)
                         .font(.title2)
                         .fontWeight(.bold)
-                        .foregroundStyle(.primary)
+                        .foregroundStyle(.textPrimary)
                 }
                 Text(.records)
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.textSecondary)
             }
         }
     }
@@ -100,7 +71,7 @@ struct SourceEntry: View {
     private var syncStatusBadge: some View {
         HStack {
             Image(.lastSync)
-            Text(.lastSynced(data.lastSync))
+            Text(.lastSynced(store.lastSync))
                 .font(.caption)
         }
         .foregroundStyle(lastSyncForeground)
@@ -111,47 +82,99 @@ struct SourceEntry: View {
     }
 
     private var lastSyncForeground: Color {
-        .syncSeverityForeground[data.lastSyncSeverity] ?? .syncSeverityHigh
+        /*.syncSeverityForeground[store.lastSyncSeverity] ??*/ .syncSeverityHigh // TODO: Fix
     }
 
     private var lastSyncBackground: Color {
-        .syncSeverityBackground[data.lastSyncSeverity] ?? .syncSeverityHigh
+        lastSyncForeground.opacity(colorScheme == .light ? .lightOpacity : .darkOpacity)
+    }
+
+    private var details: some View {
+        HStack {
+            VStack {
+                HStack {
+                    Image(.firstRecord)
+                        .foregroundStyle(Color.firstRecordImage)
+                    VStack(alignment: .leading, spacing: .detailsSpacing) {
+                        Text(.firstRecordTitle)
+                            .font(.firstlastRecordTitle)
+                            .foregroundStyle(Color.firstlastRecordTitle)
+                        Text(store.firstRecordDate)
+                            .font(.firstlastRecordDate)
+                            .fontWeight(.firstlastRecordDate)
+                            .foregroundStyle(Color.firstlastRecordDate)
+                    }
+                }
+                HStack {
+                    Image(.lastRecord)
+                        .foregroundStyle(Color.lastRecordImage)
+                    VStack(alignment: .leading, spacing: .detailsSpacing) {
+                        Text(.lastRecord)
+                            .font(.firstlastRecordTitle)
+                            .foregroundStyle(Color.firstlastRecordTitle)
+                        Text(store.lastRecordDate)
+                            .font(.firstlastRecordDate)
+                            .fontWeight(.firstlastRecordDate)
+                            .foregroundStyle(Color.firstlastRecordDate)
+                    }
+                }
+            }
+            Spacer()
+            Button {
+                print("-=- | >")
+            } label: {
+                Image(.refresh)
+                Text("Refresh")
+            }
+        }
     }
 }
 
+// MARK : - Styles
+struct SourceCardStyle: ViewModifier {
+    func body(content: Content) -> some View {
+        content
+            .padding(.vertical, 8)
+            .padding(.horizontal, 10)
+            .background(.backgroundPrimary)
+            .cornerRadius(.cardCorners)
+            .shadow(color: .cardShadow, radius: .shadowRadius, x: .shadowXOffset, y: .shadowYOffset)
+    }
+}
+
+extension ViewModifier where Self == SourceCardStyle {
+    static var sourceCardStyle: SourceCardStyle { .init() }
+}
+
+// MARK: - Resources
 extension Color {
-    fileprivate static let shadow: Self = .black.opacity(0.05)
-    fileprivate static let syncSeverityForeground: [SourceEntry.SyncSeverity: Self] = [
-        .low: .syncSeverityLow,
-        .medium: .syncSeverityMedium,
-        .high: .syncSeverityHigh
-    ]
-    fileprivate static let syncSeverityBackground: [SourceEntry.SyncSeverity: Self] = [
-        .low: .syncSeverityLow.opacity(0.1),
-        .medium: .syncSeverityMedium.opacity(0.1),
-        .high: .syncSeverityHigh.opacity(0.1)
-    ]
-    fileprivate static let firstRecordImage: Self = .blue
-    fileprivate static let firstlastRecordTitle: Self = .secondary
-    fileprivate static let firstlastRecordDate: Self = .primary
+    fileprivate static var cardShadow: Self { .shadow }
+    fileprivate static var syncSeverityForeground: [SourceEntry.SyncSeverity: Self] {
+        [
+            .low: .syncSeverityLow,
+            .medium: .syncSeverityMedium,
+            .high: .syncSeverityHigh
+        ]
+    }
+    fileprivate static let firstRecordImage: Self = .primaryBlue
+    fileprivate static let firstlastRecordTitle: Self = .textSecondary
+    fileprivate static let firstlastRecordDate: Self = .textPrimary
 
-    fileprivate static let lastRecordImage: Self = .purple
-    fileprivate static let sourceTitle: Self = .primary
+    fileprivate static let lastRecordImage: Self = .accentPurple
+    fileprivate static let sourceTitle: Self = .textPrimary
 
-    fileprivate static let syncSeverityLow: Self = .green
-    fileprivate static let syncSeverityMedium: Self = .yellow
-    fileprivate static let syncSeverityHigh: Self = .red
+    fileprivate static let syncSeverityLow: Self = .successGreen
+    fileprivate static let syncSeverityMedium: Self = .warningYellow
+    fileprivate static let syncSeverityHigh: Self = .errorRed
 }
 
 extension Font {
     fileprivate static let firstlastRecordTitle: Self = .caption
     fileprivate static let firstlastRecordDate: Self = .subheadline
-    fileprivate static let sourceTitle: Self = .title
 }
 
 extension Font.Weight {
     fileprivate static let firstlastRecordDate: Self = .medium
-    fileprivate static let sourceTitle: Self = .semibold
 }
 
 extension ImageType {
@@ -159,6 +182,7 @@ extension ImageType {
     fileprivate static let records: Self = .system("square.3.layers.3d")
     fileprivate static let lastRecord: Self = .system("clock")
     fileprivate static let lastSync: Self = .system("arrow.trianglehead.2.clockwise.rotate.90")
+    fileprivate static let refresh: Self = .system("arrow.trianglehead.2.clockwise.rotate.90")
 }
 
 extension CGFloat {
@@ -177,6 +201,11 @@ extension CGFloat {
     fileprivate static let syncStatusCorners: Self = 12
 }
 
+extension Double {
+    fileprivate static let lightOpacity: Self = 0.15
+    fileprivate static let darkOpacity: Self = 0.35
+}
+
 extension LocalizedStringKey {
     fileprivate static let firstRecordTitle: Self = "First Record:"
     fileprivate static let lastRecord: Self = "Latest Record:"
@@ -184,33 +213,49 @@ extension LocalizedStringKey {
     fileprivate static let records: Self = "records"
 }
 
-#Preview("Dark Mode") {
-    List {
-        SourceEntry(data: .mock1n)
-            .padding()
-            .preferredColorScheme(.dark)
-        SourceEntry(data: .mock1m)
-            .padding()
-            .preferredColorScheme(.dark)
-        SourceEntry(data: .mock1s)
-            .padding()
-            .preferredColorScheme(.dark)
-    }
+#Preview("Dark Mode - none") {
+    SourceEntryView(store: Store(initialState: .mock1n) { SourceEntry() })
+        .padding()
+        .background(.backgroundTertiary)
+        .preferredColorScheme(.dark)
+}
+
+#Preview("Dark Mode - medium") {
+    SourceEntryView(store: Store(initialState: .mock1m) { SourceEntry() })
+        .padding()
+        .background(.backgroundSecondary)
+        .preferredColorScheme(.dark)
+}
+
+#Preview("Dark Mode - severe") {
+    SourceEntryView(store: Store(initialState: .mock1s) { SourceEntry() })
+        .padding()
+        .background(.backgroundSecondary)
+        .preferredColorScheme(.dark)
 }
 
 #Preview("Light Mode - none") {
-    SourceEntry(data: .mock1n)
+    SourceEntryView(store: Store(initialState: .mock1n) { SourceEntry() })
         .padding()
-        .preferredColorScheme(.light)
-    SourceEntry(data: .mock1m)
-        .padding()
-        .preferredColorScheme(.light)
-    SourceEntry(data: .mock1s)
-        .padding()
+        .background(.backgroundSecondary)
         .preferredColorScheme(.light)
 }
 
-extension SourceEntry.DisplayData {
+#Preview("Light Mode - medium") {
+    SourceEntryView(store: Store(initialState: .mock1m) { SourceEntry() })
+        .padding()
+        .background(.backgroundSecondary)
+        .preferredColorScheme(.light)
+}
+
+#Preview("Light Mode - severe") {
+    SourceEntryView(store: Store(initialState: .mock1s) { SourceEntry() })
+        .padding()
+        .background(.backgroundSecondary)
+        .preferredColorScheme(.light)
+}
+
+extension SourceEntry.State {
     static let mock1n: Self = .init(
         name: "MBTN Server",
         lastSync: "Jul 19, 2024, 10:15 AM",
