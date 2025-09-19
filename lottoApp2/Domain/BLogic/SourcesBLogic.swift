@@ -10,18 +10,35 @@ import Foundation
 
 struct SourcesBLogic {
     var knownSources: () async -> [Source]
+    var fetchFrom: (String) async -> Source
 }
 
 extension SourcesBLogic: DependencyKey {
     static let liveValue = SourcesBLogic(
-        knownSources: { [.mbnetMock, .lottoMock] })
+        knownSources: { [.mbnetMock, .lottoMock] },
+        fetchFrom: { _ in
+            // TODO: -- Do the fetching
+            // TODO: -- Update soyrces data
+            @Dependency(\.continuousClock) var clock
+            do { try await clock.sleep(for: .seconds(5)) } catch { }
+            return .mbnetMock
+        }
+    )
 }
 
 extension SourcesBLogic: TestDependencyKey {
     static let testValue = SourcesBLogic(
-        knownSources: { [.mbnetMock, .lottoMock] })
+        knownSources: { [.mbnetMock, .lottoMock] },
+        fetchFrom: { _ in .mbnetMock    }
+    )
     static let previewValue = SourcesBLogic(
-        knownSources: { [.mbnetMock, .lottoMock] })
+        knownSources: { [.mbnetMock, .lottoMock] },
+        fetchFrom: { _ in
+            @Dependency(\.continuousClock) var clock
+            do { try await clock.sleep(for: .seconds(5)) } catch { }
+            return .mbnetMock
+        }
+    )
 }
 
 extension DependencyValues {
@@ -34,7 +51,7 @@ extension DependencyValues {
 extension Source {
     static let mbnetMock: Source = .init(
         name: "mbnet",
-        displayName: "MBNet",
+        displayName: "MBNet Server",
         lastSync: Date(timeIntervalSinceNow: -100000),
         recordCount: 120,
         latestRecord: Date(timeIntervalSinceNow: -180000),

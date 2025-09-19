@@ -1,13 +1,13 @@
 //
-//  SourceEntry.swift
+//  SourceEntryView.swift
 //  lottoApp2
 //
-//  Created by Jarosław Wojtasik on 18/07/2025.
+//  Created by Jarosław Wojtasik on 16/09/2025.
 //
 
 import ComposableArchitecture
 import Dependencies
-import SwiftUI
+import Foundation
 
 @Reducer
 struct SourceEntry {
@@ -19,267 +19,51 @@ struct SourceEntry {
 
     @ObservableState
     struct State: Equatable, Identifiable {
-        var id: String { name }
+        let id: String
         let name: String
         let lastSync: String
         let lastSyncSeverity: SyncSeverity
         let firstRecordDate: String
         let lastRecordDate: String
         let recordsCount: String
-    }
-}
-
-struct SourceEntryView: View {
-    @Environment(\.colorScheme) var colorScheme
-
-    let store: StoreOf<SourceEntry>
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: .headerDataSpacing) {
-            headerRow
-            details
-        }
-        .modifier(.sourceCardStyle)
+        var isRefreshing: Bool = false
     }
 
-    private var headerRow: some View {
-        HStack(alignment: .top) {
-            VStack(alignment: .leading, spacing: .headerVSpacing) {
-                SourceTitle(title: store.name)
+    enum Action {
+        case refresh
+        case refreshResponse(Source)
+    }
 
-                syncStatusBadge
-            }
+    var body: some Reducer<State, Action> {
+        Reduce { state, action in
+            @Dependency(\.blSources) var blSources
 
-            Spacer()
-
-            VStack(alignment: .trailing) {
-                HStack(spacing: .headerVSpacing) {
-                    Image(.records)
-                        .foregroundStyle(.textPrimary)
-                    Text(store.recordsCount)
-                        .font(.title2)
-                        .fontWeight(.bold)
-                        .foregroundStyle(.textPrimary)
+            switch action {
+            case .refresh:
+                state.isRefreshing = true
+                return .run { [id = state.id] send in
+                    await send(
+                        .refreshResponse(blSources.fetchFrom(id))
+                    )
                 }
-                Text(.records)
-                    .font(.caption)
-                    .foregroundStyle(.textSecondary)
-            }
-        }
-    }
-
-    private var syncStatusBadge: some View {
-        HStack {
-            Image(.lastSync)
-            Text(.lastSynced(store.lastSync))
-                .font(.caption)
-        }
-        .foregroundStyle(lastSyncForeground)
-        .padding(.horizontal, .syncStatusHPadding)
-        .padding(.vertical, .syncStatusVPadding)
-        .background(lastSyncBackground)
-        .cornerRadius(.syncStatusCorners)
-    }
-
-    private var lastSyncForeground: Color {
-        /*.syncSeverityForeground[store.lastSyncSeverity] ??*/ .syncSeverityHigh // TODO: Fix
-    }
-
-    private var lastSyncBackground: Color {
-        lastSyncForeground.opacity(colorScheme == .light ? .lightOpacity : .darkOpacity)
-    }
-
-    private var details: some View {
-        HStack {
-            VStack {
-                HStack {
-                    Image(.firstRecord)
-                        .foregroundStyle(Color.firstRecordImage)
-                    VStack(alignment: .leading, spacing: .detailsSpacing) {
-                        Text(.firstRecordTitle)
-                            .font(.firstlastRecordTitle)
-                            .foregroundStyle(Color.firstlastRecordTitle)
-                        Text(store.firstRecordDate)
-                            .font(.firstlastRecordDate)
-                            .fontWeight(.firstlastRecordDate)
-                            .foregroundStyle(Color.firstlastRecordDate)
-                    }
-                }
-                HStack {
-                    Image(.lastRecord)
-                        .foregroundStyle(Color.lastRecordImage)
-                    VStack(alignment: .leading, spacing: .detailsSpacing) {
-                        Text(.lastRecord)
-                            .font(.firstlastRecordTitle)
-                            .foregroundStyle(Color.firstlastRecordTitle)
-                        Text(store.lastRecordDate)
-                            .font(.firstlastRecordDate)
-                            .fontWeight(.firstlastRecordDate)
-                            .foregroundStyle(Color.firstlastRecordDate)
-                    }
-                }
-            }
-            Spacer()
-            Button {
-                print("-=- | >")
-            } label: {
-                Image(.refresh)
-                Text("Refresh")
+            case .refreshResponse(let response):
+                state = response.sourceEntryState
+                return .none
             }
         }
     }
 }
 
-// MARK : - Styles
-struct SourceCardStyle: ViewModifier {
-    func body(content: Content) -> some View {
-        content
-            .padding(.vertical, 8)
-            .padding(.horizontal, 10)
-            .background(.backgroundPrimary)
-            .cornerRadius(.cardCorners)
-            .shadow(color: .cardShadow, radius: .shadowRadius, x: .shadowXOffset, y: .shadowYOffset)
+extension Source {
+    var sourceEntryState: SourceEntry.State {
+        .init(
+            id: name,
+            name: displayName,
+            lastSync: lastSync.formatted(date: .abbreviated, time: .shortened),
+            lastSyncSeverity: lastSync.toSeverity,
+            firstRecordDate: firstRecrd.formatted(date: .abbreviated, time: .omitted),
+            lastRecordDate: latestRecord.formatted(date: .abbreviated, time: .omitted),
+            recordsCount: String(recordCount)
+        )
     }
-}
-
-extension ViewModifier where Self == SourceCardStyle {
-    static var sourceCardStyle: SourceCardStyle { .init() }
-}
-
-// MARK: - Resources
-extension Color {
-    fileprivate static var cardShadow: Self { .shadow }
-    fileprivate static var syncSeverityForeground: [SourceEntry.SyncSeverity: Self] {
-        [
-            .low: .syncSeverityLow,
-            .medium: .syncSeverityMedium,
-            .high: .syncSeverityHigh
-        ]
-    }
-    fileprivate static let firstRecordImage: Self = .primaryBlue
-    fileprivate static let firstlastRecordTitle: Self = .textSecondary
-    fileprivate static let firstlastRecordDate: Self = .textPrimary
-
-    fileprivate static let lastRecordImage: Self = .accentPurple
-    fileprivate static let sourceTitle: Self = .textPrimary
-
-    fileprivate static let syncSeverityLow: Self = .successGreen
-    fileprivate static let syncSeverityMedium: Self = .warningYellow
-    fileprivate static let syncSeverityHigh: Self = .errorRed
-}
-
-extension Font {
-    fileprivate static let firstlastRecordTitle: Self = .caption
-    fileprivate static let firstlastRecordDate: Self = .subheadline
-}
-
-extension Font.Weight {
-    fileprivate static let firstlastRecordDate: Self = .medium
-}
-
-extension ImageType {
-    fileprivate static let firstRecord: Self = .system("calendar")
-    fileprivate static let records: Self = .system("square.3.layers.3d")
-    fileprivate static let lastRecord: Self = .system("clock")
-    fileprivate static let lastSync: Self = .system("arrow.trianglehead.2.clockwise.rotate.90")
-    fileprivate static let refresh: Self = .system("arrow.trianglehead.2.clockwise.rotate.90")
-}
-
-extension CGFloat {
-    fileprivate static let headerDataSpacing: Self = 16
-    fileprivate static let cardCorners: Self = 12
-
-    fileprivate static let shadowRadius: Self = 2
-    fileprivate static let shadowXOffset: Self = 0
-    fileprivate static let shadowYOffset: Self = 1
-
-    fileprivate static let detailsSpacing: Self = 2
-    fileprivate static let headerVSpacing: Self = 4
-
-    fileprivate static let syncStatusHPadding: Self = 8
-    fileprivate static let syncStatusVPadding: Self = 4
-    fileprivate static let syncStatusCorners: Self = 12
-}
-
-extension Double {
-    fileprivate static let lightOpacity: Self = 0.15
-    fileprivate static let darkOpacity: Self = 0.35
-}
-
-extension LocalizedStringKey {
-    fileprivate static let firstRecordTitle: Self = "First Record:"
-    fileprivate static let lastRecord: Self = "Latest Record:"
-    fileprivate static func lastSynced(_ date: String) -> Self { "Last synced: \(date)" }
-    fileprivate static let records: Self = "records"
-}
-
-#Preview("Dark Mode - none") {
-    SourceEntryView(store: Store(initialState: .mock1n) { SourceEntry() })
-        .padding()
-        .background(.backgroundTertiary)
-        .preferredColorScheme(.dark)
-}
-
-#Preview("Dark Mode - medium") {
-    SourceEntryView(store: Store(initialState: .mock1m) { SourceEntry() })
-        .padding()
-        .background(.backgroundSecondary)
-        .preferredColorScheme(.dark)
-}
-
-#Preview("Dark Mode - severe") {
-    SourceEntryView(store: Store(initialState: .mock1s) { SourceEntry() })
-        .padding()
-        .background(.backgroundSecondary)
-        .preferredColorScheme(.dark)
-}
-
-#Preview("Light Mode - none") {
-    SourceEntryView(store: Store(initialState: .mock1n) { SourceEntry() })
-        .padding()
-        .background(.backgroundSecondary)
-        .preferredColorScheme(.light)
-}
-
-#Preview("Light Mode - medium") {
-    SourceEntryView(store: Store(initialState: .mock1m) { SourceEntry() })
-        .padding()
-        .background(.backgroundSecondary)
-        .preferredColorScheme(.light)
-}
-
-#Preview("Light Mode - severe") {
-    SourceEntryView(store: Store(initialState: .mock1s) { SourceEntry() })
-        .padding()
-        .background(.backgroundSecondary)
-        .preferredColorScheme(.light)
-}
-
-extension SourceEntry.State {
-    static let mock1n: Self = .init(
-        name: "MBTN Server",
-        lastSync: "Jul 19, 2024, 10:15 AM",
-        lastSyncSeverity: .low,
-        firstRecordDate: "Mar 15, 2020",
-        lastRecordDate: "Jul 18, 2024",
-        recordsCount: "15,847"
-    )
-
-    static let mock1m: Self = .init(
-        name: "MBTN Server",
-        lastSync: "Jul 19, 2024, 10:15 AM",
-        lastSyncSeverity: .medium,
-        firstRecordDate: "Mar 15, 2020",
-        lastRecordDate: "Jul 18, 2024",
-        recordsCount: "15,847"
-    )
-
-    static let mock1s: Self = .init(
-        name: "MBTN Server",
-        lastSync: "Jul 19, 2024, 10:15 AM",
-        lastSyncSeverity: .high,
-        firstRecordDate: "Mar 15, 2020",
-        lastRecordDate: "Jul 18, 2024",
-        recordsCount: "15,847"
-    )
 }

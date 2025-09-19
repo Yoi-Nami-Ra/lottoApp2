@@ -43,19 +43,6 @@ struct StartPage {
     }
 }
 
-extension Source {
-    var sourceEntryState: SourceEntry.State {
-        .init(
-            name: displayName,
-            lastSync: lastSync.formatted(date: .abbreviated, time: .shortened),
-            lastSyncSeverity: lastSync.toSeverity,
-            firstRecordDate: firstRecrd.formatted(date: .abbreviated, time: .omitted),
-            lastRecordDate: latestRecord.formatted(date: .abbreviated, time: .omitted),
-            recordsCount: String(recordCount)
-        )
-    }
-}
-
 extension Int {
     var days: TimeInterval {
         TimeInterval(self) * 24.hours
