@@ -9,37 +9,38 @@ import Dependencies
 import Foundation
 
 struct SourcesBLogic {
+    enum Error: Swift.Error {
+        case somethingWentWrong
+    }
+
     var knownSources: () async -> [Source]
-    var fetchFrom: (String) async -> Source
+    var fetchFrom: (String) async -> Result<Source, Error>
 }
 
 extension SourcesBLogic: DependencyKey {
     static let liveValue = SourcesBLogic(
         knownSources: { [.mbnetMock, .lottoMock] },
-        fetchFrom: { _ in
-            // TODO: -- Do the fetching
-            // TODO: -- Update soyrces data
-            @Dependency(\.continuousClock) var clock
-            do { try await clock.sleep(for: .seconds(5)) } catch { }
-            return .mbnetMock
+        fetchFrom: {
+            @Dependency(\.sorcesRepo) var repo
+            return await repo.fetchAndSaveDataFrom($0).mapError { _ in .somethingWentWrong } //TODO: re-implement
         }
     )
 }
 
-extension SourcesBLogic: TestDependencyKey {
-    static let testValue = SourcesBLogic(
-        knownSources: { [.mbnetMock, .lottoMock] },
-        fetchFrom: { _ in .mbnetMock    }
-    )
-    static let previewValue = SourcesBLogic(
-        knownSources: { [.mbnetMock, .lottoMock] },
-        fetchFrom: { _ in
-            @Dependency(\.continuousClock) var clock
-            do { try await clock.sleep(for: .seconds(5)) } catch { }
-            return .mbnetMock
-        }
-    )
-}
+//extension SourcesBLogic: TestDependencyKey {
+//    static let testValue = SourcesBLogic(
+//        knownSources: { [.mbnetMock, .lottoMock] },
+//        fetchFrom: { _ in .success(.mbnetMock) }
+//    )
+//    static let previewValue = SourcesBLogic(
+//        knownSources: { [.mbnetMock, .lottoMock] },
+//        fetchFrom: { _ in
+//            @Dependency(\.continuousClock) var clock
+//            do { try await clock.sleep(for: .seconds(3)) } catch { }
+//            return .success(.mbnetMock)
+//        }
+//    )
+//}
 
 extension DependencyValues {
   var blSources: SourcesBLogic {

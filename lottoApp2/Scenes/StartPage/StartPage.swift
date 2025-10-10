@@ -55,15 +55,3 @@ extension Int {
     }
     var seconds: TimeInterval { .init(self) }
 }
-
-extension Date {
-    var toSeverity: SourceEntry.SyncSeverity {
-        let interval = abs(self.timeIntervalSinceNow)
-        if interval < 2.days  {
-            return .low
-        } else if interval < 4.days {
-            return .medium
-        }
-        return .high
-    }
-}

@@ -21,17 +21,17 @@ struct SourceEntry {
     struct State: Equatable, Identifiable {
         let id: String
         let name: String
-        let lastSync: String
-        let lastSyncSeverity: SyncSeverity
-        let firstRecordDate: String
-        let lastRecordDate: String
-        let recordsCount: String
+        let lastSync: Date
+        var lastSyncSeverity: SyncSeverity { lastSync.toSeverity }
+        let firstRecordDate: Date
+        let lastRecordDate: Date
+        let recordsCount: Int
         var isRefreshing: Bool = false
     }
 
     enum Action {
         case refresh
-        case refreshResponse(Source)
+        case refreshResponse(Result<Source, SourcesBLogic.Error>)
     }
 
     var body: some Reducer<State, Action> {
@@ -47,7 +47,12 @@ struct SourceEntry {
                     )
                 }
             case .refreshResponse(let response):
-                state = response.sourceEntryState
+                switch response {
+                case .failure:
+                    break // TODO: implement unhappy path
+                case .success(let result):
+                    state = result.sourceEntryState
+                }
                 return .none
             }
         }
@@ -59,11 +64,22 @@ extension Source {
         .init(
             id: name,
             name: displayName,
-            lastSync: lastSync.formatted(date: .abbreviated, time: .shortened),
-            lastSyncSeverity: lastSync.toSeverity,
-            firstRecordDate: firstRecrd.formatted(date: .abbreviated, time: .omitted),
-            lastRecordDate: latestRecord.formatted(date: .abbreviated, time: .omitted),
-            recordsCount: String(recordCount)
+            lastSync: lastSync, //.formatted(date: .abbreviated, time: .shortened),
+            firstRecordDate: firstRecrd, //.formatted(date: .abbreviated, time: .omitted),
+            lastRecordDate: latestRecord, //.formatted(date: .abbreviated, time: .omitted),
+            recordsCount: recordCount
         )
+    }
+}
+
+extension Date {
+    var toSeverity: SourceEntry.SyncSeverity {
+        let interval = abs(self.timeIntervalSinceNow)
+        if interval < 2.days  {
+            return .low
+        } else if interval < 4.days {
+            return .medium
+        }
+        return .high
     }
 }

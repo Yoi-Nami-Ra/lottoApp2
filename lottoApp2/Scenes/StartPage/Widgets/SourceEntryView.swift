@@ -35,7 +35,7 @@ struct SourceEntryView: View {
                 HStack(spacing: .headerVSpacing) {
                     Image(.records)
                         .foregroundStyle(.textPrimary)
-                    Text(store.recordsCount)
+                    Text(String(store.recordsCount))
                         .font(.title2)
                         .fontWeight(.bold)
                         .foregroundStyle(.textPrimary)
@@ -78,7 +78,7 @@ struct SourceEntryView: View {
                         Text(.firstRecordTitle)
                             .font(.firstlastRecordTitle)
                             .foregroundStyle(Color.firstlastRecordTitle)
-                        Text(store.firstRecordDate)
+                        Text(store.firstRecordDate.formatted(date: .abbreviated, time: .omitted))
                             .font(.firstlastRecordDate)
                             .fontWeight(.firstlastRecordDate)
                             .foregroundStyle(Color.firstlastRecordDate)
@@ -91,7 +91,7 @@ struct SourceEntryView: View {
                         Text(.lastRecord)
                             .font(.firstlastRecordTitle)
                             .foregroundStyle(Color.firstlastRecordTitle)
-                        Text(store.lastRecordDate)
+                        Text(store.lastRecordDate.formatted(date: .abbreviated, time: .omitted))
                             .font(.firstlastRecordDate)
                             .fontWeight(.firstlastRecordDate)
                             .foregroundStyle(Color.firstlastRecordDate)
@@ -210,7 +210,7 @@ extension Double {
 extension LocalizedStringKey {
     fileprivate static let firstRecordTitle: Self = "First Record:"
     fileprivate static let lastRecord: Self = "Latest Record:"
-    fileprivate static func lastSynced(_ date: String) -> Self { "Last synced: \(date)" }
+    fileprivate static func lastSynced(_ date: Date) -> Self { "Last synced: \(date.formatted(date: .abbreviated, time: .shortened))" }
     fileprivate static let records: Self = "records"
 }
 
@@ -260,30 +260,27 @@ extension SourceEntry.State {
     static let mock1n: Self = .init(
         id: "mbtn",
         name: "MBTN Server",
-        lastSync: "Jul 19, 2024, 10:15 AM",
-        lastSyncSeverity: .low,
-        firstRecordDate: "Mar 15, 2020",
-        lastRecordDate: "Jul 18, 2024",
-        recordsCount: "15,847"
+        lastSync: Date(timeIntervalSinceNow: -100000),
+        firstRecordDate: Date(timeIntervalSinceNow: -180000),
+        lastRecordDate: Date(timeIntervalSince1970: 18223210),
+        recordsCount: 15_847
     )
 
     static let mock1m: Self = .init(
         id: "mbtn",
         name: "MBTN Server",
-        lastSync: "Jul 19, 2024, 10:15 AM",
-        lastSyncSeverity: .medium,
-        firstRecordDate: "Mar 15, 2020",
-        lastRecordDate: "Jul 18, 2024",
-        recordsCount: "15,847"
+        lastSync: Date(timeIntervalSinceNow: -100000),
+        firstRecordDate: Date(timeIntervalSinceNow: -180000),
+        lastRecordDate: Date(timeIntervalSince1970: 18223210),
+        recordsCount: 15_847
     )
 
     static let mock1s: Self = .init(
         id: "mbtn",
         name: "MBTN Server",
-        lastSync: "Jul 19, 2024, 10:15 AM",
-        lastSyncSeverity: .high,
-        firstRecordDate: "Mar 15, 2020",
-        lastRecordDate: "Jul 18, 2024",
-        recordsCount: "15,847"
+        lastSync: Date(timeIntervalSinceNow: -100000),
+        firstRecordDate: Date(timeIntervalSinceNow: -180000),
+        lastRecordDate: Date(timeIntervalSince1970: 18223210),
+        recordsCount: 15_847
     )
 }
