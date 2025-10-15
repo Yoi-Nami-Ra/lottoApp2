@@ -11,11 +11,11 @@ import Testing
 
 @testable import lottoApp2
 
-struct StartPageTests {
+struct StartPage_Tests {
 
     @MainActor
     @Test
-    func startPage_Feature_() async throws {
+    func action_task() async throws {
         let store = TestStore(initialState: StartPage.State()) {
             StartPage()
                 .dependency(\.blSources, .mock)
@@ -43,11 +43,4 @@ struct StartPageTests {
             ]
         }
     }
-}
-
-extension SourcesBLogic {
-    fileprivate static let mock = SourcesBLogic(
-        knownSources: { [.mbnetMock, .lottoMock] },
-        fetchFrom: { _ in .success(.mbnetMock) }
-    )
 }

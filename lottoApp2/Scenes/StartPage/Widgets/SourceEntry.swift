@@ -19,13 +19,13 @@ struct SourceEntry {
 
     @ObservableState
     struct State: Equatable, Identifiable {
-        let id: String
-        let name: String
-        let lastSync: Date
+        var id: String
+        var name: String
+        var lastSync: Date
         var lastSyncSeverity: SyncSeverity { lastSync.toSeverity }
-        let firstRecordDate: Date
-        let lastRecordDate: Date
-        let recordsCount: Int
+        var firstRecordDate: Date
+        var lastRecordDate: Date
+        var recordsCount: Int
         var isRefreshing: Bool = false
     }
 
@@ -49,6 +49,7 @@ struct SourceEntry {
             case .refreshResponse(let response):
                 switch response {
                 case .failure:
+                    state.isRefreshing = false
                     break // TODO: implement unhappy path
                 case .success(let result):
                     state = result.sourceEntryState
@@ -64,9 +65,9 @@ extension Source {
         .init(
             id: name,
             name: displayName,
-            lastSync: lastSync, //.formatted(date: .abbreviated, time: .shortened),
-            firstRecordDate: firstRecrd, //.formatted(date: .abbreviated, time: .omitted),
-            lastRecordDate: latestRecord, //.formatted(date: .abbreviated, time: .omitted),
+            lastSync: lastSync,
+            firstRecordDate: firstRecrd,
+            lastRecordDate: latestRecord,
             recordsCount: recordCount
         )
     }
