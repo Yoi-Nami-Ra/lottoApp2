@@ -19,28 +19,16 @@ struct SourcesBLogic {
 
 extension SourcesBLogic: DependencyKey {
     static let liveValue = SourcesBLogic(
-        knownSources: { [.mbnetMock, .lottoMock] },
+        knownSources: {
+            @Dependency(\.sorcesRepo) var repo
+            return await repo.listKnownSources()
+        },
         fetchFrom: {
             @Dependency(\.sorcesRepo) var repo
             return await repo.fetchAndSaveDataFrom($0).mapError { _ in .somethingWentWrong } //TODO: re-implement
         }
     )
 }
-
-//extension SourcesBLogic: TestDependencyKey {
-//    static let testValue = SourcesBLogic(
-//        knownSources: { [.mbnetMock, .lottoMock] },
-//        fetchFrom: { _ in .success(.mbnetMock) }
-//    )
-//    static let previewValue = SourcesBLogic(
-//        knownSources: { [.mbnetMock, .lottoMock] },
-//        fetchFrom: { _ in
-//            @Dependency(\.continuousClock) var clock
-//            do { try await clock.sleep(for: .seconds(3)) } catch { }
-//            return .success(.mbnetMock)
-//        }
-//    )
-//}
 
 extension DependencyValues {
   var blSources: SourcesBLogic {
