@@ -43,7 +43,7 @@ An app to do some operations on random games data
             ++ tests
         ++ BLogic + moc repository
             ++ tests
-        -- Repository Impl + mock Data
+        -+ Repository Impl + mock Data
             -- tests
         -- Data
             -- tests
