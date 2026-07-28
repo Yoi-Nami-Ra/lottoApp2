@@ -30,7 +30,7 @@ struct StartPage_Tests {
                     lastSync: Source.mbnetMock.lastSync,
                     firstRecordDate: Source.mbnetMock.firstRecrd,
                     lastRecordDate: Source.mbnetMock.latestRecord,
-                    recordsCount: Source.mbnetMock.recordCount,
+                    recordsCount: Source.mbnetMock.recordsCount,
                 ),
                 SourceEntry.State(
                     id: Source.lottoMock.name,
@@ -38,7 +38,7 @@ struct StartPage_Tests {
                     lastSync: Source.lottoMock.lastSync,
                     firstRecordDate: Source.lottoMock.firstRecrd,
                     lastRecordDate: Source.lottoMock.latestRecord,
-                    recordsCount: Source.lottoMock.recordCount,
+                    recordsCount: Source.lottoMock.recordsCount,
                 ),
             ]
         }

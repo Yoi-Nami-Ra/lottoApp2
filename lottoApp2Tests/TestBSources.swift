@@ -7,28 +7,45 @@
 
 import Testing
 import Dependencies
-
+    
 @testable import lottoApp2
 
 struct SourceBLogicTests {
 
-    @Test func knownSources() async throws {
+    @Test
+    @MainActor
+    func knownSources() async throws {
         let sources = await withDependencies {
-            $0.sorcesRepo.listKnownSources = { [.mbnetMock, .lottoMock] }
+            // mbnet, lotto as known sources
+            $0.sourcesRepo.listKnownSources = { [.mbnetMock, .partialLottoMock] }
+            // mbnet as saved source
         } operation: {
             await SourcesBLogic.liveValue.knownSources()
         }
 
-        #expect(sources == [.mbnetMock, .lottoMock])
+        #expect(sources == [.mbnetMock, .partialLottoMock])
     }
 
-    @Test func fetchSourceData() async throws {
+    @Test
+    @MainActor
+    func fetchSourceData() async throws {
         let testResult = await withDependencies {
-            $0.sorcesRepo.fetchAndSaveDataFrom = { _ in .success(.mbnetMock) }
+            $0.sourcesRepo.fetchAndSaveDataFrom = { _ in .success(.mbnetMock) }
         } operation: {
             await SourcesBLogic.liveValue.fetchFrom("klopik")
         }
 
         #expect(testResult == .success(Source.mbnetMock))
     }
+}
+
+extension Source {
+    static let partialMbnetMock: Self = .init(
+        name: "mbnet",
+        displayName: "MBNet Server",
+    )
+    static let partialLottoMock: Self = .init(
+        name: "lotto",
+        displayName: "Lotto Server",
+    )
 }

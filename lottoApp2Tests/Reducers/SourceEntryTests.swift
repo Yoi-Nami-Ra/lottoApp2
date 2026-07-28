@@ -39,7 +39,7 @@ struct SourceEntry_Tests {
             state.lastSync = Source.mbnetMock.lastSync
             state.firstRecordDate = Source.mbnetMock.firstRecrd
             state.lastRecordDate = Source.mbnetMock.latestRecord
-            state.recordsCount = Source.mbnetMock.recordCount
+            state.recordsCount = Source.mbnetMock.recordsCount
             state.isRefreshing = false
         }
     }

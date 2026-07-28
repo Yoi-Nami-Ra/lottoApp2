@@ -15,17 +15,18 @@ struct SourceEntry {
         case low
         case medium
         case high
+        case none
     }
 
     @ObservableState
     struct State: Equatable, Identifiable {
         var id: String
         var name: String
-        var lastSync: Date
-        var lastSyncSeverity: SyncSeverity { lastSync.toSeverity }
-        var firstRecordDate: Date
-        var lastRecordDate: Date
-        var recordsCount: Int
+        var lastSync: Date?
+        var lastSyncSeverity: SyncSeverity { lastSync?.toSeverity ?? .none }
+        var firstRecordDate: Date?
+        var lastRecordDate: Date?
+        var recordsCount: Int?
         var isRefreshing: Bool = false
     }
 
@@ -68,7 +69,7 @@ extension Source {
             lastSync: lastSync,
             firstRecordDate: firstRecrd,
             lastRecordDate: latestRecord,
-            recordsCount: recordCount
+            recordsCount: recordsCount
         )
     }
 }

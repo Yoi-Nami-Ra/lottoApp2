@@ -12,7 +12,7 @@ struct SourceTitle: View {
     
     var body: some View {
         Text(title)
-            .modifier(.sourceTitle)
+            .modifier(SourceTitleStyle.sourceTitle)
     }
 }
 

@@ -18,7 +18,7 @@ struct SourceEntryView: View {
             headerRow
             details
         }
-        .modifier(.sourceCardStyle)
+        .modifier(SourceCardStyle.sourceCardStyle)
     }
 
     private var headerRow: some View {
@@ -35,7 +35,7 @@ struct SourceEntryView: View {
                 HStack(spacing: .headerVSpacing) {
                     Image(.records)
                         .foregroundStyle(.textPrimary)
-                    Text(String(store.recordsCount))
+                    recordsCount
                         .font(.title2)
                         .fontWeight(.bold)
                         .foregroundStyle(.textPrimary)
@@ -47,11 +47,23 @@ struct SourceEntryView: View {
         }
     }
 
+    private var recordsCount: some View {
+        if let count = store.recordsCount {
+            Text(count.toString)
+        } else {
+            Text(.notAvailable)
+        }
+    }
+
     private var syncStatusBadge: some View {
         HStack {
             Image(.lastSync)
-            Text(.lastSynced(store.lastSync))
-                .font(.caption)
+            if let lastSync = store.lastSync {
+                Text(.lastSynced(lastSync))
+                    .font(.caption)
+            } else {
+                Text(.notSynced)
+            }
         }
         .foregroundStyle(lastSyncForeground)
         .padding(.horizontal, .syncStatusHPadding)
@@ -70,7 +82,7 @@ struct SourceEntryView: View {
 
     private var details: some View {
         HStack {
-            VStack {
+            VStack(alignment: .leading) {
                 HStack {
                     Image(.firstRecord)
                         .foregroundStyle(Color.firstRecordImage)
@@ -78,7 +90,7 @@ struct SourceEntryView: View {
                         Text(.firstRecordTitle)
                             .font(.firstlastRecordTitle)
                             .foregroundStyle(Color.firstlastRecordTitle)
-                        Text(store.firstRecordDate.formatted(date: .abbreviated, time: .omitted))
+                        firstRecordDate
                             .font(.firstlastRecordDate)
                             .fontWeight(.firstlastRecordDate)
                             .foregroundStyle(Color.firstlastRecordDate)
@@ -88,10 +100,10 @@ struct SourceEntryView: View {
                     Image(.lastRecord)
                         .foregroundStyle(Color.lastRecordImage)
                     VStack(alignment: .leading, spacing: .detailsSpacing) {
-                        Text(.lastRecord)
+                        Text(.lastRecordTitle)
                             .font(.firstlastRecordTitle)
                             .foregroundStyle(Color.firstlastRecordTitle)
-                        Text(store.lastRecordDate.formatted(date: .abbreviated, time: .omitted))
+                        lastRecordDate
                             .font(.firstlastRecordDate)
                             .fontWeight(.firstlastRecordDate)
                             .foregroundStyle(Color.firstlastRecordDate)
@@ -127,6 +139,22 @@ struct SourceEntryView: View {
             .buttonStyle(PlainButtonStyle())
         }
     }
+
+    private var firstRecordDate: some View {
+        if let date = store.firstRecordDate {
+            Text(date.formatted(date: .abbreviated, time: .omitted))
+        } else {
+            Text(.notAvailable)
+        }
+    }
+
+    private var lastRecordDate: some View {
+        if let date = store.lastRecordDate {
+            Text(date.formatted(date: .abbreviated, time: .omitted))
+        } else {
+            Text(.notAvailable)
+        }
+    }
 }
 
 // MARK : - Styles
@@ -153,6 +181,7 @@ extension Color {
             .low: .syncSeverityLow,
             .medium: .syncSeverityMedium,
             .high: .syncSeverityHigh,
+            .none: .syncSeverityNone,
         ]
     }
     fileprivate static let firstRecordImage: Self = .primaryBlue
@@ -165,6 +194,7 @@ extension Color {
     fileprivate static let syncSeverityLow: Self = .successGreen
     fileprivate static let syncSeverityMedium: Self = .warningYellow
     fileprivate static let syncSeverityHigh: Self = .errorRed
+    fileprivate static let syncSeverityNone: Self = .undefinedGrey
 }
 
 extension Font {
@@ -209,9 +239,11 @@ extension Double {
 
 extension LocalizedStringKey {
     fileprivate static let firstRecordTitle: Self = "First Record:"
-    fileprivate static let lastRecord: Self = "Latest Record:"
+    fileprivate static let lastRecordTitle: Self = "Latest Record:"
     fileprivate static func lastSynced(_ date: Date) -> Self { "Last synced: \(date.formatted(date: .abbreviated, time: .shortened))" }
+    fileprivate static let notSynced: Self = "Not synced"
     fileprivate static let records: Self = "records"
+    fileprivate static let notAvailable: Self = "N/A"
 }
 
 #Preview("Dark Mode - none") {
@@ -235,6 +267,13 @@ extension LocalizedStringKey {
         .preferredColorScheme(.dark)
 }
 
+#Preview("Dark Mode - empty") {
+    SourceEntryView(store: Store(initialState: .mock1e) { SourceEntry() })
+        .padding()
+        .background(.backgroundSecondary)
+        .preferredColorScheme(.dark)
+}
+
 #Preview("Light Mode - none") {
     SourceEntryView(store: Store(initialState: .mock1n) { SourceEntry() })
         .padding()
@@ -251,6 +290,13 @@ extension LocalizedStringKey {
 
 #Preview("Light Mode - severe") {
     SourceEntryView(store: Store(initialState: .mock1s) { SourceEntry() })
+        .padding()
+        .background(.backgroundSecondary)
+        .preferredColorScheme(.light)
+}
+
+#Preview("Light Mode - empty") {
+    SourceEntryView(store: Store(initialState: .mock1e) { SourceEntry() })
         .padding()
         .background(.backgroundSecondary)
         .preferredColorScheme(.light)
@@ -283,4 +329,17 @@ extension SourceEntry.State {
         lastRecordDate: Date(timeIntervalSince1970: 18223210),
         recordsCount: 15_847
     )
+
+    static let mock1e: Self = .init(
+        id: "mbtn",
+        name: "MBTN Server",
+        lastSync: nil,
+        firstRecordDate: nil,
+        lastRecordDate: nil,
+        recordsCount: nil
+    )
+}
+
+extension Int {
+    var toString: String { String(self) }
 }

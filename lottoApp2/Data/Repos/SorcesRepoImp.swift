@@ -7,16 +7,33 @@
 
 import Dependencies
 
-extension SorcesRepo: DependencyKey {
-    static let liveValue = SorcesRepo(
-        listKnownSources: { [] }, // TODO Implement
-        fetchAndSaveDataFrom: { sourceName in
+nonisolated struct SourcesRepoImpl: Sendable {
+    static let live = SourcesRepo(
+        listKnownSources: { @Sendable in
+            @Dependency(\.remoteSourcesManager) var remote
+            @Dependency(\.localStore) var local
+            let sources = await remote.listAllSources()
+            let displayNames = await remote.listDisplayNamesFor(sources)
+            let metaList = await local.listSourceMetaFor(sources)
+
+            return sources
+                .map { source in
+                    if let source =  metaList[source]?.toSource {
+                        return source
+                    }
+                    if let displayName = displayNames[source] {
+                        return Source(name: source, displayName: displayName)
+                    }
+                    return Source(name: source, displayName: source)
+                }
+        }, // TODO Implement
+        fetchAndSaveDataFrom: { sourceId in
             @Dependency(\.remoteSourcesManager) var remotes
             @Dependency(\.localStore) var store
 
             // - fetch them from selected source
             do {
-                let source = await remotes.sourceFor(sourceName)
+                let source = await remotes.sourceFor(sourceId)
                 let data = try await source.fetchData()
                 let syncDate = store.save(data, source)
 
@@ -25,9 +42,9 @@ extension SorcesRepo: DependencyKey {
                         name: source.name,
                         displayName: source.displayName,
                         lastSync: syncDate,
-                        recordCount: data.count,
-                        latestRecord: data.latest!.date,
-                        firstRecrd: data.oldest!.date
+                        recordsCount: data.count,
+                        latestRecord: data.latest?.date,
+                        firstRecord: data.oldest?.date
                     )
                 )
             } catch {
@@ -39,11 +56,40 @@ extension SorcesRepo: DependencyKey {
     )
 }
 
-/*
- - what if we can fetch sources from network
-    - source description
-        - id
-        - display name - could be updated after fetch
-        - type of game - ex. 6/49 - combination of 6 numbers from 1 - 49
-        - where to get it
- */
+nonisolated extension SourceMeta {
+    var toSource: Source {
+        Source(
+            name: name,
+            displayName: displayName,
+            lastSync: lastSync,
+            recordsCount: recordsCount,
+            latestRecord: latestRecord,
+            firstRecord: firstRecrd
+        )
+    }
+}
+
+nonisolated struct RemoteSourcesManager {
+    var listAllSources: @Sendable () async -> [String]
+    var listDisplayNamesFor: @Sendable ([String]) async -> [String: String]
+    var sourceFor: @Sendable (String) async -> RemoteSource
+}
+
+extension RemoteSourcesManager: DependencyKey {
+    static let liveValue = RemoteSourcesManagerImp.live
+}
+
+nonisolated struct RemoteSourcesManagerImp {
+    static let live: RemoteSourcesManager = .init(
+        listAllSources: { [] },
+        listDisplayNamesFor: { _ in [:] },
+        sourceFor: { _ in RemoteSource(name: "a", displayName: "b") }
+    )
+}
+
+extension DependencyValues {
+  nonisolated var remoteSourcesManager: RemoteSourcesManager {
+    get { self[RemoteSourcesManager.self] }
+    set { self[RemoteSourcesManager.self] = newValue }
+  }
+}

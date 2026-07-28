@@ -8,51 +8,57 @@
 import Dependencies
 import Foundation
 
-struct SourcesBLogic {
+nonisolated struct SourcesBLogic: Sendable {
     enum Error: Swift.Error {
         case somethingWentWrong
     }
 
-    var knownSources: () async -> [Source]
-    var fetchFrom: (String) async -> Result<Source, Error>
+    var knownSources: @Sendable () async -> [Source]
+    var fetchFrom: @Sendable (String) async -> Result<Source, Error>
 }
 
 extension SourcesBLogic: DependencyKey {
     static let liveValue = SourcesBLogic(
         knownSources: {
-            @Dependency(\.sorcesRepo) var repo
+            @Dependency(\.sourcesRepo) var repo
             return await repo.listKnownSources()
         },
-        fetchFrom: {
-            @Dependency(\.sorcesRepo) var repo
-            return await repo.fetchAndSaveDataFrom($0).mapError { _ in .somethingWentWrong } //TODO: re-implement
+        fetchFrom: { source in
+            @Dependency(\.sourcesRepo) var repo
+            return await repo.fetchAndSaveDataFrom(source).mapError { _ in .somethingWentWrong } //TODO: re-implement
         }
     )
 }
 
 extension DependencyValues {
-  var blSources: SourcesBLogic {
+  nonisolated var blSources: SourcesBLogic {
     get { self[SourcesBLogic.self] }
     set { self[SourcesBLogic.self] = newValue }
   }
+}
+
+extension Array where Element == Source {
+    fileprivate func updated(with list: [Source]) -> [Source] {
+        map { element in list.first { $0.name == element.name } ?? element }
+    }
 }
 
 extension Source {
     static let mbnetMock: Source = .init(
         name: "mbnet",
         displayName: "MBNet Server",
-        lastSync: Date(timeIntervalSinceNow: -100000),
-        recordCount: 120,
-        latestRecord: Date(timeIntervalSinceNow: -180000),
-        firstRecrd: Date(timeIntervalSince1970: 18223210)
+        lastSync: .now.addingTimeInterval(-100_000),
+        recordsCount: 120,
+        latestRecord: .now.addingTimeInterval(-180_000),
+        firstRecord: Date(timeIntervalSince1970: 18_223_210)
     )
 
     static let lottoMock: Source = .init(
         name: "lotto",
         displayName: "Lotto Server",
-        lastSync: Date(timeIntervalSinceNow: -432000),
-        recordCount: 110,
-        latestRecord: Date(timeIntervalSinceNow: -600000),
-        firstRecrd: Date(timeIntervalSince1970: 18223210)
+        lastSync: .now.addingTimeInterval(-432_000),
+        recordsCount: 110,
+        latestRecord: .now.addingTimeInterval(-600_000),
+        firstRecord: Date(timeIntervalSince1970: 18_223_210)
     )
 }

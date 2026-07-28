@@ -8,19 +8,23 @@
 import Foundation
 import Dependencies
 
-struct SorcesRepo {
+nonisolated struct SourcesRepo: Sendable {
     enum Error: Swift.Error {
         case weFailed
         case failedToFetchData /// general fail to fetch current data from given server
     }
 
-    var listKnownSources: () async -> [Source]
-    var fetchAndSaveDataFrom: (String) async -> Result<Source, Error>
+    var listKnownSources: @Sendable () async -> [Source]
+    var fetchAndSaveDataFrom: @Sendable (String) async -> Result<Source, Error>
+}
+
+extension SourcesRepo: DependencyKey {
+    static let liveValue = SourcesRepoImpl.live
 }
 
 extension DependencyValues {
-  var sorcesRepo: SorcesRepo {
-    get { self[SorcesRepo.self] }
-    set { self[SorcesRepo.self] = newValue }
+  nonisolated var sourcesRepo: SourcesRepo {
+    get { self[SourcesRepo.self] }
+    set { self[SourcesRepo.self] = newValue }
   }
 }

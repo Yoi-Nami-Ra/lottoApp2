@@ -10,11 +10,27 @@ import ComposableArchitecture
 import Dependencies
 import SwiftUI
 
-struct Source: Equatable {
+nonisolated struct Source: Equatable {
     let name: String
     let displayName: String
-    let lastSync: Date
-    let recordCount: Int
-    let latestRecord: Date
-    let firstRecrd: Date
+    let lastSync: Date?
+    let recordsCount: Int?
+    let latestRecord: Date?
+    let firstRecrd: Date?
+
+    init(
+        name: String,
+        displayName: String,
+        lastSync: Date? = nil,
+        recordsCount: Int? = nil,
+        latestRecord: Date? = nil,
+        firstRecord: Date? = nil
+    ) {
+        self.name = name
+        self.displayName = displayName
+        self.lastSync = lastSync
+        self.recordsCount = recordsCount
+        self.latestRecord = latestRecord
+        self.firstRecrd = firstRecord
+    }
 }
