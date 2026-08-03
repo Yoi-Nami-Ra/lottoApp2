@@ -28,35 +28,43 @@ struct SourceEntry {
         var lastRecordDate: Date?
         var recordsCount: Int?
         var isRefreshing: Bool = false
+        @Presents var alert: AlertState<Action.Alert>?
     }
 
     enum Action {
-        case refresh
-        case refreshResponse(Result<Source, SourcesBLogic.Error>)
+        case refreshButtonTapped
+        case delegate(Delegate)
+        case alert(PresentationAction<Alert>)
+
+        @CasePathable
+        enum Delegate: Equatable {
+            case refreshRequested
+        }
+        enum Alert: Equatable {}
     }
 
     var body: some Reducer<State, Action> {
         Reduce { state, action in
-            @Dependency(\.blSources) var blSources
-
             switch action {
-            case .refresh:
-                state.isRefreshing = true
-                return .run { [id = state.id] send in
-                    await send(
-                        .refreshResponse(blSources.fetchFrom(id))
-                    )
-                }
-            case .refreshResponse(let response):
-                switch response {
-                case .failure:
-                    state.isRefreshing = false
-                    break // TODO: implement unhappy path
-                case .success(let result):
-                    state = result.sourceEntryState
-                }
+            case .refreshButtonTapped:
+                // FR-020: ignore taps while a sync is already in progress (no second concurrent sync).
+                // The parent (StartPage) owns the fetch; forward the intent and let it drive `isRefreshing`.
+                guard state.isRefreshing == false else { return .none }
+                return .send(.delegate(.refreshRequested))
+            case .delegate, .alert:
                 return .none
             }
+        }
+        .ifLet(\.$alert, action: \.alert)
+    }
+}
+
+extension AlertState where Action == SourceEntry.Action.Alert {
+    static var syncFailed: AlertState {
+        AlertState {
+            TextState("Sync failed")
+        } message: {
+            TextState("Couldn't refresh this source. Check your connection and try again.")
         }
     }
 }

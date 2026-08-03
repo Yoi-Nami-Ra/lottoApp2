@@ -15,7 +15,8 @@ struct SourceEntry_Tests {
 
     @MainActor
     @Test
-    func action_refresh() async throws {
+    func action_refreshButtonTapped_emitsDelegate() async throws {
+        // The child owns no fetch: a tap forwards the intent to the parent as a delegate action.
         let store = TestStore(
             initialState: SourceEntry.State(
                 id: "a",
@@ -27,20 +28,45 @@ struct SourceEntry_Tests {
             )
         ) {
             SourceEntry()
-                .dependency(\.blSources, .mock)
         }
 
-        await store.send(.refresh) {
-            $0.isRefreshing = true
+        await store.send(.refreshButtonTapped)
+        await store.receive(\.delegate.refreshRequested)
+    }
+
+    @MainActor
+    @Test
+    func action_refreshButtonTapped_guardedWhileRefreshing() async throws {
+        // FR-020: a tap while already refreshing forwards nothing (no delegate, no state change).
+        let store = TestStore(
+            initialState: SourceEntry.State(id: "mbnet", name: "MBNet Server", isRefreshing: true)
+        ) {
+            SourceEntry()
         }
-        await store.receive(\.refreshResponse) { state in
-            state.id = Source.mbnetMock.name
-            state.name = Source.mbnetMock.displayName
-            state.lastSync = Source.mbnetMock.lastSync
-            state.firstRecordDate = Source.mbnetMock.firstRecrd
-            state.lastRecordDate = Source.mbnetMock.latestRecord
-            state.recordsCount = Source.mbnetMock.recordsCount
-            state.isRefreshing = false
+
+        await store.send(.refreshButtonTapped)
+    }
+
+    @MainActor
+    @Test
+    func action_alertDismiss_clearsAlert() async throws {
+        // SC-010: dismissing the failure alert clears it (the parent sets it; the child presents it).
+        var initialState = SourceEntry.State(
+            id: "mbnet",
+            name: "MBNet Server",
+            lastSync: .now,
+            firstRecordDate: .now,
+            lastRecordDate: .now,
+            recordsCount: 100
+        )
+        initialState.alert = .syncFailed
+
+        let store = TestStore(initialState: initialState) {
+            SourceEntry()
+        }
+
+        await store.send(.alert(.dismiss)) {
+            $0.alert = nil
         }
     }
 }

@@ -8,7 +8,7 @@
 import Dependencies
 
 nonisolated struct SourcesRepoImpl: Sendable {
-    static let live = SourcesRepo(
+    nonisolated static let live = SourcesRepo(
         listKnownSources: { @Sendable in
             @Dependency(\.remoteSourcesManager) var remote
             @Dependency(\.localStore) var local
@@ -18,7 +18,7 @@ nonisolated struct SourcesRepoImpl: Sendable {
 
             return sources
                 .map { source in
-                    if let source =  metaList[source]?.toSource {
+                    if let source = metaList[source]?.toSource {
                         return source
                     }
                     if let displayName = displayNames[source] {
@@ -26,17 +26,23 @@ nonisolated struct SourcesRepoImpl: Sendable {
                     }
                     return Source(name: source, displayName: source)
                 }
-        }, // TODO Implement
+        },
         fetchAndSaveDataFrom: { sourceId in
             @Dependency(\.remoteSourcesManager) var remotes
             @Dependency(\.localStore) var store
 
-            // - fetch them from selected source
             do {
+                // - fetch from the selected source
                 let source = await remotes.sourceFor(sourceId)
                 let data = try await source.fetchData()
-                let syncDate = store.save(data, source)
+                // - save (additive-union merge) into the local store
+                let syncDate = try await store.save(data, source)
 
+                // Build the returned Source from the *persisted, merged* metadata so the card reflects the
+                // full stored set (FR-005/SC-002), not just this fetch's draws.
+                if let meta = await store.listSourceMetaFor([source.name])[source.name] {
+                    return .success(meta.toSource)
+                }
                 return .success(
                     Source(
                         name: source.name,
@@ -50,8 +56,6 @@ nonisolated struct SourcesRepoImpl: Sendable {
             } catch {
                 return .failure(.failedToFetchData)
             }
-
-            // - save them into the database
         }
     )
 }
@@ -67,29 +71,4 @@ nonisolated extension SourceMeta {
             firstRecord: firstRecrd
         )
     }
-}
-
-nonisolated struct RemoteSourcesManager {
-    var listAllSources: @Sendable () async -> [String]
-    var listDisplayNamesFor: @Sendable ([String]) async -> [String: String]
-    var sourceFor: @Sendable (String) async -> RemoteSource
-}
-
-extension RemoteSourcesManager: DependencyKey {
-    static let liveValue = RemoteSourcesManagerImp.live
-}
-
-nonisolated struct RemoteSourcesManagerImp {
-    static let live: RemoteSourcesManager = .init(
-        listAllSources: { [] },
-        listDisplayNamesFor: { _ in [:] },
-        sourceFor: { _ in RemoteSource(name: "a", displayName: "b") }
-    )
-}
-
-extension DependencyValues {
-  nonisolated var remoteSourcesManager: RemoteSourcesManager {
-    get { self[RemoteSourcesManager.self] }
-    set { self[RemoteSourcesManager.self] = newValue }
-  }
 }

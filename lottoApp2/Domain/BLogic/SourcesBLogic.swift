@@ -17,8 +17,8 @@ nonisolated struct SourcesBLogic: Sendable {
     var fetchFrom: @Sendable (String) async -> Result<Source, Error>
 }
 
-extension SourcesBLogic: DependencyKey {
-    static let liveValue = SourcesBLogic(
+extension SourcesBLogic: nonisolated DependencyKey {
+    nonisolated static let liveValue = SourcesBLogic(
         knownSources: {
             @Dependency(\.sourcesRepo) var repo
             return await repo.listKnownSources()
@@ -37,13 +37,25 @@ extension DependencyValues {
   }
 }
 
+extension SourcesBLogic {
+    /// Business logic backed by in-memory sample data, for SwiftUI previews.
+    static let previewMock = SourcesBLogic(
+        knownSources: { Source.mocks },
+        fetchFrom: { name in
+            guard let source = Source.mocks.first(where: { $0.name == name })
+            else { return .failure(.somethingWentWrong) }
+            return .success(source)
+        }
+    )
+}
+
 extension Array where Element == Source {
     fileprivate func updated(with list: [Source]) -> [Source] {
         map { element in list.first { $0.name == element.name } ?? element }
     }
 }
 
-extension Source {
+nonisolated extension Source {
     static let mbnetMock: Source = .init(
         name: "mbnet",
         displayName: "MBNet Server",
@@ -61,4 +73,11 @@ extension Source {
         latestRecord: .now.addingTimeInterval(-600_000),
         firstRecord: Date(timeIntervalSince1970: 18_223_210)
     )
+
+    static let neverSyncedMock: Source = .init(
+        name: "eurojackpot",
+        displayName: "EuroJackpot Server"
+    )
+
+    static let mocks: [Source] = [.mbnetMock, .lottoMock, .neverSyncedMock]
 }

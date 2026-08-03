@@ -11,7 +11,7 @@ import SwiftUI
 struct SourceEntryView: View {
     @Environment(\.colorScheme) var colorScheme
 
-    let store: StoreOf<SourceEntry>
+    @Bindable var store: StoreOf<SourceEntry>
 
     var body: some View {
         VStack(alignment: .leading, spacing: .headerDataSpacing) {
@@ -19,6 +19,7 @@ struct SourceEntryView: View {
             details
         }
         .modifier(SourceCardStyle.sourceCardStyle)
+        .alert($store.scope(state: \.alert, action: \.alert))
     }
 
     private var headerRow: some View {
@@ -111,33 +112,40 @@ struct SourceEntryView: View {
                 }
             }
             Spacer()
-            Button {
-                store.send(.refresh)
-            } label: {
-                HStack {
-                    Image(.refresh)
-                        .font(.caption)
-                        .rotationEffect(.degrees(store.isRefreshing ? 360 : 0))
-                        .animation(
-                            store.isRefreshing ? .linear(duration: 1).repeatForever(autoreverses: false) : .default,
-                            value: store.isRefreshing
-                        )
-                    Text("Refresh")
-                        .font(.caption)
-                        .fontWeight(.medium)
-                }
-                .foregroundColor(store.isRefreshing ? .secondary : .blue)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 6)
-                .background(store.isRefreshing ? .gray : Color.blue.opacity(0.1))
-                .cornerRadius(6)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 6)
-                        .stroke(store.isRefreshing ? .gray : Color.blue.opacity(0.3), lineWidth: 1)
-                )
-            }
-            .buttonStyle(PlainButtonStyle())
+            refreshButton
         }
+    }
+
+    private var refreshButton: some View {
+        Button {
+            store.send(.refreshButtonTapped)
+        } label: {
+            HStack(spacing: .refreshIconSpacing) {
+                Image(.refresh)
+                    .rotationEffect(.degrees(store.isRefreshing ? .refreshSpinDegrees : 0))
+                    .animation(
+                        store.isRefreshing ? .refreshSpin : .default,
+                        value: store.isRefreshing
+                    )
+                Text(store.isRefreshing ? .refreshing : .refresh)
+                    .fontWeight(.refreshLabel)
+            }
+            .font(.refreshLabel)
+            .foregroundStyle(store.isRefreshing ? Color.refreshActiveForeground : .refreshIdleForeground)
+            .padding(.horizontal, .refreshHPadding)
+            .padding(.vertical, .refreshVPadding)
+            .background(store.isRefreshing ? Color.refreshActiveBackground : .refreshIdleBackground)
+            .cornerRadius(.refreshCorners)
+            .overlay(
+                RoundedRectangle(cornerRadius: .refreshCorners)
+                    .stroke(
+                        store.isRefreshing ? Color.refreshActiveBorder : .refreshIdleBorder,
+                        lineWidth: .refreshBorderWidth
+                    )
+            )
+        }
+        .buttonStyle(PlainButtonStyle())
+        .disabled(store.isRefreshing)
     }
 
     private var firstRecordDate: some View {
@@ -195,15 +203,28 @@ extension Color {
     fileprivate static let syncSeverityMedium: Self = .warningYellow
     fileprivate static let syncSeverityHigh: Self = .errorRed
     fileprivate static let syncSeverityNone: Self = .undefinedGrey
+
+    fileprivate static let refreshIdleForeground: Self = .primaryBlue
+    fileprivate static let refreshActiveForeground: Self = .textSecondary
+    fileprivate static let refreshIdleBackground: Self = .primaryBlue.opacity(0.1)
+    fileprivate static let refreshActiveBackground: Self = .undefinedGrey.opacity(0.15)
+    fileprivate static let refreshIdleBorder: Self = .primaryBlue.opacity(0.3)
+    fileprivate static let refreshActiveBorder: Self = .undefinedGrey
 }
 
 extension Font {
     fileprivate static let firstlastRecordTitle: Self = .caption
     fileprivate static let firstlastRecordDate: Self = .subheadline
+    fileprivate static let refreshLabel: Self = .caption
 }
 
 extension Font.Weight {
     fileprivate static let firstlastRecordDate: Self = .medium
+    fileprivate static let refreshLabel: Self = .medium
+}
+
+extension Animation {
+    fileprivate static let refreshSpin: Self = .linear(duration: 1).repeatForever(autoreverses: false)
 }
 
 extension ImageType {
@@ -230,11 +251,19 @@ extension CGFloat {
     fileprivate static let syncStatusCorners: Self = 12
 
     fileprivate static let buttonCorners: Self = 15
+
+    fileprivate static let refreshIconSpacing: Self = 4
+    fileprivate static let refreshHPadding: Self = 12
+    fileprivate static let refreshVPadding: Self = 6
+    fileprivate static let refreshCorners: Self = 8
+    fileprivate static let refreshBorderWidth: Self = 1
 }
 
 extension Double {
     fileprivate static let lightOpacity: Self = 0.15
     fileprivate static let darkOpacity: Self = 0.35
+
+    fileprivate static let refreshSpinDegrees: Self = 360
 }
 
 extension LocalizedStringKey {
@@ -244,6 +273,8 @@ extension LocalizedStringKey {
     fileprivate static let notSynced: Self = "Not synced"
     fileprivate static let records: Self = "records"
     fileprivate static let notAvailable: Self = "N/A"
+    fileprivate static let refresh: Self = "Refresh"
+    fileprivate static let refreshing: Self = "Refreshing…"
 }
 
 #Preview("Dark Mode - none") {
@@ -302,31 +333,59 @@ extension LocalizedStringKey {
         .preferredColorScheme(.light)
 }
 
+#Preview("Dark Mode - refreshing") {
+    SourceEntryView(store: Store(initialState: .mock1r) { SourceEntry() })
+        .padding()
+        .background(.backgroundSecondary)
+        .preferredColorScheme(.dark)
+}
+
+#Preview("Light Mode - refreshing") {
+    SourceEntryView(store: Store(initialState: .mock1r) { SourceEntry() })
+        .padding()
+        .background(.backgroundSecondary)
+        .preferredColorScheme(.light)
+}
+
+#Preview("Dark Mode - error alert") {
+    SourceEntryView(store: Store(initialState: .mock1a) { SourceEntry() })
+        .padding()
+        .background(.backgroundSecondary)
+        .preferredColorScheme(.dark)
+}
+
+#Preview("Light Mode - error alert") {
+    SourceEntryView(store: Store(initialState: .mock1a) { SourceEntry() })
+        .padding()
+        .background(.backgroundSecondary)
+        .preferredColorScheme(.light)
+}
+
 extension SourceEntry.State {
     static let mock1n: Self = .init(
         id: "mbtn",
         name: "MBTN Server",
-        lastSync: Date(timeIntervalSinceNow: -100000),
-        firstRecordDate: Date(timeIntervalSinceNow: -180000),
-        lastRecordDate: Date(timeIntervalSince1970: 18223210),
+        lastSync: Date(timeIntervalSinceNow: -100000),          // ~1.2 days → .low (green)
+        firstRecordDate: Date(timeIntervalSince1970: 18223210),
+        lastRecordDate: Date(timeIntervalSinceNow: -180000),
         recordsCount: 15_847
     )
 
     static let mock1m: Self = .init(
         id: "mbtn",
         name: "MBTN Server",
-        lastSync: Date(timeIntervalSinceNow: -100000),
-        firstRecordDate: Date(timeIntervalSinceNow: -180000),
-        lastRecordDate: Date(timeIntervalSince1970: 18223210),
+        lastSync: Date(timeIntervalSinceNow: -260000),          // ~3 days → .medium (yellow)
+        firstRecordDate: Date(timeIntervalSince1970: 18223210),
+        lastRecordDate: Date(timeIntervalSinceNow: -180000),
         recordsCount: 15_847
     )
 
     static let mock1s: Self = .init(
         id: "mbtn",
         name: "MBTN Server",
-        lastSync: Date(timeIntervalSinceNow: -100000),
-        firstRecordDate: Date(timeIntervalSinceNow: -180000),
-        lastRecordDate: Date(timeIntervalSince1970: 18223210),
+        lastSync: Date(timeIntervalSinceNow: -500000),          // ~5.8 days → .high (red)
+        firstRecordDate: Date(timeIntervalSince1970: 18223210),
+        lastRecordDate: Date(timeIntervalSinceNow: -180000),
         recordsCount: 15_847
     )
 
@@ -338,6 +397,29 @@ extension SourceEntry.State {
         lastRecordDate: nil,
         recordsCount: nil
     )
+
+    static let mock1r: Self = .init(
+        id: "mbnet",
+        name: "MBNet Server",
+        lastSync: Date(timeIntervalSinceNow: -100000),
+        firstRecordDate: Date(timeIntervalSince1970: 18223210),
+        lastRecordDate: Date(timeIntervalSinceNow: -180000),
+        recordsCount: 7380,
+        isRefreshing: true
+    )
+
+    static let mock1a: Self = {
+        var state = Self(
+            id: "mbnet",
+            name: "MBNet Server",
+            lastSync: Date(timeIntervalSinceNow: -100000),
+            firstRecordDate: Date(timeIntervalSince1970: 18223210),
+            lastRecordDate: Date(timeIntervalSinceNow: -180000),
+            recordsCount: 7380
+        )
+        state.alert = .syncFailed
+        return state
+    }()
 }
 
 extension Int {

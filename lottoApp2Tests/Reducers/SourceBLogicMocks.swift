@@ -12,4 +12,9 @@ extension SourcesBLogic {
         knownSources: { [.mbnetMock, .lottoMock] },
         fetchFrom: { _ in .success(.mbnetMock) }
     )
+
+    static let failureMock = SourcesBLogic(
+        knownSources: { [] },
+        fetchFrom: { _ in .failure(.somethingWentWrong) }
+    )
 }

@@ -18,8 +18,8 @@ nonisolated struct SourcesRepo: Sendable {
     var fetchAndSaveDataFrom: @Sendable (String) async -> Result<Source, Error>
 }
 
-extension SourcesRepo: DependencyKey {
-    static let liveValue = SourcesRepoImpl.live
+extension SourcesRepo: nonisolated DependencyKey {
+    nonisolated static let liveValue = SourcesRepoImpl.live
 }
 
 extension DependencyValues {
