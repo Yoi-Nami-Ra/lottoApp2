@@ -1,6 +1,13 @@
 <!--
 Sync Impact Report
 ==================
+Version change: 1.0.0 → 1.0.1
+Bump rationale: PATCH — reconcile the Technology & Platform Constraints "Testing" line from "XCTest"
+to "swift-testing" to match the codebase's actual test runner and CLAUDE.md guidance. No principle
+added, removed, or redefined; the Principle III MUST (test behavior via TCA TestStore) is unchanged and
+runner-agnostic. Resolves finding C1 from /speckit-analyze on 001-mbnet-source.
+
+--- Prior entry ---
 Version change: (unratified template) → 1.0.0
 Bump rationale: Initial ratification. The file previously contained only unfilled
 placeholder tokens; this is the first concrete, adopted version → MAJOR baseline 1.0.0.
@@ -128,7 +135,9 @@ test surface.
   `swift-dependencies` (`Dependencies`) are the mandated state-management and DI
   frameworks. Introducing an alternative state-management or DI framework requires a
   constitution amendment.
-- **Testing**: XCTest with TCA's `TestStore`. Tests live under `lottoApp2Tests/`.
+- **Testing**: swift-testing (`import Testing`, `@Test`, `#expect`) with TCA's `TestStore`. Tests live
+  under `lottoApp2Tests/`. (The test *runner* is swift-testing; the reducer-testing MUST in Principle III —
+  exercising behavior through `TestStore` — is independent of the runner and still binding.)
 - **Package management**: Dependencies are managed through Swift Package Manager; the
   resolved graph (`Package.resolved`) is committed.
 - **Specification-driven delivery**: Non-trivial features are developed through the Spec
@@ -168,4 +177,4 @@ test surface.
   (or the PR description) with the reason and the simpler alternative that was rejected.
   Unjustified complexity MUST be removed.
 
-**Version**: 1.0.0 | **Ratified**: 2026-07-27 | **Last Amended**: 2026-07-27
+**Version**: 1.0.1 | **Ratified**: 2026-07-27 | **Last Amended**: 2026-07-30
