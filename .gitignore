@@ -26,3 +26,9 @@ Packages/
 # Playgrounds
 timeline.xctimeline
 playground.xcworkspace
+
+# Spec Kit — per-developer state.
+# Note: the rest of .specify/ (constitution, scripts, templates, workflows) and
+# specs/ are deliberately NOT ignored. Only this active-feature pointer is, since
+# Spec Kit rewrites it per feature and per branch.
+.specify/feature.json
