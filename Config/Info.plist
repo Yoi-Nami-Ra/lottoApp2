@@ -2,6 +2,9 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<!-- The MBNet endpoint is served over plain HTTP only; migrating it is outside the app's control.
+	     Scoped to exactly that host: no NSIncludesSubdomains, since nothing below www.mbnet.com.pl is
+	     fetched and widening the exception would only enlarge the cleartext surface. -->
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSExceptionDomains</key>
@@ -9,8 +12,6 @@
 			<key>www.mbnet.com.pl</key>
 			<dict>
 				<key>NSExceptionAllowsInsecureHTTPLoads</key>
-				<true/>
-				<key>NSIncludesSubdomains</key>
 				<true/>
 			</dict>
 		</dict>

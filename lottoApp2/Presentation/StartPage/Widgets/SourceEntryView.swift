@@ -74,7 +74,7 @@ struct SourceEntryView: View {
     }
 
     private var lastSyncForeground: Color {
-        .syncSeverityForeground[store.lastSyncSeverity] ?? .syncSeverityHigh
+        .syncSeverityForeground(store.lastSyncSeverity)
     }
 
     private var lastSyncBackground: Color {
@@ -165,12 +165,12 @@ struct SourceEntryView: View {
     }
 }
 
-// MARK : - Styles
+// MARK: - Styles
 struct SourceCardStyle: ViewModifier {
     func body(content: Content) -> some View {
         content
-            .padding(.vertical, 8)
-            .padding(.horizontal, 10)
+            .padding(.vertical, .cardVPadding)
+            .padding(.horizontal, .cardHPadding)
             .background(.backgroundPrimary)
             .cornerRadius(.cardCorners)
             .shadow(color: .cardShadow, radius: .shadowRadius, x: .shadowXOffset, y: .shadowYOffset)
@@ -184,20 +184,21 @@ extension ViewModifier where Self == SourceCardStyle {
 // MARK: - Resources
 extension Color {
     fileprivate static var cardShadow: Self { .shadow }
-    fileprivate static var syncSeverityForeground: [SourceEntry.SyncSeverity: Self] {
-        [
-            .low: .syncSeverityLow,
-            .medium: .syncSeverityMedium,
-            .high: .syncSeverityHigh,
-            .none: .syncSeverityNone,
-        ]
+    /// A `switch` rather than a dictionary lookup with a fallback: adding a severity then fails to compile
+    /// instead of silently rendering as an error colour.
+    fileprivate static func syncSeverityForeground(_ severity: SourceEntry.SyncSeverity) -> Self {
+        switch severity {
+        case .low: .syncSeverityLow
+        case .medium: .syncSeverityMedium
+        case .high: .syncSeverityHigh
+        case .notSynced: .syncSeverityNone
+        }
     }
     fileprivate static let firstRecordImage: Self = .primaryBlue
     fileprivate static let firstlastRecordTitle: Self = .textSecondary
     fileprivate static let firstlastRecordDate: Self = .textPrimary
 
     fileprivate static let lastRecordImage: Self = .accentPurple
-    fileprivate static let sourceTitle: Self = .textPrimary
 
     fileprivate static let syncSeverityLow: Self = .successGreen
     fileprivate static let syncSeverityMedium: Self = .warningYellow
@@ -238,6 +239,8 @@ extension ImageType {
 extension CGFloat {
     fileprivate static let headerDataSpacing: Self = 16
     fileprivate static let cardCorners: Self = 12
+    fileprivate static let cardVPadding: Self = 8
+    fileprivate static let cardHPadding: Self = 10
 
     fileprivate static let shadowRadius: Self = 2
     fileprivate static let shadowXOffset: Self = 0
@@ -249,8 +252,6 @@ extension CGFloat {
     fileprivate static let syncStatusHPadding: Self = 8
     fileprivate static let syncStatusVPadding: Self = 4
     fileprivate static let syncStatusCorners: Self = 12
-
-    fileprivate static let buttonCorners: Self = 15
 
     fileprivate static let refreshIconSpacing: Self = 4
     fileprivate static let refreshHPadding: Self = 12
@@ -365,27 +366,30 @@ extension SourceEntry.State {
     static let mock1n: Self = .init(
         id: "mbtn",
         name: "MBTN Server",
-        lastSync: Date(timeIntervalSinceNow: -100000),          // ~1.2 days → .low (green)
-        firstRecordDate: Date(timeIntervalSince1970: 18223210),
-        lastRecordDate: Date(timeIntervalSinceNow: -180000),
+        lastSync: Date(timeIntervalSinceNow: -100_000),         // ~1.2 days
+        lastSyncSeverity: .low,                                 // green
+        firstRecordDate: Date(timeIntervalSince1970: 18_223_210),
+        lastRecordDate: Date(timeIntervalSinceNow: -180_000),
         recordsCount: 15_847
     )
 
     static let mock1m: Self = .init(
         id: "mbtn",
         name: "MBTN Server",
-        lastSync: Date(timeIntervalSinceNow: -260000),          // ~3 days → .medium (yellow)
-        firstRecordDate: Date(timeIntervalSince1970: 18223210),
-        lastRecordDate: Date(timeIntervalSinceNow: -180000),
+        lastSync: Date(timeIntervalSinceNow: -260_000),         // ~3 days
+        lastSyncSeverity: .medium,                              // yellow
+        firstRecordDate: Date(timeIntervalSince1970: 18_223_210),
+        lastRecordDate: Date(timeIntervalSinceNow: -180_000),
         recordsCount: 15_847
     )
 
     static let mock1s: Self = .init(
         id: "mbtn",
         name: "MBTN Server",
-        lastSync: Date(timeIntervalSinceNow: -500000),          // ~5.8 days → .high (red)
-        firstRecordDate: Date(timeIntervalSince1970: 18223210),
-        lastRecordDate: Date(timeIntervalSinceNow: -180000),
+        lastSync: Date(timeIntervalSinceNow: -500_000),         // ~5.8 days
+        lastSyncSeverity: .high,                                // red
+        firstRecordDate: Date(timeIntervalSince1970: 18_223_210),
+        lastRecordDate: Date(timeIntervalSinceNow: -180_000),
         recordsCount: 15_847
     )
 
@@ -393,6 +397,7 @@ extension SourceEntry.State {
         id: "mbtn",
         name: "MBTN Server",
         lastSync: nil,
+        lastSyncSeverity: .notSynced,
         firstRecordDate: nil,
         lastRecordDate: nil,
         recordsCount: nil
@@ -401,9 +406,10 @@ extension SourceEntry.State {
     static let mock1r: Self = .init(
         id: "mbnet",
         name: "MBNet Server",
-        lastSync: Date(timeIntervalSinceNow: -100000),
-        firstRecordDate: Date(timeIntervalSince1970: 18223210),
-        lastRecordDate: Date(timeIntervalSinceNow: -180000),
+        lastSync: Date(timeIntervalSinceNow: -100_000),
+        lastSyncSeverity: .low,
+        firstRecordDate: Date(timeIntervalSince1970: 18_223_210),
+        lastRecordDate: Date(timeIntervalSinceNow: -180_000),
         recordsCount: 7380,
         isRefreshing: true
     )
@@ -412,9 +418,10 @@ extension SourceEntry.State {
         var state = Self(
             id: "mbnet",
             name: "MBNet Server",
-            lastSync: Date(timeIntervalSinceNow: -100000),
-            firstRecordDate: Date(timeIntervalSince1970: 18223210),
-            lastRecordDate: Date(timeIntervalSinceNow: -180000),
+            lastSync: Date(timeIntervalSinceNow: -100_000),
+            lastSyncSeverity: .low,
+            firstRecordDate: Date(timeIntervalSince1970: 18_223_210),
+            lastRecordDate: Date(timeIntervalSinceNow: -180_000),
             recordsCount: 7380
         )
         state.alert = .syncFailed

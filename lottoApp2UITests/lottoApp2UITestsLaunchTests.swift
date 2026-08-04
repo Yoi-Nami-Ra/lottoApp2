@@ -7,7 +7,8 @@
 
 import XCTest
 
-final class lottoApp2UITestsLaunchTests: XCTestCase {
+// See `lottoApp2UITests` — XCTestCase subclasses opt out of the target's default MainActor isolation.
+nonisolated final class lottoApp2UITestsLaunchTests: XCTestCase {
 
     override class var runsForEachTargetApplicationUIConfiguration: Bool {
         true
@@ -17,13 +18,16 @@ final class lottoApp2UITestsLaunchTests: XCTestCase {
         continueAfterFailure = false
     }
 
+    /// Launch smoke test: the sources list renders on a cold start, captured per UI configuration.
     @MainActor
     func testLaunch() throws {
         let app = XCUIApplication()
         app.launch()
 
-        // Insert steps here to perform after app launch but before taking a screenshot,
-        // such as logging into a test account or navigating somewhere in the app
+        XCTAssertTrue(
+            app.staticTexts["MBNet Server"].waitForExistence(timeout: 10),
+            "the sources list must render on launch"
+        )
 
         let attachment = XCTAttachment(screenshot: app.screenshot())
         attachment.name = "Launch Screen"

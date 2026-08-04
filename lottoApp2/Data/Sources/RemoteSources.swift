@@ -15,27 +15,29 @@ nonisolated struct DrawDTO: Equatable, Codable, Sendable {
     let numbers: [Int]
 }
 
-nonisolated extension Array where Element == DrawDTO {
-    var latest: DrawDTO? { self.max { $0.date < $1.date } }
-    var oldest: DrawDTO? { self.min { $0.date < $1.date } }
+/// The outcome of fetching one source: the well-formed draws plus how many rows were unusable.
+///
+/// `skipped` travels with the draws so the caller can report it (FR-007) instead of it dying at the parser.
+nonisolated struct FetchedDraws: Equatable, Sendable {
+    var draws: [DrawDTO]
+    var skipped: Int
 }
 
 /// Description of a single remote source and how to fetch its draws.
 nonisolated struct RemoteSource: Sendable {
     let name: String
     let displayName: String
-    var fetchData: @Sendable () async throws -> [DrawDTO]
+    var fetchData: @Sendable () async throws -> FetchedDraws
 }
 
 enum RemoteSourceError: Swift.Error, Equatable {
     case unsupportedSource(String)
     case undecodableBody
+    /// The body decoded but every row was malformed — a format change, not an empty history (FR-006).
+    case unparseableBody(skipped: Int)
 }
 
-/// The MBNet endpoint (plain HTTP — requires an ATS exception for `www.mbnet.com.pl`).
-private let mbnetURL = URL(string: "http://www.mbnet.com.pl/dl.txt")!
-
-nonisolated struct RemoteSourcesManager {
+nonisolated struct RemoteSourcesManager: Sendable {
     var listAllSources: @Sendable () async -> [String]
     var listDisplayNamesFor: @Sendable ([String]) async -> [String: String]
     var sourceFor: @Sendable (String) async -> RemoteSource
@@ -60,23 +62,13 @@ nonisolated struct RemoteSourcesManagerImp {
             return result
         },
         sourceFor: { name in
-            let module = SourceRegistry.module(for: name)
-            let displayName = module?.displayName ?? name
-
-            switch name {
-            case "mbnet":
-                return RemoteSource(name: name, displayName: displayName) {
-                    @Dependency(\.networkClient) var networkClient
-                    let data = try await networkClient.data(mbnetURL)
-                    guard let text = String(data: data, encoding: .utf8) else {
-                        throw RemoteSourceError.undecodableBody
-                    }
-                    return MBNetParser.parse(text).draws
-                }
-            default:
-                return RemoteSource(name: name, displayName: displayName) {
+            guard let module = SourceRegistry.module(for: name) else {
+                return RemoteSource(name: name, displayName: name) {
                     throw RemoteSourceError.unsupportedSource(name)
                 }
+            }
+            return RemoteSource(name: module.name, displayName: module.displayName) {
+                try await module.fetchDraws()
             }
         }
     )

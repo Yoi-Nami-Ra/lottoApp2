@@ -5,18 +5,16 @@
 //  Created by Jarosław Wojtasik on 07/07/2025.
 //
 
+import Foundation
 
-import ComposableArchitecture
-import Dependencies
-import SwiftUI
-
-nonisolated struct Source: Equatable {
+/// A lottery data source and its derived sync analytics. Analytics are `nil` until the first successful sync.
+nonisolated struct Source: Equatable, Sendable {
     let name: String
     let displayName: String
     let lastSync: Date?
     let recordsCount: Int?
     let latestRecord: Date?
-    let firstRecrd: Date?
+    let firstRecord: Date?
 
     init(
         name: String,
@@ -31,6 +29,6 @@ nonisolated struct Source: Equatable {
         self.lastSync = lastSync
         self.recordsCount = recordsCount
         self.latestRecord = latestRecord
-        self.firstRecrd = firstRecord
+        self.firstRecord = firstRecord
     }
 }

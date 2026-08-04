@@ -15,11 +15,6 @@ import Foundation
 /// Never performs I/O and never throws: malformed lines are skipped and counted so a partial response still
 /// yields the well-formed draws (FR-007). Transport/status failures are the caller's concern.
 nonisolated enum MBNetParser {
-    struct ParseResult: Equatable, Sendable {
-        var draws: [DrawDTO]
-        var skipped: Int
-    }
-
     /// A calendar fixed to UTC so `DD.MM.YYYY` maps to a stable, DST-free `Date` (parsed once, per FR-012).
     private static let utcCalendar: Calendar = {
         var calendar = Calendar(identifier: .gregorian)
@@ -27,7 +22,7 @@ nonisolated enum MBNetParser {
         return calendar
     }()
 
-    static func parse(_ text: String) -> ParseResult {
+    static func parse(_ text: String) -> FetchedDraws {
         var draws: [DrawDTO] = []
         var skipped = 0
 
@@ -41,7 +36,7 @@ nonisolated enum MBNetParser {
             }
         }
 
-        return ParseResult(draws: draws, skipped: skipped)
+        return FetchedDraws(draws: draws, skipped: skipped)
     }
 
     /// Parses one line into a `DrawDTO`, or `nil` if malformed.

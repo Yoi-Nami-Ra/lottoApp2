@@ -10,7 +10,6 @@ import Dependencies
 
 nonisolated struct SourcesRepo: Sendable {
     enum Error: Swift.Error {
-        case weFailed
         case failedToFetchData /// general fail to fetch current data from given server
     }
 

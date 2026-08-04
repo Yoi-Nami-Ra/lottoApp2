@@ -30,16 +30,22 @@ Examples (first, last observed):
 Observed invariants (7,380 rows on 2026-07-29): 100% match `^\d+\.\s\d{2}\.\d{2}\.\d{4}\s\d+(,\d+){5}$`;
 numbers min=1, max=49; 0 blank lines; full history from 1957.
 
-## Parser contract (`MBNetParser.parse(_ text: String) -> ParseResult`)
+## Parser contract (`MBNetParser.parse(_ text: String) -> FetchedDraws`)
 
 - **Input**: the raw response body (`String`).
-- **Output**: `ParseResult { draws: [DrawDTO], skipped: Int }`.
+- **Output**: `FetchedDraws { draws: [DrawDTO], skipped: Int }`. Both fields cross the fetch boundary —
+  `RemoteSource.fetchData` returns the whole value so `skipped` can be reported (FR-007).
 - **Behavior**:
   - Split on newlines; trim; ignore empty lines.
   - For each line, validate against the field rules. Well-formed → a `DrawDTO`. Malformed (bad index, bad
     date, ≠6 numbers, out-of-range number) → increment `skipped`, do not throw (FR-007).
-  - A body that yields **zero** parseable lines from a non-empty, well-fetched response is still a *success*
-    with `draws == []` (maps to the "empty history" edge case — record count 0).
+  - A body with **no rows at all** (empty/whitespace) is a *success* with `draws == []` — the spec's
+    "empty history" edge case (record count 0).
+  - A body that **had rows but yielded zero parseable ones** (`draws.isEmpty && skipped > 0`) is schema
+    drift, not an empty history: `MBNetSource.fetchDraws()` throws `RemoteSourceError.unparseableBody`, so
+    the sync fails and nothing is written. This is what FR-006 ("a response that cannot be parsed at all
+    MUST report the sync as a failure") and the spec's Schema-drift edge case require; an earlier revision
+    of this contract said such a body was a success, which contradicted both.
   - The parser never performs I/O and never throws; transport/status failures are the caller's concern
     (`NetworkClient`/`RemoteSource.fetchData`), which throw → sync failure → alert.
 - **Determinism**: pure function of its input → exhaustively unit-testable (Principle III).
@@ -51,5 +57,6 @@ numbers min=1, max=49; 0 blank lines; full history from 1957.
 | Host unreachable / timeout (15s) | `NetworkClient.data` throws | `RemoteSource.fetchData` throws → `SorcesRepoImp` → `.failure(.failedToFetchData)` → alert; no write |
 | Non-2xx HTTP status | `NetworkClient` live (throws on non-2xx) | same as above |
 | Body not valid UTF-8 | `RemoteSource.fetchData` decode | throws → failure; no write |
-| Body decodes but 0 parseable lines | `MBNetParser` | success, empty history (count 0) |
-| Some lines malformed | `MBNetParser` | success; malformed skipped & counted (surfaced via `skipped`) |
+| Body decodes, no rows present | `MBNetParser` | success, empty history (count 0) |
+| Body decodes, rows present but none parseable | `MBNetSource.fetchDraws` | throws `unparseableBody(skipped:)` → failure; no write |
+| Some lines malformed | `MBNetParser` | success; malformed skipped & counted, then logged by `SorcesRepoImp` |

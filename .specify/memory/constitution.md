@@ -1,6 +1,19 @@
 <!--
 Sync Impact Report
 ==================
+Version change: 1.0.1 → 1.0.2
+Bump rationale: PATCH — rename the outermost layer from "Scenes" to "Presentation" throughout, matching the
+`lottoApp2/Presentation/` directory the code now lives in. Purely nominal: the dependency rule, its direction,
+and every MUST are unchanged; no principle added, removed, or redefined.
+
+Templates requiring updates:
+  - ✅ CLAUDE.md — layer diagram and architecture layout updated to `Presentation/`.
+  - ✅ specs/001-mbnet-source/* — left as the historical record of a shipped feature; the paths there refer
+       to the tree as it stood at implementation time.
+
+Follow-up TODOs: none.
+
+--- Prior entry ---
 Version change: 1.0.0 → 1.0.1
 Bump rationale: PATCH — reconcile the Technology & Platform Constraints "Testing" line from "XCTest"
 to "swift-testing" to match the codebase's actual test runner and CLAUDE.md guidance. No principle
@@ -44,13 +57,13 @@ Follow-up TODOs: none.
 ### I. Layered Clean Architecture (Dependencies Point Inward)
 
 The codebase is organized into three layers with a strict, one-directional dependency rule:
-**Scenes (UI) → Domain (BLogic, Repos, Ents) → Data (Repos impl, Sources)**.
+**Presentation (UI) → Domain (BLogic, Repos, Ents) → Data (Repos impl, Sources)**.
 
 - Source dependencies MUST point inward only. Domain code MUST NOT import or reference
-  concrete Data-layer types; the UI (Scenes) MUST NOT reach past the Domain layer into
+  concrete Data-layer types; the UI (Presentation) MUST NOT reach past the Domain layer into
   Data implementations.
 - The Domain layer owns the contracts (entities and repository/business-logic interfaces).
-  The Data layer provides implementations; the Scenes layer consumes Domain interfaces.
+  The Data layer provides implementations; the Presentation layer consumes Domain interfaces.
 - Cross-layer collaboration happens exclusively through abstractions declared in the
   inner layer (see Principle IV), never through direct construction of an outer layer's
   concrete types.
@@ -177,4 +190,4 @@ test surface.
   (or the PR description) with the reason and the simpler alternative that was rejected.
   Unjustified complexity MUST be removed.
 
-**Version**: 1.0.1 | **Ratified**: 2026-07-27 | **Last Amended**: 2026-07-30
+**Version**: 1.0.2 | **Ratified**: 2026-07-27 | **Last Amended**: 2026-08-04

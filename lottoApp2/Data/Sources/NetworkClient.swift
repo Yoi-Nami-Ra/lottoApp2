@@ -23,11 +23,23 @@ extension NetworkClient {
 }
 
 extension NetworkClient: nonisolated DependencyKey {
+    private static let requestTimeout: TimeInterval = 15
+    private static let resourceTimeout: TimeInterval = 60
+
+    /// One shared session for the process. `URLSession(configuration:)` retains itself until it is
+    /// invalidated, so building one per request leaks the session and its delegate queue on every sync.
+    ///
+    /// Stays `.ephemeral` deliberately: the endpoint sends no validators, so letting `URLCache` apply its
+    /// heuristic freshness could serve a stale history back as a "successful" sync.
+    private static let session: URLSession = {
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.timeoutIntervalForRequest = requestTimeout
+        configuration.timeoutIntervalForResource = resourceTimeout
+        return URLSession(configuration: configuration)
+    }()
+
     nonisolated static let liveValue = NetworkClient(
         data: { url in
-            let configuration = URLSessionConfiguration.ephemeral
-            configuration.timeoutIntervalForRequest = 15
-            let session = URLSession(configuration: configuration)
             let (data, response) = try await session.data(from: url)
             guard let http = response as? HTTPURLResponse else { throw Failure.notHTTP }
             guard (200..<300).contains(http.statusCode) else { throw Failure.badStatus(http.statusCode) }
@@ -35,10 +47,14 @@ extension NetworkClient: nonisolated DependencyKey {
         }
     )
 
-    /// No live network in tests/previews: fail fast unless explicitly overridden.
+    /// No live network in tests: fail fast unless explicitly overridden.
     nonisolated static let testValue = NetworkClient(
         data: unimplemented("NetworkClient.data")
     )
+
+    /// Previews get the same fail-fast value. `DependencyKey.previewValue` otherwise defaults to
+    /// `liveValue`, which would let a `#Preview` reach the real network.
+    nonisolated static var previewValue: NetworkClient { testValue }
 }
 
 extension DependencyValues {

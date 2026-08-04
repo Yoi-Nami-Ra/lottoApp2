@@ -7,35 +7,32 @@
 
 import XCTest
 
-final class lottoApp2UITests: XCTestCase {
+// `nonisolated`: XCTestCase's overridden members are nonisolated, so the target's default MainActor
+// isolation can't apply to the subclass. Individual test methods opt in with @MainActor as usual.
+nonisolated final class lottoApp2UITests: XCTestCase {
 
     override func setUpWithError() throws {
-        // Put setup code here. This method is called before the invocation of each test method in the class.
-
-        // In UI tests it is usually best to stop immediately when a failure occurs.
         continueAfterFailure = false
-
-        // In UI tests it’s important to set the initial state - such as interface orientation - required for your tests before they run. The setUp method is a good place to do this.
     }
 
-    override func tearDownWithError() throws {
-        // Put teardown code here. This method is called after the invocation of each test method in the class.
-    }
-
+    /// SC-001 / SC-007: the MBNet card is on screen at launch and shows every field it is supposed to.
     @MainActor
-    func testExample() throws {
-        // UI tests must launch the application that they test.
+    func testMBNetCardIsListedAtLaunchWithAllFields() throws {
         let app = XCUIApplication()
         app.launch()
 
-        // Use XCTAssert and related functions to verify your tests produce the correct results.
+        XCTAssertTrue(
+            app.staticTexts["MBNet Server"].waitForExistence(timeout: 5),
+            "MBNet must be listed whether or not it has ever synced"
+        )
+        for label in ["records", "First Record:", "Latest Record:"] {
+            XCTAssertTrue(app.staticTexts[label].exists, "card is missing the '\(label)' field")
+        }
+        XCTAssertTrue(app.buttons.containing(.staticText, identifier: "Refresh").firstMatch.exists,
+                      "FR-018: every card provides a Refresh button")
     }
 
-    @MainActor
-    func testLaunchPerformance() throws {
-        // This measures how long it takes to launch your application.
-        measure(metrics: [XCTApplicationLaunchMetric()]) {
-            XCUIApplication().launch()
-        }
-    }
+    // `testLaunchPerformance` (Xcode boilerplate) was removed: it relaunched the app five times for ~6
+    // minutes, asserted nothing, and destabilised the combined unit+UI run. Launch timing belongs in a
+    // dedicated performance run, not in the default test action.
 }

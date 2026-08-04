@@ -19,11 +19,12 @@ struct SourceEntry_Tests {
         // The child owns no fetch: a tap forwards the intent to the parent as a delegate action.
         let store = TestStore(
             initialState: SourceEntry.State(
-                id: "a",
-                name: "b",
-                lastSync: .now,
-                firstRecordDate: .now,
-                lastRecordDate: .now,
+                id: "mbnet",
+                name: "MBNet Server",
+                lastSync: .fixedNow,
+                lastSyncSeverity: .low,
+                firstRecordDate: .fixedNow,
+                lastRecordDate: .fixedNow,
                 recordsCount: 1
             )
         ) {
@@ -54,9 +55,10 @@ struct SourceEntry_Tests {
         var initialState = SourceEntry.State(
             id: "mbnet",
             name: "MBNet Server",
-            lastSync: .now,
-            firstRecordDate: .now,
-            lastRecordDate: .now,
+            lastSync: .fixedNow,
+            lastSyncSeverity: .low,
+            firstRecordDate: .fixedNow,
+            lastRecordDate: .fixedNow,
             recordsCount: 100
         )
         initialState.alert = .syncFailed
@@ -68,5 +70,25 @@ struct SourceEntry_Tests {
         await store.send(.alert(.dismiss)) {
             $0.alert = nil
         }
+    }
+
+    @MainActor
+    @Test
+    func apply_refreshesAnalyticsAndClearsAlert() async throws {
+        // The in-place update keeps the entry's identity (so `IdentifiedArray` can't trap) while refreshing
+        // every displayed field and dismissing a stale failure alert.
+        var state = SourceEntry.State(id: "mbnet", name: "Old Name", recordsCount: 1)
+        state.alert = .syncFailed
+
+        state.apply(.refreshedMbnetMock, now: .fixedNow)
+
+        #expect(state.id == "mbnet")
+        #expect(state.name == "MBNet Server")
+        #expect(state.recordsCount == 7380)
+        #expect(state.lastSync == Source.refreshedMbnetMock.lastSync)
+        #expect(state.firstRecordDate == Source.refreshedMbnetMock.firstRecord)
+        #expect(state.lastRecordDate == Source.refreshedMbnetMock.latestRecord)
+        #expect(state.lastSyncSeverity == .low)
+        #expect(state.alert == nil)
     }
 }

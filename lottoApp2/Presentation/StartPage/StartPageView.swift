@@ -16,12 +16,36 @@ struct StartPageView: View {
         List {
             ForEach(store.scope(state: \.sources, action: \.sources)) { sourceStore in
                 SourceEntryView(store: sourceStore)
+                    // `SourceCardStyle` already draws the card; without these the row adds a second
+                    // background, its own shadow, and a separator on top of it.
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+                    .listRowInsets(.sourceRow)
             }
         }
-        .padding()
-        .background(.background)
-        .task { store.send(.task) }
+        .listStyle(.plain)
+        .scrollContentBackground(.hidden)
+        .background(Color.pageBackground)
+        // `.finish()` ties the effect to the view's lifetime, so it is cancelled on disappear instead of
+        // outliving the screen.
+        .task { await store.send(.task).finish() }
     }
+}
+
+// MARK: - Resources
+extension Color {
+    fileprivate static let pageBackground: Self = .backgroundSecondary
+}
+
+extension EdgeInsets {
+    fileprivate static let sourceRow = EdgeInsets(
+        top: .rowVInset, leading: .rowHInset, bottom: .rowVInset, trailing: .rowHInset
+    )
+}
+
+extension CGFloat {
+    fileprivate static let rowVInset: Self = 8
+    fileprivate static let rowHInset: Self = 16
 }
 
 #Preview("Start page - dark") {
@@ -34,9 +58,14 @@ struct StartPageView: View {
         .preferredColorScheme(.light)
 }
 
-#Preview("Start page - no sources") {
+#Preview("Start page - no sources - light") {
     StartPageView(store: .previewEmpty)
         .preferredColorScheme(.light)
+}
+
+#Preview("Start page - no sources - dark") {
+    StartPageView(store: .previewEmpty)
+        .preferredColorScheme(.dark)
 }
 
 extension StoreOf<StartPage> {

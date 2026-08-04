@@ -7,7 +7,7 @@
 
 import Testing
 import Dependencies
-    
+
 @testable import lottoApp2
 
 struct SourceBLogicTests {
@@ -15,10 +15,9 @@ struct SourceBLogicTests {
     @Test
     @MainActor
     func knownSources() async throws {
+        // The business logic is a pass-through today: it forwards whatever the repo lists, unchanged.
         let sources = await withDependencies {
-            // mbnet, lotto as known sources
             $0.sourcesRepo.listKnownSources = { [.mbnetMock, .partialLottoMock] }
-            // mbnet as saved source
         } operation: {
             await SourcesBLogic.liveValue.knownSources()
         }
@@ -37,13 +36,24 @@ struct SourceBLogicTests {
 
         #expect(testResult == .success(Source.mbnetMock))
     }
+
+    @Test
+    @MainActor
+    func fetchSourceDataMapsRepoFailure() async throws {
+        let testResult = await withDependencies {
+            $0.sourcesRepo.fetchAndSaveDataFrom = { _ in .failure(.failedToFetchData) }
+        } operation: {
+            await SourcesBLogic.liveValue.fetchFrom("mbnet")
+        }
+
+        guard case .failure(.somethingWentWrong) = testResult else {
+            Issue.record("expected .somethingWentWrong, got \(testResult)")
+            return
+        }
+    }
 }
 
-extension Source {
-    static let partialMbnetMock: Self = .init(
-        name: "mbnet",
-        displayName: "MBNet Server",
-    )
+nonisolated extension Source {
     static let partialLottoMock: Self = .init(
         name: "lotto",
         displayName: "Lotto Server",
