@@ -18,6 +18,53 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Correct existing typos in new code; do not propagate them. `firstRecrd` has been fixed to `firstRecord` everywhere; `SorcesRepoImp.swift` / `SorcesRepoImpTests.swift` are still misspelled *filenames* (the types inside are `SourcesRepoImpl`) — match those only where already referenced, don't invent new ones.
 
+## Domain model & block pipeline (target design)
+
+This section is the target conceptual model the Domain layer is growing toward. It is
+documentation, not yet fully implemented; items marked **TBD** are open design questions
+that are *not* to be resolved by guessing — raise them before committing to a shape.
+
+### Entities
+
+- **Element** — a single drawable value. Modeled as `UInt` for now (may become a richer
+  type later).
+- **CombinationType** — an "**x of y**" rule: a combination of `x` non-repeating elements
+  drawn from a pool of `y` elements, with `x <= y`. (`x` = pick count, `y` = pool size.)
+- **Combination** — a concrete draw: a **CombinationType** plus a list of exactly `x`
+  non-repeating **Element**s.
+- **SubCombination** — a combination of `z` elements where `z < x`, *derived from* a
+  Combination. **TBD:** whether a SubCombination references the **GameEntry**, the
+  **CombinationType** it was produced from, or **both** — leave undecided until specified.
+- **GameEntry** — one row of a game's history: an **index**, a **date**, and a
+  **Combination**.
+- **Game** — what a **Source** produces: a list of **GameEntry**s, described by a
+  **GameType**.
+- **GameType** — describes a Game; **mainly** carries the **CombinationType**. Many Games
+  can share the same GameType.
+
+Ownership arrows: `Source → Game`, `Game → GameType`, `Game → [GameEntry]`,
+`GameType → CombinationType`, `GameEntry → Combination`, `Combination → CombinationType + [Element]`.
+
+### Blocks (typed pipeline)
+
+The app is composed of **blocks**. Each block takes an **input of a given type** and
+produces an **output of the same or another type**; blocks compose into a pipeline.
+
+- **Source** — a *special* block with **no input** that produces a **Game**. (The existing
+  `Source`/`SourcesRepo`/`SourceModule` machinery is the current head of this pipeline.)
+- **Filter blocks** — `dropLast(x)`, `dropFirst(x)`, `prefix(x)`, `suffix(x)`.
+  (User wrote "sufix"; correct spelling is **suffix** per the typo rule above.)
+- **Sorting blocks** — sort by **date**, sort by **index**, sort by **count**.
+- **Count blocks**:
+  - **count all elements** — total element count across the processed list.
+  - **count unique elements** — produces a list of **UniqueCount**, each holding a unique
+    element and its number of occurrences in the processed list.
+
+**TBD / to specify before implementing:** the concrete I/O *types* that flow between blocks
+(e.g. what "sort by count" sorts, what a filter operates over — `[GameEntry]` vs `[Element]`
+vs `[UniqueCount]`), and how block chains are represented/executed. Do not invent these; they
+need a spec.
+
 ## Build & Test
 
 Single scheme `lottoApp2`; targets `lottoApp2`, `lottoApp2Tests`, `lottoApp2UITests` — all three on iOS 18.6 / Swift 6. Note this repo builds against an Xcode 27 Beta toolchain.
