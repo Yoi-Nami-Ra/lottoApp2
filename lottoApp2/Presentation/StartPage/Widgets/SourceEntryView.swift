@@ -51,6 +51,8 @@ struct SourceEntryView: View {
                         .font(.title2)
                         .fontWeight(.bold)
                         .foregroundStyle(.textPrimary)
+                        .lineLimit(.recordsCountLines)
+                        .minimumScaleFactor(.recordsCountScale)
                 }
                 Text(.records)
                     .font(.caption)
@@ -63,16 +65,23 @@ struct SourceEntryView: View {
     /// for anyone who cannot distinguish it (FR-015).
     private var titleRow: some View {
         HStack(spacing: .titleCheckSpacing) {
+            // The checkmark takes its intrinsic width and the title keeps the rest: without this the
+            // two split the column evenly at accessibility text sizes and the name hyphen-breaks
+            // mid-word ("MB-/Net/Serv/er") purely because the badge appeared next to it.
             SourceTitle(title: store.name)
+                .layoutPriority(.titleOverCheckmark)
 
             if store.isSelected {
                 Image(.selectedCheckmark)
                     .font(.selectedCheckmark)
                     .foregroundStyle(Color.selectedCheckmark)
+                    .fixedSize()
             }
         }
     }
 
+    /// `lineLimit(1)` plus a scale floor because a record count is a single number: allowed to wrap it
+    /// splits across lines at accessibility text sizes and reads as two separate figures.
     private var recordsCount: some View {
         if let count = store.recordsCount {
             Text(count.toString)
@@ -286,6 +295,7 @@ extension CGFloat {
     fileprivate static let cardSelectedBorderWidth: Self = 2
     fileprivate static let cardIdleBorderWidth: Self = 0
     fileprivate static let titleCheckSpacing: Self = 6
+    fileprivate static let recordsCountScale: Self = 0.5
 
     fileprivate static let headerDataSpacing: Self = 16
     fileprivate static let cardCorners: Self = 12
@@ -310,7 +320,12 @@ extension CGFloat {
     fileprivate static let refreshBorderWidth: Self = 1
 }
 
+extension Int {
+    fileprivate static let recordsCountLines: Self = 1
+}
+
 extension Double {
+    fileprivate static let titleOverCheckmark: Self = 1
     fileprivate static let lightOpacity: Self = 0.15
     fileprivate static let darkOpacity: Self = 0.35
 

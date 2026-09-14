@@ -113,11 +113,13 @@ extension CGFloat {
     fileprivate static let rowHPadding: Self = 14
     fileprivate static let rowCorners: Self = 12
     fileprivate static let rowVInset: Self = 6
-    fileprivate static let headerNameScale: Self = 0.8
+    /// Low enough that a long name still fits within `headerNameLines` at the largest accessibility
+    /// text size, where `.title2` roughly doubles and two lines at 0.8 would truncate.
+    fileprivate static let headerNameScale: Self = 0.6
 }
 
 extension Int {
-    fileprivate static let headerNameLines: Self = 2
+    fileprivate static let headerNameLines: Self = 3
 }
 
 extension LocalizedStringKey {

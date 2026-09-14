@@ -39,10 +39,10 @@ struct StartPage {
             if sources.count == 1 {
                 selectedSourceID = sources.first?.id
             }
-            // `ids` is copied out first: iterating it while writing through `sources` would be
-            // overlapping access to the same storage.
+            // `ids` already hands back a value, so the loop iterates its own copy while the body
+            // writes through `sources` — no second copy is needed to keep the accesses apart.
             let chosen = selectedSourceID
-            for id in Array(sources.ids) {
+            for id in sources.ids {
                 sources[id: id]?.isSelected = (id == chosen)
             }
         }

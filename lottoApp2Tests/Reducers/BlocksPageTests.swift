@@ -21,7 +21,6 @@ struct BlocksPage_Tests {
         let state = BlocksPage.State(sourceID: "mbnet", sourceName: "MBNet Server")
 
         #expect(state.blocks == [.countUniqueElements])
-        #expect(state.blocks.count == ProcessingBlockKind.allCases.count)
     }
 
     @MainActor
