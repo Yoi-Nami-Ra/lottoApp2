@@ -18,14 +18,25 @@ struct SourceEntryView: View {
             headerRow
             details
         }
-        .modifier(SourceCardStyle.sourceCardStyle)
+        .modifier(SourceCardStyle.sourceCardStyle(isSelected: store.isSelected))
+        // A tap gesture rather than wrapping the card in a `Button`: the Refresh button lives inside, and
+        // a nested button would swallow or ambiguate its taps (FR-012). `contentShape` makes the gaps
+        // between rows hittable too, so "anywhere on the card" is literal.
+        .contentShape(Rectangle())
+        .onTapGesture { store.send(.cardTapped) }
+        // `.contain` keeps Refresh as its own element (FR-032) while the card itself still carries the
+        // name, the selected trait, and a way to choose it without sight of the highlight.
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel(Text(store.name))
+        .accessibilityAddTraits(store.isSelected ? [.isButton, .isSelected] : [.isButton])
+        .accessibilityAction(named: Text(.chooseSourceAction)) { store.send(.cardTapped) }
         .alert($store.scope(state: \.alert, action: \.alert))
     }
 
     private var headerRow: some View {
         HStack(alignment: .top) {
             VStack(alignment: .leading, spacing: .headerVSpacing) {
-                SourceTitle(title: store.name)
+                titleRow
 
                 syncStatusBadge
             }
@@ -44,6 +55,20 @@ struct SourceEntryView: View {
                 Text(.records)
                     .font(.caption)
                     .foregroundStyle(.textSecondary)
+            }
+        }
+    }
+
+    /// The checkmark is what keeps the chosen state legible without colour — the border alone would fail
+    /// for anyone who cannot distinguish it (FR-015).
+    private var titleRow: some View {
+        HStack(spacing: .titleCheckSpacing) {
+            SourceTitle(title: store.name)
+
+            if store.isSelected {
+                Image(.selectedCheckmark)
+                    .font(.selectedCheckmark)
+                    .foregroundStyle(Color.selectedCheckmark)
             }
         }
     }
@@ -167,18 +192,27 @@ struct SourceEntryView: View {
 
 // MARK: - Styles
 struct SourceCardStyle: ViewModifier {
+    let isSelected: Bool
+
     func body(content: Content) -> some View {
         content
             .padding(.vertical, .cardVPadding)
             .padding(.horizontal, .cardHPadding)
             .background(.backgroundPrimary)
             .cornerRadius(.cardCorners)
+            .overlay(
+                RoundedRectangle(cornerRadius: .cardCorners)
+                    .stroke(
+                        Color.cardBorder(isSelected: isSelected),
+                        lineWidth: .cardBorderWidth(isSelected: isSelected)
+                    )
+            )
             .shadow(color: .cardShadow, radius: .shadowRadius, x: .shadowXOffset, y: .shadowYOffset)
     }
 }
 
 extension ViewModifier where Self == SourceCardStyle {
-    static var sourceCardStyle: SourceCardStyle { .init() }
+    static func sourceCardStyle(isSelected: Bool) -> SourceCardStyle { .init(isSelected: isSelected) }
 }
 
 // MARK: - Resources
@@ -194,6 +228,13 @@ extension Color {
         case .notSynced: .syncSeverityNone
         }
     }
+    fileprivate static func cardBorder(isSelected: Bool) -> Self {
+        isSelected ? .cardSelectedBorder : .cardIdleBorder
+    }
+    fileprivate static let cardSelectedBorder: Self = .primaryBlue
+    fileprivate static let cardIdleBorder: Self = .clear
+    fileprivate static let selectedCheckmark: Self = .primaryBlue
+
     fileprivate static let firstRecordImage: Self = .primaryBlue
     fileprivate static let firstlastRecordTitle: Self = .textSecondary
     fileprivate static let firstlastRecordDate: Self = .textPrimary
@@ -214,6 +255,7 @@ extension Color {
 }
 
 extension Font {
+    fileprivate static let selectedCheckmark: Self = .title3
     fileprivate static let firstlastRecordTitle: Self = .caption
     fileprivate static let firstlastRecordDate: Self = .subheadline
     fileprivate static let refreshLabel: Self = .caption
@@ -229,6 +271,7 @@ extension Animation {
 }
 
 extension ImageType {
+    fileprivate static let selectedCheckmark: Self = .system("checkmark.circle.fill")
     fileprivate static let firstRecord: Self = .system("calendar")
     fileprivate static let records: Self = .system("square.3.layers.3d")
     fileprivate static let lastRecord: Self = .system("clock")
@@ -237,6 +280,13 @@ extension ImageType {
 }
 
 extension CGFloat {
+    fileprivate static func cardBorderWidth(isSelected: Bool) -> Self {
+        isSelected ? .cardSelectedBorderWidth : .cardIdleBorderWidth
+    }
+    fileprivate static let cardSelectedBorderWidth: Self = 2
+    fileprivate static let cardIdleBorderWidth: Self = 0
+    fileprivate static let titleCheckSpacing: Self = 6
+
     fileprivate static let headerDataSpacing: Self = 16
     fileprivate static let cardCorners: Self = 12
     fileprivate static let cardVPadding: Self = 8
@@ -268,6 +318,7 @@ extension Double {
 }
 
 extension LocalizedStringKey {
+    fileprivate static let chooseSourceAction: Self = "Choose this source"
     fileprivate static let firstRecordTitle: Self = "First Record:"
     fileprivate static let lastRecordTitle: Self = "Latest Record:"
     fileprivate static func lastSynced(_ date: Date) -> Self { "Last synced: \(date.formatted(date: .abbreviated, time: .shortened))" }
@@ -348,6 +399,27 @@ extension LocalizedStringKey {
         .preferredColorScheme(.light)
 }
 
+#Preview("Light Mode - selected") {
+    SourceEntryView(store: Store(initialState: .mock1selected) { SourceEntry() })
+        .padding()
+        .background(.backgroundSecondary)
+        .preferredColorScheme(.light)
+}
+
+#Preview("Dark Mode - selected") {
+    SourceEntryView(store: Store(initialState: .mock1selected) { SourceEntry() })
+        .padding()
+        .background(.backgroundSecondary)
+        .preferredColorScheme(.dark)
+}
+
+#Preview("Light Mode - selected while refreshing") {
+    SourceEntryView(store: Store(initialState: .mock1selectedRefreshing) { SourceEntry() })
+        .padding()
+        .background(.backgroundSecondary)
+        .preferredColorScheme(.light)
+}
+
 #Preview("Dark Mode - error alert") {
     SourceEntryView(store: Store(initialState: .mock1a) { SourceEntry() })
         .padding()
@@ -413,6 +485,19 @@ extension SourceEntry.State {
         recordsCount: 7380,
         isRefreshing: true
     )
+
+    static let mock1selected: Self = {
+        var state = mock1n
+        state.isSelected = true
+        return state
+    }()
+
+    /// A chosen source can still be syncing — choosing and refreshing are independent (FR-017).
+    static let mock1selectedRefreshing: Self = {
+        var state = mock1r
+        state.isSelected = true
+        return state
+    }()
 
     static let mock1a: Self = {
         var state = Self(

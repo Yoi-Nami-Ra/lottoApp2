@@ -33,6 +33,55 @@ struct SourceEntry_Tests {
 
         await store.send(.refreshButtonTapped)
         await store.receive(\.delegate.refreshRequested)
+        // Exhaustive by construction: a second delegate here (e.g. a selection intent) would fail this
+        // test, which is what keeps FR-012 — Refresh never changes which source is chosen.
+    }
+
+    @MainActor
+    @Test
+    func action_cardTapped_emitsSelectionDelegate() async throws {
+        // FR-011: the child owns no decision. Whether the tap may change the choice is a list-level
+        // question, so the intent goes to the parent and the child mutates nothing.
+        let store = TestStore(
+            initialState: SourceEntry.State(
+                id: "mbnet",
+                name: "MBNet Server",
+                lastSync: .fixedNow,
+                lastSyncSeverity: .low,
+                firstRecordDate: .fixedNow,
+                lastRecordDate: .fixedNow,
+                recordsCount: 1
+            )
+        ) {
+            SourceEntry()
+        }
+
+        await store.send(.cardTapped)
+        await store.receive(\.delegate.selectionRequested)
+    }
+
+    @MainActor
+    @Test
+    func action_cardTapped_isNotGuardedWhileRefreshing() async throws {
+        // FR-017 / FR-019: unlike Refresh, choosing has no re-entrancy hazard and no data prerequisite,
+        // so a syncing source stays choosable.
+        let store = TestStore(
+            initialState: SourceEntry.State(
+                id: "mbnet",
+                name: "MBNet Server",
+                lastSync: nil,
+                lastSyncSeverity: .notSynced,
+                firstRecordDate: nil,
+                lastRecordDate: nil,
+                recordsCount: nil,
+                isRefreshing: true
+            )
+        ) {
+            SourceEntry()
+        }
+
+        await store.send(.cardTapped)
+        await store.receive(\.delegate.selectionRequested)
     }
 
     @MainActor

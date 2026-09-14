@@ -15,6 +15,37 @@ struct StartPage {
     @ObservableState
     struct State: Equatable {
         var sources: IdentifiedArrayOf<SourceEntry.State> = []
+        /// The chosen source — the single source of truth for the choice. A single optional makes two
+        /// simultaneous selections unrepresentable rather than merely avoided.
+        var selectedSourceID: SourceEntry.State.ID?
+        /// `false` until the first `sourcesResponse` of this screen's life, and never reset afterwards.
+        /// It is what separates "still finding out" from "there are none", and what keeps a reload after
+        /// returning from swapping the populated list back to a loading indication.
+        var hasLoaded: Bool = false
+        @Presents var blocks: BlocksPage.State?
+
+        var isNextEnabled: Bool { selectedSourceID != nil }
+
+        /// Re-establishes the selection invariants after any change to `sources` or `selectedSourceID`.
+        /// This is the only writer of `SourceEntry.State.isSelected`, and the only place the choice rules
+        /// live, so they cannot drift apart across the call sites that trigger them.
+        ///
+        /// The order matters: a stale id is dropped *before* the single-source rule runs, so a list that
+        /// shrinks to one source chooses the survivor instead of holding on to an id that is gone.
+        mutating func applySelectionRules() {
+            if let id = selectedSourceID, sources[id: id] == nil {
+                selectedSourceID = nil
+            }
+            if sources.count == 1 {
+                selectedSourceID = sources.first?.id
+            }
+            // `ids` is copied out first: iterating it while writing through `sources` would be
+            // overlapping access to the same storage.
+            let chosen = selectedSourceID
+            for id in Array(sources.ids) {
+                sources[id: id]?.isSelected = (id == chosen)
+            }
+        }
     }
 
     enum Action {
@@ -22,6 +53,8 @@ struct StartPage {
         case sourcesResponse([Source])
         case refreshResponse(id: SourceEntry.State.ID, Result<Source, SourcesBLogic.Error>)
         case sources(IdentifiedActionOf<SourceEntry>)
+        case nextButtonTapped
+        case blocks(PresentationAction<BlocksPage.Action>)
     }
 
     private enum CancelID: nonisolated Hashable, Sendable {
@@ -57,6 +90,10 @@ struct StartPage {
                         return entry
                     }
                 )
+                // Monotonic: the loading indication belongs to the period before the *first* result, so a
+                // reload after returning from the blocks page leaves the populated list on screen.
+                state.hasLoaded = true
+                state.applySelectionRules()
                 return .none
 
             case let .sources(.element(id: id, action: .delegate(.refreshRequested))):
@@ -81,12 +118,33 @@ struct StartPage {
                 }
                 return .none
 
-            case .sources:
+            case let .sources(.element(id: id, action: .delegate(.selectionRequested))):
+                // Set the choice, then let the one ruleset settle the mirrors — so "move the highlight"
+                // and "clear the previous one" cannot drift apart.
+                state.selectedSourceID = id
+                state.applySelectionRules()
+                return .none
+
+            case .nextButtonTapped:
+                // The button is disabled without a choice; the guard is here too so the rule holds
+                // however the action arrives. Assigning `blocks` is idempotent, which is what makes a
+                // double tap push exactly one destination.
+                guard
+                    let id = state.selectedSourceID,
+                    let entry = state.sources[id: id]
+                else { return .none }
+                state.blocks = BlocksPage.State(sourceID: entry.id, sourceName: entry.name)
+                return .none
+
+            case .sources, .blocks:
                 return .none
             }
         }
         .forEach(\.sources, action: \.sources) {
             SourceEntry()
+        }
+        .ifLet(\.$blocks, action: \.blocks) {
+            BlocksPage()
         }
     }
 }

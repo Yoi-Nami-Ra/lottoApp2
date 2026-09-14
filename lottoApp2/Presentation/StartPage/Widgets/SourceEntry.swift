@@ -32,17 +32,22 @@ struct SourceEntry {
         var lastRecordDate: Date?
         var recordsCount: Int?
         var isRefreshing: Bool = false
+        /// Mirrors the parent's `selectedSourceID` so the card can draw itself. The parent is the only
+        /// writer — see `StartPage.State.applySelectionRules()`; nothing in this reducer touches it.
+        var isSelected: Bool = false
         @Presents var alert: AlertState<Action.Alert>?
     }
 
     enum Action {
         case refreshButtonTapped
+        case cardTapped
         case delegate(Delegate)
         case alert(PresentationAction<Alert>)
 
         @CasePathable
         enum Delegate: Equatable {
             case refreshRequested
+            case selectionRequested
         }
         enum Alert: Equatable {}
     }
@@ -55,6 +60,12 @@ struct SourceEntry {
                 // The parent (StartPage) owns the fetch; forward the intent and let it drive `isRefreshing`.
                 guard state.isRefreshing == false else { return .none }
                 return .send(.delegate(.refreshRequested))
+
+            case .cardTapped:
+                // No guard, deliberately: unlike a refresh there is nothing to be re-entrant about, and
+                // FR-019 makes a source choosable whatever its data or sync state. Whether the choice may
+                // move is a list-level question, so it belongs to the parent.
+                return .send(.delegate(.selectionRequested))
             case .delegate, .alert:
                 return .none
             }
