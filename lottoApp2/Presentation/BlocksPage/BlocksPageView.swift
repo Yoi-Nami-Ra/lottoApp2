@@ -19,7 +19,10 @@ struct BlocksPageView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background(Color.pageBackground)
         .navigationTitle(LocalizedStringKey.blocksPageTitle)
+        // Only iOS has a navigation bar title display mode; the Mac destination builds the same view.
+        #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
+        #endif
     }
 
     /// The name only — record counts and sync status stay on the screen the person just left, so nothing
