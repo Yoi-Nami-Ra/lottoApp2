@@ -120,9 +120,15 @@ by overriding `\.blSources` (as `PreviewFixtures.swift` already does with `Sourc
 
 - [X] All 15 tests above written first, failing, then passing; existing suite still green.
 - [X] Previews cover the state matrix in both colour schemes.
-- [ ] Manual checks 1–13 pass on the simulator — **partial**: 1, 7, 8, 9, 11, 12 verified on iPhone 17 Pro.
-      Checks 2–6 need several sources, which the live single-source registry cannot produce (reducer tests
-      and previews cover them); check 10 is covered by test 14; check 13 (VoiceOver) is unverified.
+- [X] Manual checks 1–13 pass on the simulator (iPhone 17 Pro, 2026-09-20). Checks 2–6 and the empty/loading
+      half of check 1 were reached by temporarily overriding `\.blSources` in the app entry — first with
+      `Source.mocks`, then with a delayed-empty fixture — both reverted afterwards. Check 13 was verified
+      against the live accessibility tree (a temporary XCUITest dump, since removed): card as a single
+      `Button` carrying `Selected`, Refresh as its own nested button, `Next` marked `Disabled`, and the
+      loading indicator, empty message, blocks header and block row all reachable. **How it *sounds* is
+      still unverified** — no one has listened to VoiceOver's phrasing or rotor actions.
+      Cosmetic, not blocking: at the largest AX text size "Refresh" hyphenates to `Re-/fres/h` and
+      "Latest Record:" to `Latest Recor/d:` — wrapped, not clipped, so SC-003 holds.
 - [X] `Package.resolved` unchanged; nothing added under `Data/`; no new `DependencyKey`.
       (`Package.resolved`, `project.pbxproj` and `Config/Info.plist` carry edits that pre-date this feature.)
 - [X] No inline colour, font, spacing, image name, or copy literal in any view body.
