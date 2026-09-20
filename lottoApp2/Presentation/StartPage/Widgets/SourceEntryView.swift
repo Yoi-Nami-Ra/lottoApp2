@@ -10,6 +10,7 @@ import SwiftUI
 
 struct SourceEntryView: View {
     @Environment(\.colorScheme) var colorScheme
+    @Environment(\.dynamicTypeSize) var dynamicTypeSize
 
     @Bindable var store: StoreOf<SourceEntry>
 
@@ -33,32 +34,52 @@ struct SourceEntryView: View {
         .alert($store.scope(state: \.alert, action: \.alert))
     }
 
+    /// Same reflow as `details`, for the same reason: side by side at accessibility text sizes the two
+    /// columns each end up narrower than a single word, so the name breaks as "MB" / "Net" / "Ser" / "ver"
+    /// and the sync badge as "Last" / "syn" / "ced:". Stacked, each gets the full card width and wraps at
+    /// word boundaries instead.
     private var headerRow: some View {
-        HStack(alignment: .top) {
+        headerLayout {
             VStack(alignment: .leading, spacing: .headerVSpacing) {
                 titleRow
 
                 syncStatusBadge
             }
+            // Stands in for the `Spacer()` this row used to carry — see the note on `details`.
+            .frame(maxWidth: .infinity, alignment: .leading)
 
-            Spacer()
-
-            VStack(alignment: .trailing) {
-                HStack(spacing: .headerVSpacing) {
-                    Image(.records)
-                        .foregroundStyle(.textPrimary)
-                    recordsCount
-                        .font(.title2)
-                        .fontWeight(.bold)
-                        .foregroundStyle(.textPrimary)
-                        .lineLimit(.recordsCountLines)
-                        .minimumScaleFactor(.recordsCountScale)
-                }
-                Text(.records)
-                    .font(.caption)
-                    .foregroundStyle(.textSecondary)
-            }
+            recordsColumn
         }
+    }
+
+    private var headerLayout: AnyLayout {
+        dynamicTypeSize.isAccessibilitySize
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: .headerStackSpacing))
+            : AnyLayout(HStackLayout(alignment: .top))
+    }
+
+    private var recordsColumn: some View {
+        VStack(alignment: recordsAlignment) {
+            HStack(spacing: .headerVSpacing) {
+                Image(.records)
+                    .foregroundStyle(.textPrimary)
+                recordsCount
+                    .font(.title2)
+                    .fontWeight(.bold)
+                    .foregroundStyle(.textPrimary)
+                    .lineLimit(.recordsCountLines)
+                    .minimumScaleFactor(.recordsCountScale)
+            }
+            Text(.records)
+                .font(.caption)
+                .foregroundStyle(.textSecondary)
+        }
+    }
+
+    /// Trailing while the count sits in its own right-hand column; leading once it is stacked under the
+    /// name, where a right-aligned count would read as belonging to nothing.
+    private var recordsAlignment: HorizontalAlignment {
+        dynamicTypeSize.isAccessibilitySize ? .leading : .trailing
     }
 
     /// The checkmark is what keeps the chosen state legible without colour — the border alone would fail
@@ -115,38 +136,59 @@ struct SourceEntryView: View {
         lastSyncForeground.opacity(colorScheme == .light ? .lightOpacity : .darkOpacity)
     }
 
+    /// Side by side normally, stacked at accessibility text sizes: squeezed into the narrow trailing
+    /// column the labels character-break mid-word ("Latest Recor" / "d:") and the button hyphenates
+    /// ("Re-" / "fres" / "h"). Reflowing gives both the full card width instead of shrinking them.
     private var details: some View {
-        HStack {
+        detailsLayout {
             VStack(alignment: .leading) {
-                HStack {
-                    Image(.firstRecord)
-                        .foregroundStyle(Color.firstRecordImage)
-                    VStack(alignment: .leading, spacing: .detailsSpacing) {
-                        Text(.firstRecordTitle)
-                            .font(.firstlastRecordTitle)
-                            .foregroundStyle(Color.firstlastRecordTitle)
-                        firstRecordDate
-                            .font(.firstlastRecordDate)
-                            .fontWeight(.firstlastRecordDate)
-                            .foregroundStyle(Color.firstlastRecordDate)
-                    }
-                }
-                HStack {
-                    Image(.lastRecord)
-                        .foregroundStyle(Color.lastRecordImage)
-                    VStack(alignment: .leading, spacing: .detailsSpacing) {
-                        Text(.lastRecordTitle)
-                            .font(.firstlastRecordTitle)
-                            .foregroundStyle(Color.firstlastRecordTitle)
-                        lastRecordDate
-                            .font(.firstlastRecordDate)
-                            .fontWeight(.firstlastRecordDate)
-                            .foregroundStyle(Color.firstlastRecordDate)
-                    }
-                }
+                detailRow(
+                    image: .firstRecord,
+                    imageColor: .firstRecordImage,
+                    title: .firstRecordTitle,
+                    date: firstRecordDate
+                )
+                detailRow(
+                    image: .lastRecord,
+                    imageColor: .lastRecordImage,
+                    title: .lastRecordTitle,
+                    date: lastRecordDate
+                )
             }
-            Spacer()
+            // Replaces the `Spacer()` this row used to carry: it pushes the button to the trailing edge
+            // in the horizontal layout *and* gives the column the full width in the stacked one, where a
+            // spacer would only have added dead vertical space.
+            .frame(maxWidth: .infinity, alignment: .leading)
+
             refreshButton
+                .layoutPriority(.refreshOverDetails)
+        }
+    }
+
+    private var detailsLayout: AnyLayout {
+        dynamicTypeSize.isAccessibilitySize
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: .detailsStackSpacing))
+            : AnyLayout(HStackLayout())
+    }
+
+    private func detailRow(
+        image: ImageType,
+        imageColor: Color,
+        title: LocalizedStringKey,
+        date: some View
+    ) -> some View {
+        HStack {
+            Image(image)
+                .foregroundStyle(imageColor)
+            VStack(alignment: .leading, spacing: .detailsSpacing) {
+                Text(title)
+                    .font(.firstlastRecordTitle)
+                    .foregroundStyle(Color.firstlastRecordTitle)
+                date
+                    .font(.firstlastRecordDate)
+                    .fontWeight(.firstlastRecordDate)
+                    .foregroundStyle(Color.firstlastRecordDate)
+            }
         }
     }
 
@@ -161,8 +203,13 @@ struct SourceEntryView: View {
                         store.isRefreshing ? .refreshSpin : .default,
                         value: store.isRefreshing
                     )
+                // One word on one line: allowed to wrap it hyphen-breaks into "Re-" / "fres" / "h" at
+                // accessibility text sizes. The scale floor keeps the longer "Refreshing…" readable
+                // rather than truncated when the card is still narrow.
                 Text(store.isRefreshing ? .refreshing : .refresh)
                     .fontWeight(.refreshLabel)
+                    .lineLimit(.refreshLabelLines)
+                    .minimumScaleFactor(.refreshLabelScale)
             }
             .font(.refreshLabel)
             .foregroundStyle(store.isRefreshing ? Color.refreshActiveForeground : .refreshIdleForeground)
@@ -307,6 +354,8 @@ extension CGFloat {
     fileprivate static let shadowYOffset: Self = 1
 
     fileprivate static let detailsSpacing: Self = 2
+    fileprivate static let detailsStackSpacing: Self = 12
+    fileprivate static let headerStackSpacing: Self = 8
     fileprivate static let headerVSpacing: Self = 4
 
     fileprivate static let syncStatusHPadding: Self = 8
@@ -318,14 +367,23 @@ extension CGFloat {
     fileprivate static let refreshVPadding: Self = 6
     fileprivate static let refreshCorners: Self = 8
     fileprivate static let refreshBorderWidth: Self = 1
+    fileprivate static let refreshLabelScale: Self = 0.7
+}
+
+extension DynamicTypeSize {
+    /// `accessibility-extra-extra-extra-large`, the largest size the system offers — the one the card
+    /// has to survive.
+    fileprivate static let largestAccessibility: Self = .accessibility5
 }
 
 extension Int {
     fileprivate static let recordsCountLines: Self = 1
+    fileprivate static let refreshLabelLines: Self = 1
 }
 
 extension Double {
     fileprivate static let titleOverCheckmark: Self = 1
+    fileprivate static let refreshOverDetails: Self = 1
     fileprivate static let lightOpacity: Self = 0.15
     fileprivate static let darkOpacity: Self = 0.35
 
@@ -447,6 +505,41 @@ extension LocalizedStringKey {
         .padding()
         .background(.backgroundSecondary)
         .preferredColorScheme(.light)
+}
+
+// The largest accessibility text size — `accessibility-extra-extra-extra-large` — is where the header
+// and details rows used to squeeze their columns until the labels broke mid-word. These previews are the
+// canvas check that both reflow instead.
+#Preview("Light Mode - AX5") {
+    SourceEntryView(store: Store(initialState: .mock1n) { SourceEntry() })
+        .padding()
+        .background(.backgroundSecondary)
+        .preferredColorScheme(.light)
+        .dynamicTypeSize(.largestAccessibility)
+}
+
+#Preview("Dark Mode - AX5") {
+    SourceEntryView(store: Store(initialState: .mock1selected) { SourceEntry() })
+        .padding()
+        .background(.backgroundSecondary)
+        .preferredColorScheme(.dark)
+        .dynamicTypeSize(.largestAccessibility)
+}
+
+#Preview("Light Mode - AX5 refreshing") {
+    SourceEntryView(store: Store(initialState: .mock1r) { SourceEntry() })
+        .padding()
+        .background(.backgroundSecondary)
+        .preferredColorScheme(.light)
+        .dynamicTypeSize(.largestAccessibility)
+}
+
+#Preview("Dark Mode - AX5 empty") {
+    SourceEntryView(store: Store(initialState: .mock1e) { SourceEntry() })
+        .padding()
+        .background(.backgroundSecondary)
+        .preferredColorScheme(.dark)
+        .dynamicTypeSize(.largestAccessibility)
 }
 
 extension SourceEntry.State {
