@@ -1,0 +1,17 @@
+id: 17
+title: "Fix misspelled repo filenames and stale docs TODO"
+type: task
+description: |
+  Rename `Data/Repos/SorcesRepoImp.swift` and
+  `lottoApp2Tests/SorcesRepoImpTests.swift` to match the `SourcesRepoImpl`
+  type (update the Xcode project and CLAUDE.md, which mentions the
+  misspelling). Refresh the TODO list in
+  `Documentation.docc/Documentation.md`, which predates specs 001/002,
+  and fill in its `Summary` placeholder.
+platform: ios
+status: ready
+phase: Backlog
+priority: low
+parent: null
+blocked_by: []
+designs: []

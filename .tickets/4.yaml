@@ -1,0 +1,17 @@
+id: 4
+title: "Estimate missing records from last two weeks"
+type: feature
+description: |
+  Documentation.docc scenario S01, option "(o2) update 01": instead of (or
+  in addition to) the day-based severity, look at the last two full weeks
+  of draws to learn the source's draw cadence and estimate how many
+  records are missing since the latest record. Needs a spec: how cadence
+  is derived, how the estimate maps onto severity colours, and how it is
+  shown on the card. Must use the injected `\.date` clock.
+platform: ios
+status: refine
+phase: Backlog
+priority: low
+parent: null
+blocked_by: []
+designs: []

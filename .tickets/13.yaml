@@ -1,0 +1,14 @@
+id: 13
+title: "Sync sources automatically in the background"
+type: feature
+description: |
+  Sync is user-initiated only; spec 001 put automatic/background syncing
+  and scheduling out of scope. Consider background refresh (e.g.
+  BGAppRefreshTask) or sync-on-launch for stale sources.
+platform: ios
+status: idea
+phase: Backlog
+priority: low
+parent: null
+blocked_by: []
+designs: []

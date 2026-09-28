@@ -1,0 +1,15 @@
+id: 16
+title: "Add linting and view snapshot tests"
+type: task
+description: |
+  Open questions from the Documentation.docc TODO list: add a linter /
+  formatter (SwiftLint or swift-format), and decide whether to test views
+  with screenshots (e.g. swift-snapshot-testing over the existing
+  #Previews' light/dark variants). Could run in CI (LTA-15).
+platform: ios
+status: idea
+phase: Backlog
+priority: low
+parent: null
+blocked_by: []
+designs: []

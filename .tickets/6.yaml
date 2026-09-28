@@ -1,0 +1,31 @@
+id: 6
+title: "Add core Domain entities for games"
+type: feature
+description: |
+  Implement the target Domain model from CLAUDE.md in `Domain/Ents`:
+  Element (`UInt` for now), CombinationType ("x of y", x <= y),
+  Combination (a CombinationType plus exactly x non-repeating Elements),
+  GameEntry (index, date, Combination), Game ([GameEntry] + GameType) and
+  GameType (mainly carries the CombinationType).
+
+  Rules:
+  - Every combination in the app is a combination without repetition
+    where order doesn't matter: {1, 5, 9} and {9, 1, 5} are the same
+    combination. Model the elements as a set (or a canonically sorted
+    list) so equality and hashing ignore draw order.
+  - A collection (a Game's entries) holds combinations of x elements from
+    a set of y elements, with x and y the same for every entry. The
+    CombinationType lives on the GameType, and constructing a Game must
+    reject entries of a different type.
+
+  Enforce the invariants (x <= y, exactly x elements, no repeats, elements
+  within the pool, one CombinationType per collection) with tests. Map the
+  Data layer's `DrawDTO` onto these types at the repository boundary.
+  SubCombination is excluded until LTA-7 settles its shape.
+platform: ios
+status: refine
+phase: MVP
+priority: high
+parent: null
+blocked_by: []
+designs: []

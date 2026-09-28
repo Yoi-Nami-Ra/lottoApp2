@@ -1,0 +1,28 @@
+id: 18
+title: "Add Count Unique Combinations block"
+type: feature
+description: |
+  A processing block that counts unique combinations in the processed
+  collection, the combination-level counterpart of "Count Unique
+  Elements" (LTA-9).
+
+  Behaviour:
+  - Returns a set of pairs: each unique combination paired with the
+    number of times it occurs in the collection. A combination drawn once
+    counts as 1; one that shows up more than once counts as 2 or more.
+  - Combinations are without repetition and order doesn't matter, so
+    {1, 5, 9} and {9, 1, 5} are the same combination and count together.
+  - The input collection holds x-of-y combinations with the same x and y
+    throughout, so no CombinationType check is needed between entries.
+  - Counts whole combinations only; sub-combinations are not counted.
+
+  The result is a set, so it has no order of its own; ordering belongs to
+  a sort block (LTA-10). The block's I/O types follow the spec from
+  LTA-8, and the combination rules come from LTA-6.
+platform: ios
+status: idea
+phase: Backlog
+priority: medium
+parent: null
+blocked_by: []
+designs: []

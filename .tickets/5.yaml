@@ -1,0 +1,16 @@
+id: 5
+title: "Compact card on mobile, full card on desktop"
+type: feature
+description: |
+  Documentation.docc TODO item 002 (Design): on mobile the source entry
+  should show only the source name and severity indicator with the
+  refresh control; on desktop (Mac / large widths) the full card with
+  record counts and first/latest record dates. Needs a design and a
+  decision on the switching criterion (platform vs size class).
+platform: macos
+status: refine
+phase: Backlog
+priority: low
+parent: null
+blocked_by: []
+designs: []

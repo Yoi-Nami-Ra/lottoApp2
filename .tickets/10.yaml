@@ -1,0 +1,15 @@
+id: 10
+title: "Add filter, sort and count-all blocks"
+type: feature
+description: |
+  Extend the block catalogue with the remaining blocks from the target
+  design: filters `dropFirst(x)`, `dropLast(x)`, `prefix(x)`,
+  `suffix(x)`; sorts by date, index and count; and "count all elements".
+  Filters need a parameter UI. Shape follows the spec from LTA-8.
+platform: ios
+status: idea
+phase: Backlog
+priority: medium
+parent: null
+blocked_by: [8]
+designs: []

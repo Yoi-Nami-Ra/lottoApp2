@@ -1,0 +1,17 @@
+id: 3
+title: "Show Fetch instead of Refresh on never-synced sources"
+type: feature
+description: |
+  Documentation.docc TODO item 003: a source that has never been fetched
+  should signal it is not yet available to compute but can be fetched,
+  with a "Fetch" button instead of "Refresh". Currently every card shows
+  "Refresh" regardless of `lastSync`. Derive the label in the reducer
+  from the source's sync state, add the copy token, and cover the
+  never-synced state in previews (light/dark) and tests.
+platform: ios
+status: ready
+phase: Backlog
+priority: low
+parent: null
+blocked_by: []
+designs: []

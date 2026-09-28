@@ -1,0 +1,15 @@
+id: 15
+title: "Set up CI to build and test PRs"
+type: task
+description: |
+  The repo has no CI configuration (no `.github/`). Add a workflow that
+  builds the `lottoApp2` scheme and runs `lottoApp2Tests` on a simulator
+  for each PR. Note the project currently builds against an Xcode 27 Beta
+  toolchain, which constrains runner choice.
+platform: ios
+status: idea
+phase: Backlog
+priority: medium
+parent: null
+blocked_by: []
+designs: []

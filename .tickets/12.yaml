@@ -1,0 +1,15 @@
+id: 12
+title: "Add more lottery sources beyond MBNet"
+type: feature
+description: |
+  MBNet is the only `SourceModule` in `SourceRegistry.all`. Add further
+  sources (other games or providers), each as its own module owning its
+  identity and `fetchDraws()`. Identify candidate endpoints and their
+  formats first.
+platform: ios
+status: idea
+phase: Backlog
+priority: low
+parent: null
+blocked_by: []
+designs: []

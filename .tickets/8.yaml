@@ -1,0 +1,25 @@
+id: 8
+title: "Spec block I/O types and chain execution"
+type: task
+description: |
+  CLAUDE.md marks as TBD the concrete input/output types that flow
+  between processing blocks (what a filter operates over — [GameEntry]
+  vs [Element] vs [UniqueCount]; what "sort by count" sorts) and how
+  block chains are represented and executed. Write a spec (via
+  /speckit-specify) covering these, the UniqueCount type, and how
+  `ProcessingBlockKind` grows from a catalogue identity into runnable
+  blocks. Prerequisite for LTA-9 and LTA-10.
+
+  Settled constraints the spec must build on:
+  - Every combination is a combination without repetition where order
+    doesn't matter.
+  - A collection flowing between blocks holds combinations of x elements
+    from a set of y elements, with x and y the same for every entry, so
+    blocks may assume a single CombinationType per collection.
+platform: ios
+status: refine
+phase: MVP
+priority: high
+parent: null
+blocked_by: []
+designs: []

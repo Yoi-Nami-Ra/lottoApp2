@@ -1,0 +1,16 @@
+id: 7
+title: "Decide how SubCombination references its origin"
+type: task
+description: |
+  CLAUDE.md leaves open whether a SubCombination (z < x elements derived
+  from a Combination) references the GameEntry, the CombinationType it
+  was produced from, or both. Decide based on what the count/filter
+  blocks (LTA-8) need, record the decision in CLAUDE.md, then add the
+  entity alongside the ones from LTA-6.
+platform: ios
+status: idea
+phase: Backlog
+priority: medium
+parent: null
+blocked_by: []
+designs: []

@@ -1,0 +1,19 @@
+id: 2
+title: "Show users how many malformed rows were skipped"
+type: bug
+description: |
+  Spec 001 FR-007 requires that when some draws in an otherwise valid
+  response are malformed, the sync continues and the app *surfaces* that
+  records were skipped. Today `SourcesRepoImpl.fetchAndSaveDataFrom` only
+  writes a `Logger.sources.warning`; `FetchedDraws.skipped` never reaches
+  the Domain `Source` or the card, so the user never learns about it.
+  Open questions: where to show it (card note, one-off alert, sync
+  summary) and whether the count persists until the next sync. Likely
+  shares error/result plumbing with LTA-1.
+platform: ios
+status: refine
+phase: MVP
+priority: medium
+parent: null
+blocked_by: []
+designs: []

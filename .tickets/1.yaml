@@ -1,0 +1,20 @@
+id: 1
+title: "Keep specific sync errors instead of one generic failure"
+type: task
+description: |
+  `SourcesBLogic.fetchFrom` maps every repository failure to
+  `.somethingWentWrong` (`//TODO: re-implement` at SourcesBLogic.swift:28),
+  and `SourcesRepo.Error` has only `.failedToFetchData`. The UI therefore
+  cannot tell a network failure from an unsupported source, an undecodable
+  body, a format change (`RemoteSourceError.unparseableBody`) or a local
+  store failure. Define a Domain error set that carries these cases, map
+  `RemoteSourceError`/store errors onto it in `SourcesRepoImpl`, pass it
+  through `SourcesBLogic`, and let `SourceEntry` show a matching alert
+  message. Ship with TestStore and repo tests for each case.
+platform: ios
+status: ready
+phase: MVP
+priority: medium
+parent: null
+blocked_by: []
+designs: []

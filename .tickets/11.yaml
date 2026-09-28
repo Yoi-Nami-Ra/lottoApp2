@@ -1,0 +1,15 @@
+id: 11
+title: "Show fetched draws as a list"
+type: feature
+description: |
+  Spec 001 stores every fetched draw but explicitly left displaying them
+  (a list or detail view) out of scope. Add a view of a source's stored
+  draws — index, date and numbers — and decide the ordering and where it
+  is reached from.
+platform: ios
+status: idea
+phase: Backlog
+priority: medium
+parent: null
+blocked_by: []
+designs: []

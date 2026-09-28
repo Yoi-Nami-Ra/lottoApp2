@@ -1,0 +1,15 @@
+id: 14
+title: "Remember chosen source across launches"
+type: feature
+description: |
+  Spec 002 keeps the chosen source in memory for the session only
+  (FR-018) and lists persisting it across launches as out of scope.
+  Persist the choice and restore it on launch, handling a source that no
+  longer exists.
+platform: ios
+status: idea
+phase: Backlog
+priority: low
+parent: null
+blocked_by: []
+designs: []

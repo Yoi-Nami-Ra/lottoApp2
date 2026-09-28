@@ -1,0 +1,17 @@
+id: 9
+title: "Run Count Unique Elements and show results"
+type: feature
+description: |
+  Spec 002 put executing blocks out of scope: BlocksPage lists "Count
+  Unique Elements" but its Action enum is uninhabited and tapping does
+  nothing. Make the block runnable against the chosen source's stored
+  draws, producing a list of UniqueCount (element + occurrence count),
+  and present the result. Depends on the entities (LTA-6) and the block
+  I/O spec (LTA-8).
+platform: ios
+status: refine
+phase: MVP
+priority: high
+parent: null
+blocked_by: [6, 8]
+designs: []
