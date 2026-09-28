@@ -5,9 +5,16 @@ description: |
   Spec 002 put executing blocks out of scope: BlocksPage lists "Count
   Unique Elements" but its Action enum is uninhabited and tapping does
   nothing. Make the block runnable against the chosen source's stored
-  draws, producing a list of UniqueCount (element + occurrence count),
-  and present the result. Depends on the entities (LTA-6) and the block
-  I/O spec (LTA-8).
+  draws and present the result. Depends on the entities (LTA-6) and the
+  block I/O spec (LTA-8).
+
+  Result:
+  - Unique count returns a set of pairs: each unique element paired with
+    the number of times it occurs in the collection (UniqueCount).
+  - The result is a set, so it has no order of its own; ordering belongs
+    to a sort block (LTA-10).
+  - This result type is shared: Count Unique Combinations (LTA-18) uses
+    it with the combination as the unique item.
 platform: ios
 status: refine
 phase: MVP
