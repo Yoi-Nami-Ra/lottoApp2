@@ -5,16 +5,43 @@ description: |
   Build the screens designed in LTA-21 and LTA-22 on top of the engine
   from LTA-19, following the decisions in LTA-20:
   - the chain outline replacing BlocksPage (source header, indented
-    blocks, collapsible branches, run action, leaf summaries, stale
-    marking, empty state);
-  - the add-block sheet (only fitting blocks offered, parameter entry,
-    editing parameters of an existing block);
+    blocks, collapsible branches, "+" per row, swipe to remove with
+    subtree confirmation, Run in the bottom action bar, leaf summaries,
+    stale marking, empty state);
+  - the add-block sheet (sections, disabled blocks with reasons,
+    parameter step, edit mode);
   - navigation from a leaf to its result screen (LTA-9's screen).
-  All behaviour lives in reducers with TestStore tests written first;
-  views are thin, use design tokens, and ship light/dark #Previews for
-  each state.
+
+  Structure:
+  - Evolve the existing BlocksPage reducer and view in place — StartPage
+    already pushes it — growing `State` from the fixed catalogue into the
+    chain outline; no rename.
+  - The add-block sheet is its own AddBlock reducer, presented from
+    BlocksPage with `@Presents` / `.sheet`, holding its own `StackState`
+    for catalogue → parameter step. It hands the configured block (or
+    edited parameters) back through a delegate action; BlocksPage applies
+    it through the engine.
+  - The catalogue lists only implemented blocks, driven by
+    `ProcessingBlockKind.allCases`; LTA-24, LTA-25, LTA-26, LTA-18 and
+    LTA-27 make theirs appear by adding cases.
+  - Runs go through the engine's injected dependency inside `.run`
+    effects with a cancel id, so reducers stay pure and testable.
+
+  Tests (written first):
+  - TestStore tests for BlocksPage and AddBlock covering add, branch,
+    edit, remove (with and without confirmation), run, stale after edit,
+    cancel of an in-flight run, and opening a leaf result.
+  - One XCUITest happy path: open a source → add a block → Run → open
+    the leaf's result. Needs stubbed data: add a launch argument that
+    swaps the live sources/engine dependencies for fixtures (the app has
+    no such switch yet).
+  - Views are thin, use design tokens, and ship light/dark #Previews for
+    every state in the LTA-21/LTA-22 frames.
+
+  Build from the approved files in design/final/ once LTA-21 and LTA-22
+  are promoted; add them to `designs` then.
 platform: ios
-status: refine
+status: ready
 phase: MVP
 priority: medium
 parent: 20
