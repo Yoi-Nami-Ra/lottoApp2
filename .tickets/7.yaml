@@ -2,15 +2,36 @@ id: 7
 title: "Decide how SubCombination references its origin"
 type: task
 description: |
-  CLAUDE.md leaves open whether a SubCombination (z < x elements derived
+  CLAUDE.md left open whether a SubCombination (z < x elements derived
   from a Combination) references the GameEntry, the CombinationType it
-  was produced from, or both. Decide based on what the count/filter
-  blocks (LTA-8) need, record the decision in CLAUDE.md, then add the
-  entity alongside the ones from LTA-6.
+  was produced from, or both. Decided here; record it in CLAUDE.md's
+  Domain model section (replacing the TBD) and implement the entity next
+  to LTA-6's.
+
+  Decisions:
+  - A SubCombination references the CombinationType it came from, not a
+    GameEntry. It is a value: z elements plus the parent x-of-y type.
+    Two sub-combinations with the same elements and type are equal
+    whichever draws they came from, so they can be counted. When a
+    consumer needs provenance, it tracks the entry alongside, outside the
+    entity.
+  - Size: 2 <= z < x. z = 1 is just an element and is covered by Count
+    Unique Elements (LTA-9).
+  - Same rules as Combination: no repetition, order doesn't matter
+    ({1, 5} == {5, 1}), every element within 1…y of the parent type.
+  - Construction throws LTA-6's typed Domain error (reusing its cases,
+    adding one for z out of range).
+  - A Combination can list its sub-combinations of size z (all C(x, z)
+    of them), for the count block in LTA-27.
+
+  Tests (written first): valid construction; z = 1, z = x and z > x
+  rejected; duplicates and out-of-pool elements rejected;
+  order-independent equality and hashing; generating sub-combinations of
+  a Combination (count equals C(x, z), no duplicates).
 platform: ios
-status: idea
+status: ready
 phase: Backlog
 priority: medium
 parent: null
-blocked_by: []
+blocked_by: [6]
 designs: []

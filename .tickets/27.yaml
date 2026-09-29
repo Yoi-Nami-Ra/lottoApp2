@@ -1,0 +1,24 @@
+id: 27
+title: "Add Count Unique Sub-combinations block"
+type: feature
+description: |
+  A processing block that counts unique sub-combinations of size z in
+  the processed collection — e.g. the most frequent pairs (z = 2) or
+  triples (z = 3). For every entry it takes all C(x, z) sub-combinations
+  of its Combination (LTA-7) and counts how many times each occurs
+  across the collection.
+  - Game → count result (LTA-8), reusing the unique-count result type
+    from LTA-9 with the sub-combination as the item.
+  - Parameter z with 2 <= z < x of the collection's CombinationType.
+  - Runs as a block on the engine (LTA-19).
+  Open questions:
+  - Results presentation: reuse LTA-18's grouped-by-count screen?
+  - Performance limits: 6-of-49 gives 20 triples per draw; is any z
+    capped for large histories?
+platform: ios
+status: refine
+phase: Backlog
+priority: medium
+parent: null
+blocked_by: [7, 9, 19]
+designs: []
