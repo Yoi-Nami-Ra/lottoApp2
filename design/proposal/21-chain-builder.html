@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>LTA-21 Chain builder outline — proposal</title>
+<style>
+  /* Asset-catalog tokens (Assets.xcassets), light and dark. */
+  .light {
+    --backgroundPrimary: #FFFFFF; --backgroundSecondary: #F2F2F7; --backgroundTertiary: #EBEBF0;
+    --textPrimary: #1C1C1E; --textSecondary: #707075; --textTertiary: #ADADB3;
+    --borderPrimary: #D9D9DE; --borderSecondary: #EBEBF0;
+    --primaryBlue: #007AFF; --warningYellow: #FFCC00; --errorRed: #FF453A; --undefinedGrey: #9CA3AF;
+    --overlayColor: rgba(0,0,0,.4);
+  }
+  .dark {
+    --backgroundPrimary: #000000; --backgroundSecondary: #1C1C1E; --backgroundTertiary: #2C2C2E;
+    --textPrimary: #FEFFFF; --textSecondary: #C7C7CC; --textTertiary: #8C8C94;
+    --borderPrimary: #545459; --borderSecondary: #404045;
+    --primaryBlue: #1A94FF; --warningYellow: #FFE633; --errorRed: #FF5E54; --undefinedGrey: #4B5563;
+    --overlayColor: rgba(0,0,0,.6);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 32px; background: #E4E4E9; color: #1C1C1E;
+    font: 15px/1.35 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
+  }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  .lede { color: #55555A; margin: 0 0 24px; max-width: 900px; }
+  .frames { display: grid; grid-template-columns: repeat(4, 375px); gap: 28px 24px; }
+  figure { margin: 0; }
+  figcaption { font-size: 13px; color: #55555A; margin-top: 8px; }
+  figcaption b { color: #1C1C1E; }
+
+  /* Phone frame */
+  .phone {
+    position: relative; width: 375px; height: 740px; border-radius: 36px; overflow: hidden;
+    background: var(--backgroundSecondary); color: var(--textPrimary);
+    border: 1px solid #C8C8CE; display: flex; flex-direction: column;
+  }
+  .status { height: 44px; flex: none; }
+  .navbar {
+    height: 44px; flex: none; display: flex; align-items: center; justify-content: center;
+    position: relative; font-weight: 600; font-size: 17px;
+  }
+  .navbar .back { position: absolute; left: 12px; color: var(--primaryBlue); font-weight: 400; }
+  .header { padding: 16px 16px 0; }
+  .caption { font-size: 12px; color: var(--textSecondary); }
+  .name { font-size: 22px; font-weight: 600; margin-top: 4px; }
+  .content { flex: 1; padding: 16px 16px 0; overflow: hidden; }
+
+  /* Outline */
+  .node {
+    display: flex; align-items: center; gap: 10px; background: var(--backgroundPrimary);
+    border-radius: 12px; padding: 11px 12px; margin-bottom: 8px; min-height: 48px;
+  }
+  .indent-1 { margin-left: 22px; } .indent-2 { margin-left: 44px; } .indent-3 { margin-left: 66px; }
+  .guide { position: relative; }
+  .guide::before {
+    content: ""; position: absolute; left: -12px; top: -8px; bottom: 50%;
+    border-left: 2px solid var(--borderPrimary); border-bottom: 2px solid var(--borderPrimary);
+    width: 10px; border-bottom-left-radius: 6px;
+  }
+  .disclosure { width: 14px; color: var(--textTertiary); font-size: 12px; flex: none; text-align: center; }
+  .icon { color: var(--primaryBlue); font-size: 18px; width: 22px; text-align: center; flex: none; font-style: italic; font-weight: 600; }
+  .icon.source { font-style: normal; }
+  .label { flex: 1; min-width: 0; }
+  .title { font-weight: 500; }
+  .param { font-size: 13px; color: var(--textSecondary); }
+  .add {
+    width: 28px; height: 28px; border-radius: 14px; flex: none; display: grid; place-items: center;
+    color: var(--primaryBlue); border: 1.5px solid var(--primaryBlue); font-size: 18px; line-height: 1;
+  }
+  .leaf { display: flex; align-items: center; gap: 6px; flex: none; }
+  .summary { font-size: 13px; color: var(--textSecondary); text-align: right; }
+  .chev { color: var(--textTertiary); }
+  .stale .summary { color: var(--textTertiary); text-decoration: line-through; }
+  .badge {
+    display: inline-block; font-size: 11px; font-weight: 600; padding: 2px 6px; border-radius: 6px;
+    background: color-mix(in srgb, var(--warningYellow) 25%, transparent); color: var(--textPrimary);
+  }
+  .spinner {
+    width: 16px; height: 16px; border-radius: 50%; flex: none;
+    border: 2px solid var(--borderPrimary); border-top-color: var(--primaryBlue);
+  }
+  .banner {
+    display: flex; gap: 8px; align-items: center; font-size: 13px; padding: 10px 12px; border-radius: 10px;
+    margin-bottom: 12px; background: color-mix(in srgb, var(--warningYellow) 20%, var(--backgroundPrimary));
+  }
+  .empty { text-align: center; color: var(--textSecondary); padding: 40px 24px 0; }
+  .empty .big { font-size: 34px; color: var(--textTertiary); }
+  .empty p { margin: 8px 0 0; }
+
+  /* Swipe-to-delete */
+  .swipe { display: flex; margin-bottom: 8px; border-radius: 12px; overflow: hidden; }
+  .swipe .node { margin: 0; border-radius: 0; flex: 1; transform: translateX(-4px); }
+  .swipe .delete {
+    width: 84px; background: var(--errorRed); color: #fff; display: grid; place-items: center; font-weight: 600;
+  }
+
+  /* Bottom action bar (BottomActionBar) */
+  .bar {
+    flex: none; background: var(--backgroundPrimary); border-top: 1px solid var(--borderSecondary);
+    padding: 12px 16px 30px;
+  }
+  .run {
+    border-radius: 12px; padding: 14px; text-align: center; font-weight: 600; font-size: 17px;
+    background: var(--primaryBlue); color: var(--backgroundPrimary);
+    display: flex; justify-content: center; align-items: center; gap: 8px;
+  }
+  .run.disabled { background: color-mix(in srgb, var(--undefinedGrey) 20%, transparent); color: var(--textTertiary); }
+  .run .spinner { border-color: color-mix(in srgb, var(--textTertiary) 50%, transparent); border-top-color: var(--textTertiary); }
+
+  /* Confirmation dialog */
+  .overlay { position: absolute; inset: 0; background: var(--overlayColor); display: flex; align-items: flex-end; padding: 8px; }
+  .sheet { width: 100%; }
+  .sheet .group { background: var(--backgroundPrimary); border-radius: 14px; overflow: hidden; margin-bottom: 8px; opacity: .97; }
+  .sheet .msg { padding: 14px 16px; text-align: center; font-size: 13px; color: var(--textSecondary); border-bottom: 1px solid var(--borderSecondary); }
+  .sheet .btn { padding: 16px; text-align: center; font-size: 17px; color: var(--primaryBlue); }
+  .sheet .btn.destructive { color: var(--errorRed); }
+  .sheet .btn.cancel { font-weight: 600; }
+
+  .notes { margin-top: 32px; max-width: 1560px; columns: 2; column-gap: 40px; font-size: 14px; }
+  .notes h2 { font-size: 16px; margin: 0 0 8px; column-span: all; }
+  .notes li { margin-bottom: 6px; break-inside: avoid; }
+</style>
+</head>
+<body>
+<h1>LTA-21 · Chain builder outline — proposal</h1>
+<p class="lede">Replaces BlocksPage (LTA-20). The chosen source's chain as an indented outline: "+" on every row
+adds a block beneath it through the add-block sheet (LTA-22); swipe removes a block and its subtree after
+confirmation; Run lives in the bottom action bar. Lo-fi: layout and states, not final visuals.</p>
+
+<div class="frames">
+
+  <!-- 1. Results, light -->
+  <figure>
+    <div class="phone light">
+      <div class="status"></div>
+      <div class="navbar"><span class="back">‹ Sources</span>Processing Blocks</div>
+      <div class="header"><div class="caption">Source</div><div class="name">MBNet Server</div></div>
+      <div class="content">
+        <div class="node">
+          <span class="disclosure">▾</span><span class="icon source">▤</span>
+          <div class="label"><div class="title">MBNet Server</div><div class="param">7,012 draws</div></div>
+          <span class="add">+</span>
+        </div>
+        <div class="node indent-1 guide">
+          <span class="disclosure">▾</span><span class="icon">ƒ</span>
+          <div class="label"><div class="title">Suffix</div><div class="param">last 100</div></div>
+          <span class="add">+</span>
+        </div>
+        <div class="node indent-2 guide">
+          <span class="disclosure">▾</span><span class="icon">ƒ</span>
+          <div class="label"><div class="title">Count Unique Elements</div></div>
+          <span class="add">+</span>
+        </div>
+        <div class="node indent-3 guide">
+          <span class="disclosure"></span><span class="icon">ƒ</span>
+          <div class="label"><div class="title">Sort by count</div><div class="param">descending</div></div>
+          <div class="leaf"><span class="summary">49 elements</span><span class="chev">›</span></div>
+        </div>
+        <div class="node indent-1 guide">
+          <span class="disclosure"></span><span class="icon">ƒ</span>
+          <div class="label"><div class="title">Count Unique Combinations</div></div>
+          <div class="leaf"><span class="summary">7,009 unique<br>3 repeat</span><span class="chev">›</span></div>
+        </div>
+        <div class="node indent-1 guide">
+          <span class="disclosure"></span><span class="icon">ƒ</span>
+          <div class="label"><div class="title">Count All Elements</div></div>
+          <div class="leaf"><span class="summary">Total: 42,072</span><span class="chev">›</span></div>
+        </div>
+      </div>
+      <div class="bar"><div class="run">Run</div></div>
+    </div>
+    <figcaption><b>Results.</b> Leaves show a summary and open their result screen. Rows with children get a disclosure chevron.</figcaption>
+  </figure>
+
+  <!-- 2. Stale, light -->
+  <figure>
+    <div class="phone light">
+      <div class="status"></div>
+      <div class="navbar"><span class="back">‹ Sources</span>Processing Blocks</div>
+      <div class="header"><div class="caption">Source</div><div class="name">MBNet Server</div></div>
+      <div class="content">
+        <div class="banner"><span>⚠︎</span><span>The chain changed. Run again to update the results.</span></div>
+        <div class="node">
+          <span class="disclosure">▾</span><span class="icon source">▤</span>
+          <div class="label"><div class="title">MBNet Server</div><div class="param">7,012 draws</div></div>
+          <span class="add">+</span>
+        </div>
+        <div class="node indent-1 guide">
+          <span class="disclosure">▾</span><span class="icon">ƒ</span>
+          <div class="label"><div class="title">Suffix</div><div class="param">last 50</div></div>
+          <span class="add">+</span>
+        </div>
+        <div class="node indent-2 guide stale">
+          <span class="disclosure"></span><span class="icon">ƒ</span>
+          <div class="label"><div class="title">Count Unique Elements</div><span class="badge">Out of date</span></div>
+          <div class="leaf"><span class="summary">49 elements</span><span class="chev">›</span></div>
+        </div>
+        <div class="node indent-1 guide stale">
+          <span class="disclosure"></span><span class="icon">ƒ</span>
+          <div class="label"><div class="title">Count All Elements</div><span class="badge">Out of date</span></div>
+          <div class="leaf"><span class="summary">Total: 42,072</span><span class="chev">›</span></div>
+        </div>
+        <div class="node indent-1 guide">
+          <span class="disclosure"></span><span class="icon">ƒ</span>
+          <div class="label"><div class="title">Prefix</div><div class="param">first 10</div></div>
+          <div class="leaf"><span class="summary">Not run</span></div>
+        </div>
+      </div>
+      <div class="bar"><div class="run">Run</div></div>
+    </div>
+    <figcaption><b>Stale after an edit.</b> Old summaries stay visible but are struck through and badged; new leaves say "Not run".</figcaption>
+  </figure>
+
+  <!-- 3. Running, light -->
+  <figure>
+    <div class="phone light">
+      <div class="status"></div>
+      <div class="navbar"><span class="back">‹ Sources</span>Processing Blocks</div>
+      <div class="header"><div class="caption">Source</div><div class="name">MBNet Server</div></div>
+      <div class="content">
+        <div class="node">
+          <span class="disclosure">▾</span><span class="icon source">▤</span>
+          <div class="label"><div class="title">MBNet Server</div><div class="param">7,012 draws</div></div>
+          <span class="add">+</span>
+        </div>
+        <div class="node indent-1 guide">
+          <span class="disclosure">▾</span><span class="icon">ƒ</span>
+          <div class="label"><div class="title">Suffix</div><div class="param">last 50</div></div>
+          <span class="add">+</span>
+        </div>
+        <div class="node indent-2 guide">
+          <span class="disclosure"></span><span class="icon">ƒ</span>
+          <div class="label"><div class="title">Count Unique Elements</div></div>
+          <div class="leaf"><span class="spinner"></span></div>
+        </div>
+        <div class="node indent-1 guide">
+          <span class="disclosure"></span><span class="icon">ƒ</span>
+          <div class="label"><div class="title">Count All Elements</div></div>
+          <div class="leaf"><span class="summary">Total: 42,072</span><span class="chev">›</span></div>
+        </div>
+      </div>
+      <div class="bar"><div class="run disabled"><span class="spinner"></span>Running…</div></div>
+    </div>
+    <figcaption><b>Running.</b> Each leaf spins until its result arrives, then shows its summary. Run is disabled until the run finishes.</figcaption>
+  </figure>
+
+  <!-- 4. Empty, light -->
+  <figure>
+    <div class="phone light">
+      <div class="status"></div>
+      <div class="navbar"><span class="back">‹ Sources</span>Processing Blocks</div>
+      <div class="header"><div class="caption">Source</div><div class="name">MBNet Server</div></div>
+      <div class="content">
+        <div class="node">
+          <span class="disclosure"></span><span class="icon source">▤</span>
+          <div class="label"><div class="title">MBNet Server</div><div class="param">7,012 draws</div></div>
+          <span class="add">+</span>
+        </div>
+        <div class="empty">
+          <div class="big">ƒ</div>
+          <p><b>No blocks yet</b></p>
+          <p>Tap + on the source to add the first block.</p>
+        </div>
+      </div>
+      <div class="bar"><div class="run disabled">Run</div></div>
+    </div>
+    <figcaption><b>Empty.</b> Only the source row; Run is disabled until the chain has a block.</figcaption>
+  </figure>
+
+  <!-- 5. Swipe to remove, light -->
+  <figure>
+    <div class="phone light">
+      <div class="status"></div>
+      <div class="navbar"><span class="back">‹ Sources</span>Processing Blocks</div>
+      <div class="header"><div class="caption">Source</div><div class="name">MBNet Server</div></div>
+      <div class="content">
+        <div class="node">
+          <span class="disclosure">▾</span><span class="icon source">▤</span>
+          <div class="label"><div class="title">MBNet Server</div><div class="param">7,012 draws</div></div>
+          <span class="add">+</span>
+        </div>
+        <div class="swipe indent-1">
+          <div class="node">
+            <span class="disclosure">▾</span><span class="icon">ƒ</span>
+            <div class="label"><div class="title">Suffix</div><div class="param">last 100</div></div>
+            <span class="add">+</span>
+          </div>
+          <div class="delete">Remove</div>
+        </div>
+        <div class="node indent-2 guide">
+          <span class="disclosure">▾</span><span class="icon">ƒ</span>
+          <div class="label"><div class="title">Count Unique Elements</div></div>
+          <span class="add">+</span>
+        </div>
+        <div class="node indent-3 guide">
+          <span class="disclosure"></span><span class="icon">ƒ</span>
+          <div class="label"><div class="title">Sort by count</div><div class="param">descending</div></div>
+          <div class="leaf"><span class="summary">49 elements</span><span class="chev">›</span></div>
+        </div>
+        <div class="node indent-1 guide">
+          <span class="disclosure"></span><span class="icon">ƒ</span>
+          <div class="label"><div class="title">Count All Elements</div></div>
+          <div class="leaf"><span class="summary">Total: 42,072</span><span class="chev">›</span></div>
+        </div>
+      </div>
+      <div class="bar"><div class="run">Run</div></div>
+    </div>
+    <figcaption><b>Swipe to remove.</b> Available on every block row (never on the source row).</figcaption>
+  </figure>
+
+  <!-- 6. Remove confirmation, light -->
+  <figure>
+    <div class="phone light">
+      <div class="status"></div>
+      <div class="navbar"><span class="back">‹ Sources</span>Processing Blocks</div>
+      <div class="header"><div class="caption">Source</div><div class="name">MBNet Server</div></div>
+      <div class="content">
+        <div class="node">
+          <span class="disclosure">▾</span><span class="icon source">▤</span>
+          <div class="label"><div class="title">MBNet Server</div><div class="param">7,012 draws</div></div>
+          <span class="add">+</span>
+        </div>
+        <div class="node indent-1 guide">
+          <span class="disclosure">▾</span><span class="icon">ƒ</span>
+          <div class="label"><div class="title">Suffix</div><div class="param">last 100</div></div>
+          <span class="add">+</span>
+        </div>
+      </div>
+      <div class="bar"><div class="run">Run</div></div>
+      <div class="overlay">
+        <div class="sheet">
+          <div class="group">
+            <div class="msg">Remove "Suffix" and the 2 blocks under it?</div>
+            <div class="btn destructive">Remove 3 Blocks</div>
+          </div>
+          <div class="group"><div class="btn cancel">Cancel</div></div>
+        </div>
+      </div>
+    </div>
+    <figcaption><b>Confirm removal.</b> Names the block and how many go with it. A leaf (no children) is removed without a dialog.</figcaption>
+  </figure>
+
+  <!-- 7. Results, dark -->
+  <figure>
+    <div class="phone dark">
+      <div class="status"></div>
+      <div class="navbar"><span class="back">‹ Sources</span>Processing Blocks</div>
+      <div class="header"><div class="caption">Source</div><div class="name">MBNet Server</div></div>
+      <div class="content">
+        <div class="node">
+          <span class="disclosure">▾</span><span class="icon source">▤</span>
+          <div class="label"><div class="title">MBNet Server</div><div class="param">7,012 draws</div></div>
+          <span class="add">+</span>
+        </div>
+        <div class="node indent-1 guide">
+          <span class="disclosure">▾</span><span class="icon">ƒ</span>
+          <div class="label"><div class="title">Suffix</div><div class="param">last 100</div></div>
+          <span class="add">+</span>
+        </div>
+        <div class="node indent-2 guide">
+          <span class="disclosure"></span><span class="icon">ƒ</span>
+          <div class="label"><div class="title">Count Unique Elements</div></div>
+          <div class="leaf"><span class="summary">49 elements</span><span class="chev">›</span></div>
+        </div>
+        <div class="node indent-1 guide stale">
+          <span class="disclosure"></span><span class="icon">ƒ</span>
+          <div class="label"><div class="title">Count All Elements</div><span class="badge">Out of date</span></div>
+          <div class="leaf"><span class="summary">Total: 42,072</span><span class="chev">›</span></div>
+        </div>
+      </div>
+      <div class="bar"><div class="run">Run</div></div>
+    </div>
+    <figcaption><b>Dark mode.</b> Same tokens, dark appearance; a stale leaf included.</figcaption>
+  </figure>
+
+  <!-- 8. Collapsed, light -->
+  <figure>
+    <div class="phone light">
+      <div class="status"></div>
+      <div class="navbar"><span class="back">‹ Sources</span>Processing Blocks</div>
+      <div class="header"><div class="caption">Source</div><div class="name">MBNet Server</div></div>
+      <div class="content">
+        <div class="node">
+          <span class="disclosure">▾</span><span class="icon source">▤</span>
+          <div class="label"><div class="title">MBNet Server</div><div class="param">7,012 draws</div></div>
+          <span class="add">+</span>
+        </div>
+        <div class="node indent-1 guide">
+          <span class="disclosure">▸</span><span class="icon">ƒ</span>
+          <div class="label"><div class="title">Suffix</div><div class="param">last 100 · 2 blocks hidden</div></div>
+          <span class="add">+</span>
+        </div>
+        <div class="node indent-1 guide">
+          <span class="disclosure"></span><span class="icon">ƒ</span>
+          <div class="label"><div class="title">Count Unique Combinations</div></div>
+          <div class="leaf"><span class="summary">7,009 unique<br>3 repeat</span><span class="chev">›</span></div>
+        </div>
+        <div class="node indent-1 guide">
+          <span class="disclosure"></span><span class="icon">ƒ</span>
+          <div class="label"><div class="title">Count All Elements</div></div>
+          <div class="leaf"><span class="summary">Total: 42,072</span><span class="chev">›</span></div>
+        </div>
+      </div>
+      <div class="bar"><div class="run">Run</div></div>
+    </div>
+    <figcaption><b>Collapsed branch.</b> Tapping the chevron folds a subtree; the row says how many blocks it hides.</figcaption>
+  </figure>
+
+</div>
+
+<div class="notes">
+  <h2>Notes for the implementer</h2>
+  <ul>
+    <li><b>Structure.</b> A native <code>List</code>, one row per node, indented 22 pt per depth with a guide line to the parent. The source is always the first row and can't be removed or collapsed away.</li>
+    <li><b>Adding.</b> The "+" on a row opens the add-block sheet (LTA-22) for that row as parent. It shows on the source and every non-terminal block; it's hidden on blocks whose output ends a branch (Count All Elements). Adding to a node that already has a child creates a branch.</li>
+    <li><b>Editing.</b> Tapping a non-leaf block row edits its parameters (same form as the sheet). Tapping a leaf with a result opens that result; before any run, tapping it edits instead.</li>
+    <li><b>Removing.</b> Swipe to remove on block rows. A block with children asks for confirmation naming the count ("Remove 3 Blocks"); a childless block goes without a dialog.</li>
+    <li><b>Run.</b> BottomActionBar with a single "Run" button: disabled with no blocks and while running (label "Running…" with a spinner).</li>
+    <li><b>Stale.</b> After any edit following a run: a banner above the outline, old summaries struck through with an "Out of date" badge, new leaves "Not run".</li>
+    <li><b>Accessibility.</b> Each row reads as "&lt;block&gt;, &lt;parameter&gt;, level &lt;n&gt;, &lt;summary or state&gt;". "+" is labelled "Add block under &lt;block&gt;". At accessibility text sizes the summary wraps under the title instead of sitting to its right, and the indent per level shrinks to 12 pt.</li>
+    <li><b>Tokens.</b> Row, header and bar styling carry over from BlocksPageView and BottomActionBar; new tokens needed for the guide line (borderPrimary), the stale badge (warningYellow at 25 %) and the banner.</li>
+  </ul>
+</div>
+</body>
+</html>

@@ -8,22 +8,37 @@ description: |
   page; it shows that source's processing chain.
   Built from: the current BlocksPage (source name header over a list)
   and the start page's source cards and bottom action bar.
-  Proposal: none yet.
-  Open questions:
-  - How the indented outline shows depth, branches and collapsed nodes
-    on a phone-width screen, including at large Dynamic Type sizes.
-  - Where the run action lives (bottom bar, like Next on the start
-    page?) and how an in-progress run looks.
-  - How a leaf's result summary and the stale-results state look.
-  - How a node is selected as the parent for adding, and how blocks are
-    edited and removed (does removing a node remove its subtree?).
-  - The empty state: a source with no blocks yet.
-  Done when: an approved design exists and this ticket's `designs`
-  points at it.
+
+  Decided:
+  - Adding: a "+" on every row (the source included) opens the add-block
+    sheet (LTA-22) for that row as parent; no separate selection state.
+  - Removing: swipe to remove on block rows. A block with children is
+    removed with its whole subtree after a confirmation naming how many
+    blocks go.
+  - Run: the bottom action bar (BottomActionBar) with a single "Run"
+    button, disabled with no blocks and while a run is in flight.
+
+  Proposal: design/proposal/21-chain-builder.html (+ .png) — eight
+  frames: results, stale after an edit, running, empty, swipe to remove,
+  confirm removal, dark mode, collapsed branch. It also suggests:
+  - a 22 pt indent per level with a guide line to the parent (12 pt at
+    accessibility text sizes, where leaf summaries wrap under the title);
+  - "+" hidden on blocks that end a branch (Count All Elements);
+  - tapping a block row edits its parameters, tapping a leaf with a
+    result opens it;
+  - a childless block is removed without a dialog; the source row can't
+    be removed;
+  - stale results struck through with an "Out of date" badge plus a
+    banner, new leaves reading "Not run";
+  - a collapsed row saying how many blocks it hides.
+  Open questions: approve or change the suggestions above.
+  Done when: an approved file exists in design/final/ and this ticket's
+  `designs` points at it.
 platform: ios
-status: refine
+status: ready
 phase: MVP
 priority: medium
 parent: 20
 blocked_by: []
-designs: []
+designs:
+  - design/proposal/21-chain-builder.html
