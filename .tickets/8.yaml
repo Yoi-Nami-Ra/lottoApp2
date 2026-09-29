@@ -2,22 +2,49 @@ id: 8
 title: "Spec block I/O types and chain execution"
 type: task
 description: |
-  CLAUDE.md marks as TBD the concrete input/output types that flow
-  between processing blocks (what a filter operates over — [GameEntry]
-  vs [Element] vs [UniqueCount]; what "sort by count" sorts) and how
-  block chains are represented and executed. Write a spec (via
-  /speckit-specify) covering these, the UniqueCount type, and how
-  `ProcessingBlockKind` grows from a catalogue identity into runnable
-  blocks. Prerequisite for LTA-9 and LTA-10.
+  Write the spec (via /speckit-specify) for the processing-block pipeline:
+  the data that flows between blocks, each block's input and output, and
+  how chains are represented and executed. It turns `ProcessingBlockKind`
+  from a catalogue identity into runnable blocks. Prerequisite for LTA-9
+  and LTA-10.
 
-  Settled constraints the spec must build on:
+  Settled constraints:
   - Every combination is a combination without repetition where order
-    doesn't matter.
-  - A collection flowing between blocks holds combinations of x elements
-    from a set of y elements, with x and y the same for every entry, so
-    blocks may assume a single CombinationType per collection.
+    doesn't matter (LTA-6).
+  - A collection holds combinations of x elements from a set of y
+    elements, with x and y the same for every entry, so blocks may assume
+    a single CombinationType per collection.
+
+  Decisions:
+  - Data kinds: a Game (LTA-6), a count result (the set of (item, count)
+    pairs from LTA-9), and a single number (count all).
+  - Blocks and their input → output:
+    - dropFirst(x), dropLast(x), prefix(x), suffix(x):
+      Game → Game, and count result → count result
+    - sort by date, sort by index: Game → Game
+    - sort by count: count result → count result
+    - count unique elements (LTA-9), count unique combinations (LTA-18):
+      Game → count result
+    - count all elements: Game → number (ends a branch)
+  - Every sort takes a direction parameter (ascending / descending). A
+    sorted count result is an ordered list; unsorted it is a set with no
+    order of its own.
+  - Chains are trees: the source is the root, and one block's output can
+    feed several blocks (e.g. count over the last 50 and over the last
+    100 draws side by side). Each block has exactly one input. The user
+    builds chains at runtime, so each block declares its input and output
+    kind and the app rejects attaching a block whose input doesn't match
+    its parent's output. Every leaf yields one result.
+
+  Open for the spec:
+  - Tie order when sorting by count (e.g. by item, ascending).
+  - Parameter bounds, e.g. prefix(x) with x larger than the collection.
+  - How the results of several leaves are presented together.
+  - Execution: when a tree runs (on demand vs on every edit), whether
+    shared branches are computed once, and cancellation of long runs.
+  - Whether chains are saved, and where.
 platform: ios
-status: refine
+status: ready
 phase: MVP
 priority: high
 parent: null
