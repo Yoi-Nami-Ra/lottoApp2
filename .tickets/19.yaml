@@ -1,0 +1,20 @@
+id: 19
+title: "Build the processing-block tree engine"
+type: feature
+description: |
+  Implement the chain model and executor specified in LTA-8, which LTA-9
+  deliberately leaves out by running Count Unique Elements as a single
+  block. Chains are trees rooted at a source; each block has one input,
+  declares its input and output kind (Game, count result, number), and
+  the app rejects attaching a block whose input doesn't match its
+  parent's output. Every leaf yields one result. Adopt the count result
+  type from LTA-9 and move that block onto the engine. Execution details
+  (when trees run, sharing computed branches, cancellation) follow the
+  LTA-8 spec.
+platform: ios
+status: refine
+phase: MVP
+priority: medium
+parent: null
+blocked_by: [8]
+designs: []

@@ -4,19 +4,47 @@ type: feature
 description: |
   Spec 002 put executing blocks out of scope: BlocksPage lists "Count
   Unique Elements" but its Action enum is uninhabited and tapping does
-  nothing. Make the block runnable against the chosen source's stored
-  draws and present the result. Depends on the entities (LTA-6) and the
-  block I/O spec (LTA-8).
+  nothing. Make that one block runnable against the chosen source's
+  stored draws and show its result. Depends on the entities and the
+  source → Game read path (LTA-6) and the block I/O spec (LTA-8).
 
   Result:
   - Unique count returns a set of pairs: each unique element paired with
     the number of times it occurs in the collection (UniqueCount).
+  - Only elements that occur in the collection appear; pool elements that
+    were never drawn are not included with a count of 0.
   - The result is a set, so it has no order of its own; ordering belongs
     to a sort block (LTA-10).
   - This result type is shared: Count Unique Combinations (LTA-18) uses
     it with the combination as the unique item.
+
+  Scope:
+  - A single block run directly on the source's Game
+    (source → count unique elements). The tree engine from LTA-8 —
+    attaching blocks, input/output kind checks, branches — is LTA-19; the
+    result type here already follows LTA-8 so the engine can adopt it.
+  - The counting is a pure Domain function (Game → set of UniqueCount),
+    exposed through an injected BLogic dependency so the reducer never
+    reaches the repo.
+
+  Flow:
+  - Tapping the "Count Unique Elements" row on BlocksPage runs the block
+    for `State.sourceID` and pushes a results screen.
+  - The results screen lists one row per element with its count, ordered
+    by element ascending (1 → y). That order is display-only and doesn't
+    change the set semantics of the result.
+  - States: loading while the Game is read and counted; empty when the
+    source has no stored draws (e.g. never synced); an error message when
+    the read fails.
+
+  Tests (written first): the counting function (duplicates across
+  entries, single entry, empty Game); BlocksPage and results reducers via
+  TestStore with the BLogic dependency overridden. Views ship light/dark
+  #Previews for loaded, empty, loading and error states.
+
+  The results screen has no design yet.
 platform: ios
-status: refine
+status: ready
 phase: MVP
 priority: high
 parent: null
