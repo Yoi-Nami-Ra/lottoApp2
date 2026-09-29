@@ -1,0 +1,39 @@
+id: 28
+title: "Design: compact and wide source cards"
+type: task
+description: |
+  Why it's needed: LTA-5 splits the start page's source card into a
+  compact variant for narrow widths and a grid of full cards for wide
+  ones; neither the compact card nor the grid has a design.
+  When it shows: on the start page, chosen by horizontal size class.
+  Built from: today's source card (SourceEntryView) and the start
+  page's list and bottom action bar.
+  Proposal: design/proposal/28-source-cards.html (+ .png) — compact
+  collapsed, expanded and selected, refreshing, dark mode, and the
+  regular-width grid. It suggests:
+  - compact row: severity dot · name (checkmark when selected, "Not
+    synced" inline when never synced) · refresh icon button · chevron;
+    52 pt minimum height; the row outside the buttons selects the source;
+  - expanded details: record count, severity-coloured last-sync badge,
+    first and latest record; several cards may be expanded; collapsed by
+    default and not persisted;
+  - grid: `LazyVGrid` with adaptive columns of at least ~320 pt, cards
+    in a row sharing its height; the Next bar keeps a fixed width at the
+    trailing edge on wide screens;
+  - accessibility: the dot is decorative and severity is read from the
+    text; the chevron is labelled "Show details" / "Hide details"; at
+    accessibility sizes the name wraps before the buttons shrink and the
+    details become one column.
+  Open questions: approve or change the suggestions above; where
+  LTA-2's skipped note and LTA-4's "~N missing" line sit on the compact
+  card (likely in the expanded details).
+  Done when: an approved file exists in design/final/ and this ticket's
+  `designs` points at it.
+platform: ios
+status: ready
+phase: Backlog
+priority: low
+parent: 5
+blocked_by: []
+designs:
+  - design/proposal/28-source-cards.html

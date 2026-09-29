@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>LTA-28 Compact and wide source cards — proposal</title>
+<style>
+  /* Asset-catalog tokens (Assets.xcassets), light and dark. */
+  .light {
+    --backgroundPrimary: #FFFFFF; --backgroundSecondary: #F2F2F7; --backgroundTertiary: #EBEBF0;
+    --textPrimary: #1C1C1E; --textSecondary: #707075; --textTertiary: #ADADB3;
+    --borderPrimary: #D9D9DE; --borderSecondary: #EBEBF0;
+    --primaryBlue: #007AFF; --accentPurple: #B052FF;
+    --successGreen: #21D66B; --warningYellow: #FFCC00; --errorRed: #FF453A; --undefinedGrey: #9CA3AF;
+    --shadow: rgba(0,0,0,.1); --tint: .15;
+  }
+  .dark {
+    --backgroundPrimary: #000000; --backgroundSecondary: #1C1C1E; --backgroundTertiary: #2C2C2E;
+    --textPrimary: #FEFFFF; --textSecondary: #C7C7CC; --textTertiary: #8C8C94;
+    --borderPrimary: #545459; --borderSecondary: #404045;
+    --primaryBlue: #1A94FF; --accentPurple: #CA85FF;
+    --successGreen: #3BF085; --warningYellow: #FFE633; --errorRed: #FF5E54; --undefinedGrey: #4B5563;
+    --shadow: rgba(0,0,0,.3); --tint: .35;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 32px; background: #E4E4E9; color: #1C1C1E;
+    font: 15px/1.35 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
+  }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  .lede { color: #55555A; margin: 0 0 24px; max-width: 1000px; }
+  .frames { display: grid; grid-template-columns: repeat(4, 375px); gap: 28px 24px; }
+  .wide-row { grid-column: 1 / -1; }
+  figure { margin: 0; }
+  figcaption { font-size: 13px; color: #55555A; margin-top: 8px; }
+  figcaption b { color: #1C1C1E; }
+
+  .phone, .tablet {
+    position: relative; overflow: hidden; background: var(--backgroundSecondary); color: var(--textPrimary);
+    border: 1px solid #C8C8CE; display: flex; flex-direction: column;
+  }
+  .phone { width: 375px; height: 700px; border-radius: 36px; }
+  .tablet { width: 1180px; height: 640px; border-radius: 22px; }
+  .status { height: 44px; flex: none; }
+  .tablet .status { height: 24px; }
+  .largetitle { font-size: 32px; font-weight: 700; padding: 4px 16px 12px; }
+  .tablet .largetitle { padding: 12px 28px 16px; }
+  .content { flex: 1; padding: 0 16px; overflow: hidden; }
+  .tablet .content { padding: 0 28px; }
+
+  /* Severity */
+  .sev-low { --sev: var(--successGreen); }
+  .sev-medium { --sev: var(--warningYellow); }
+  .sev-high { --sev: var(--errorRed); }
+  .sev-none { --sev: var(--undefinedGrey); }
+  .dot { width: 12px; height: 12px; border-radius: 6px; background: var(--sev); flex: none; }
+
+  /* Compact card */
+  .ccard {
+    background: var(--backgroundPrimary); border-radius: 12px; margin-bottom: 10px;
+    box-shadow: 0 1px 2px var(--shadow); border: 2px solid transparent;
+  }
+  .ccard.selected { border-color: var(--primaryBlue); }
+  .crow { display: flex; align-items: center; gap: 10px; padding: 12px 10px 12px 12px; min-height: 52px; }
+  .cname { flex: 1; min-width: 0; font-weight: 600; font-size: 17px; display: flex; align-items: center; gap: 6px; }
+  .check { color: var(--primaryBlue); font-size: 18px; }
+  .ago { font-size: 12px; color: var(--textSecondary); font-weight: 400; }
+  .iconbtn {
+    width: 36px; height: 32px; border-radius: 8px; flex: none; display: grid; place-items: center;
+    color: var(--primaryBlue); border: 1px solid color-mix(in srgb, var(--primaryBlue) 30%, transparent);
+    background: color-mix(in srgb, var(--primaryBlue) 10%, transparent); font-size: 16px;
+  }
+  .iconbtn.busy { color: var(--textSecondary); border-color: var(--undefinedGrey); background: color-mix(in srgb, var(--undefinedGrey) 15%, transparent); }
+  .disc { width: 28px; text-align: center; color: var(--textTertiary); font-size: 13px; flex: none; }
+  .cdetails { border-top: 1px solid var(--borderSecondary); padding: 10px 12px 12px 34px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px 12px; }
+  .k { font-size: 12px; color: var(--textSecondary); }
+  .v { font-size: 15px; font-weight: 500; }
+  .v.big { font-size: 20px; font-weight: 700; }
+  .badge {
+    display: inline-flex; gap: 4px; align-items: center; font-size: 12px; padding: 3px 8px; border-radius: 12px;
+    color: var(--sev); background: color-mix(in srgb, var(--sev) calc(var(--tint) * 100%), transparent);
+  }
+
+  /* Full card (today's card) */
+  .fcard {
+    background: var(--backgroundPrimary); border-radius: 12px; padding: 10px 12px; box-shadow: 0 1px 2px var(--shadow);
+    border: 2px solid transparent; display: flex; flex-direction: column; gap: 14px;
+  }
+  .fcard.selected { border-color: var(--primaryBlue); }
+  .fhead { display: flex; align-items: flex-start; gap: 8px; }
+  .ftitle { flex: 1; }
+  .ftitle .n { font-size: 20px; font-weight: 600; display: flex; gap: 6px; align-items: center; margin-bottom: 4px; }
+  .frec { text-align: right; }
+  .frec .c { font-size: 22px; font-weight: 700; }
+  .fdetails { display: flex; gap: 16px; align-items: flex-end; }
+  .fdetails .col { flex: 1; }
+  .ic-first { color: var(--primaryBlue); } .ic-last { color: var(--accentPurple); }
+  .refresh {
+    border-radius: 8px; padding: 6px 12px; font-size: 12px; font-weight: 500; color: var(--primaryBlue);
+    border: 1px solid color-mix(in srgb, var(--primaryBlue) 30%, transparent);
+    background: color-mix(in srgb, var(--primaryBlue) 10%, transparent); white-space: nowrap;
+  }
+  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+
+  .bar { flex: none; background: var(--backgroundPrimary); border-top: 1px solid var(--borderSecondary); padding: 12px 16px 30px; }
+  .tablet .bar { padding: 12px 28px 16px; display: flex; justify-content: flex-end; }
+  .next { border-radius: 12px; padding: 14px; text-align: center; font-weight: 600; font-size: 17px; background: var(--primaryBlue); color: var(--backgroundPrimary); }
+  .tablet .next { width: 320px; }
+
+  .notes { margin-top: 32px; max-width: 1560px; columns: 2; column-gap: 40px; font-size: 14px; }
+  .notes h2 { font-size: 16px; margin: 0 0 8px; column-span: all; }
+  .notes li { margin-bottom: 6px; break-inside: avoid; }
+</style>
+</head>
+<body>
+<h1>LTA-28 · Compact and wide source cards — proposal</h1>
+<p class="lede">LTA-5: the start page picks the card by horizontal size class. Compact width (iPhone, narrow iPad
+split view) gets a one-row card — severity dot, name, refresh icon — that expands inline to show the details.
+Regular width (iPad, Mac) keeps today's full card, laid out in an adaptive grid. Only MBNet exists today; the other sources are illustrative. Selection, the Next bar and the
+sync behaviour are unchanged. Lo-fi: layout and states, not final visuals.</p>
+
+<div class="frames">
+
+  <!-- 1. Compact, collapsed -->
+  <figure>
+    <div class="phone light">
+      <div class="status"></div>
+      <div class="largetitle">Sources</div>
+      <div class="content">
+        <div class="ccard sev-low"><div class="crow"><span class="dot"></span><span class="cname">MBNet Server</span><span class="iconbtn">↻</span><span class="disc">⌄</span></div></div>
+        <div class="ccard sev-medium"><div class="crow"><span class="dot"></span><span class="cname">EuroJackpot Archive</span><span class="iconbtn">↻</span><span class="disc">⌄</span></div></div>
+        <div class="ccard sev-high"><div class="crow"><span class="dot"></span><span class="cname">Mini Lotto Mirror</span><span class="iconbtn">↻</span><span class="disc">⌄</span></div></div>
+        <div class="ccard sev-none"><div class="crow"><span class="dot"></span><span class="cname">Keno Feed <span class="ago">Not synced</span></span><span class="iconbtn">↻</span><span class="disc">⌄</span></div></div>
+      </div>
+      <div class="bar"><div class="next" style="background:color-mix(in srgb,var(--undefinedGrey) 20%,transparent);color:var(--textTertiary)">Next</div></div>
+    </div>
+    <figcaption><b>Compact, collapsed.</b> One row per source. The dot carries severity; "Not synced" is spelled out so it doesn't rely on grey alone.</figcaption>
+  </figure>
+
+  <!-- 2. Compact, one expanded + selected -->
+  <figure>
+    <div class="phone light">
+      <div class="status"></div>
+      <div class="largetitle">Sources</div>
+      <div class="content">
+        <div class="ccard sev-low selected">
+          <div class="crow"><span class="dot"></span><span class="cname">MBNet Server <span class="check">✓</span></span><span class="iconbtn">↻</span><span class="disc">⌃</span></div>
+          <div class="cdetails">
+            <div><div class="k">Records</div><div class="v big">7,012</div></div>
+            <div><div class="k">Last sync</div><div><span class="badge">↻ 1 day ago</span></div></div>
+            <div><div class="k"><span class="ic-first">▦</span> First Record:</div><div class="v">27.01.1957</div></div>
+            <div><div class="k"><span class="ic-last">◷</span> Latest Record:</div><div class="v">27.09.2026</div></div>
+          </div>
+        </div>
+        <div class="ccard sev-medium"><div class="crow"><span class="dot"></span><span class="cname">EuroJackpot Archive</span><span class="iconbtn">↻</span><span class="disc">⌄</span></div></div>
+        <div class="ccard sev-high"><div class="crow"><span class="dot"></span><span class="cname">Mini Lotto Mirror</span><span class="iconbtn">↻</span><span class="disc">⌄</span></div></div>
+      </div>
+      <div class="bar"><div class="next">Next</div></div>
+    </div>
+    <figcaption><b>Expanded and selected.</b> The chevron expands the details inline; tapping elsewhere on the card still selects it (border + checkmark).</figcaption>
+  </figure>
+
+  <!-- 3. Compact, refreshing -->
+  <figure>
+    <div class="phone light">
+      <div class="status"></div>
+      <div class="largetitle">Sources</div>
+      <div class="content">
+        <div class="ccard sev-low"><div class="crow"><span class="dot"></span><span class="cname">MBNet Server</span><span class="iconbtn busy">◌</span><span class="disc">⌄</span></div></div>
+        <div class="ccard sev-medium"><div class="crow"><span class="dot"></span><span class="cname">EuroJackpot Archive</span><span class="iconbtn">↻</span><span class="disc">⌄</span></div></div>
+      </div>
+      <div class="bar"><div class="next" style="background:color-mix(in srgb,var(--undefinedGrey) 20%,transparent);color:var(--textTertiary)">Next</div></div>
+    </div>
+    <figcaption><b>Refreshing.</b> The icon button spins and dims, as the full card's Refresh does today; it announces "Refreshing".</figcaption>
+  </figure>
+
+  <!-- 4. Compact, dark -->
+  <figure>
+    <div class="phone dark">
+      <div class="status"></div>
+      <div class="largetitle">Sources</div>
+      <div class="content">
+        <div class="ccard sev-low selected">
+          <div class="crow"><span class="dot"></span><span class="cname">MBNet Server <span class="check">✓</span></span><span class="iconbtn">↻</span><span class="disc">⌃</span></div>
+          <div class="cdetails">
+            <div><div class="k">Records</div><div class="v big">7,012</div></div>
+            <div><div class="k">Last sync</div><div><span class="badge">↻ 1 day ago</span></div></div>
+            <div><div class="k"><span class="ic-first">▦</span> First Record:</div><div class="v">27.01.1957</div></div>
+            <div><div class="k"><span class="ic-last">◷</span> Latest Record:</div><div class="v">27.09.2026</div></div>
+          </div>
+        </div>
+        <div class="ccard sev-high"><div class="crow"><span class="dot"></span><span class="cname">Mini Lotto Mirror</span><span class="iconbtn">↻</span><span class="disc">⌄</span></div></div>
+      </div>
+      <div class="bar"><div class="next">Next</div></div>
+    </div>
+    <figcaption><b>Dark mode.</b> Same tokens, dark appearance.</figcaption>
+  </figure>
+
+  <!-- 5. Regular width grid -->
+  <figure class="wide-row">
+    <div class="tablet light">
+      <div class="status"></div>
+      <div class="largetitle">Sources</div>
+      <div class="content">
+        <div class="grid">
+          <div class="fcard sev-low selected">
+            <div class="fhead">
+              <div class="ftitle"><div class="n">MBNet Server <span class="check">✓</span></div><span class="badge">↻ Last synced: 1 day ago</span></div>
+              <div class="frec"><div class="c">▤ 7,012</div><div class="k">records</div></div>
+            </div>
+            <div class="fdetails">
+              <div class="col"><div class="k"><span class="ic-first">▦</span> First Record:</div><div class="v">27.01.1957</div></div>
+              <div class="col"><div class="k"><span class="ic-last">◷</span> Latest Record:</div><div class="v">27.09.2026</div></div>
+              <span class="refresh">↻ Refresh</span>
+            </div>
+          </div>
+          <div class="fcard sev-medium">
+            <div class="fhead">
+              <div class="ftitle"><div class="n">EuroJackpot Archive</div><span class="badge">↻ Last synced: 3 days ago</span></div>
+              <div class="frec"><div class="c">▤ 912</div><div class="k">records</div></div>
+            </div>
+            <div class="fdetails">
+              <div class="col"><div class="k"><span class="ic-first">▦</span> First Record:</div><div class="v">23.03.2012</div></div>
+              <div class="col"><div class="k"><span class="ic-last">◷</span> Latest Record:</div><div class="v">23.09.2026</div></div>
+              <span class="refresh">↻ Refresh</span>
+            </div>
+          </div>
+          <div class="fcard sev-high">
+            <div class="fhead">
+              <div class="ftitle"><div class="n">Mini Lotto Mirror</div><span class="badge">↻ Last synced: 9 days ago</span></div>
+              <div class="frec"><div class="c">▤ 5,340</div><div class="k">records</div></div>
+            </div>
+            <div class="fdetails">
+              <div class="col"><div class="k"><span class="ic-first">▦</span> First Record:</div><div class="v">01.10.1992</div></div>
+              <div class="col"><div class="k"><span class="ic-last">◷</span> Latest Record:</div><div class="v">18.09.2026</div></div>
+              <span class="refresh">↻ Refresh</span>
+            </div>
+          </div>
+          <div class="fcard sev-none">
+            <div class="fhead">
+              <div class="ftitle"><div class="n">Keno Feed</div><span class="badge">↻ Not synced</span></div>
+              <div class="frec"><div class="c">▤ N/A</div><div class="k">records</div></div>
+            </div>
+            <div class="fdetails">
+              <div class="col"><div class="k"><span class="ic-first">▦</span> First Record:</div><div class="v">N/A</div></div>
+              <div class="col"><div class="k"><span class="ic-last">◷</span> Latest Record:</div><div class="v">N/A</div></div>
+              <span class="refresh">↻ Refresh</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="bar"><div class="next">Next</div></div>
+    </div>
+    <figcaption><b>Regular width (iPad / Mac).</b> Today's full card, unchanged, in an adaptive grid (columns of at least ~320 pt: 3 here, 2 on a narrower iPad, 1 when it falls back to compact). The Next bar keeps a fixed width at the trailing edge.</figcaption>
+  </figure>
+
+</div>
+
+<div class="notes">
+  <h2>Notes for the implementer</h2>
+  <ul>
+    <li><b>Switch.</b> <code>horizontalSizeClass == .compact</code> → compact card in a single column; <code>.regular</code> → full card in a <code>LazyVGrid</code> with <code>.adaptive(minimum: ~320)</code>. No platform checks, so iPad split view and Mac window resizing follow automatically.</li>
+    <li><b>Compact row.</b> Severity dot · name (checkmark when selected; "Not synced" inline when never synced) · refresh icon button · disclosure chevron. Minimum height 52 pt; the whole row except the two buttons selects the source, as today.</li>
+    <li><b>Expand.</b> The chevron toggles an inline details block: record count, last-sync badge (severity-coloured, as on the full card), first and latest record. Expanded state lives in <code>SourceEntry.State</code> (an <code>isExpanded</code> flag toggled by an action), per TCA; several cards can be expanded at once; collapsed by default and not persisted.</li>
+    <li><b>Refresh.</b> Icon-only on compact, labelled "Refresh" / "Refreshing" for VoiceOver; same spin and dimmed styling as the full card's button.</li>
+    <li><b>Full card.</b> Unchanged from today, including its accessibility-size reflow. Cards in one grid row share the row's height.</li>
+    <li><b>Accessibility.</b> The dot is decorative; severity is read from the badge text (compact: announced with the name, e.g. "MBNet Server, synced 1 day ago"). The chevron is labelled "Show details" / "Hide details". At accessibility text sizes the compact row lets the name wrap onto two lines before the buttons shrink, and the details grid becomes one column.</li>
+    <li><b>Tokens.</b> New tokens for the dot size, compact row height and padding, and the grid's minimum column width; colours reuse the existing severity and refresh tokens.</li>
+  </ul>
+</div>
+</body>
+</html>

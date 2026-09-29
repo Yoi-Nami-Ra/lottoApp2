@@ -1,0 +1,30 @@
+id: 29
+title: "Implement compact and wide source cards"
+type: feature
+description: |
+  Build the design from LTA-28, following the decisions in LTA-5:
+  - StartPageView reads the horizontal size class and renders the
+    compact card list or the full-card adaptive grid;
+  - a compact card view next to today's SourceEntryView, driven by the
+    same SourceEntry store;
+  - `SourceEntry.State` gains an `isExpanded` flag toggled by an action
+    (TCA state, not view @State), collapsed by default;
+  - refresh on the compact card is icon-only with a "Refresh" /
+    "Refreshing" accessibility label and the existing spin/dim styling.
+  Keep working with LTA-3 (Fetch vs Refresh on never-synced sources),
+  LTA-2 (skipped-rows note) and LTA-4 ("~N missing") wherever those
+  have landed.
+  Tests (written first): TestStore tests for the expand toggle and that
+  selection and refresh still behave the same from both card variants.
+  Views use design tokens and ship light/dark #Previews for compact
+  collapsed, expanded, selected, refreshing, never synced, large
+  Dynamic Type, and the regular-width grid.
+  Build from the approved file in design/final/ once LTA-28 is
+  promoted; add it to `designs` then.
+platform: ios
+status: ready
+phase: Backlog
+priority: low
+parent: 5
+blocked_by: [28]
+designs: []

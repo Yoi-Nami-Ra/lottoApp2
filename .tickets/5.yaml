@@ -2,13 +2,23 @@ id: 5
 title: "Compact card on mobile, full card on desktop"
 type: feature
 description: |
-  Documentation.docc TODO item 002 (Design): on mobile the source entry
-  should show only the source name and severity indicator with the
-  refresh control; on desktop (Mac / large widths) the full card with
-  record counts and first/latest record dates. Needs a design and a
-  decision on the switching criterion (platform vs size class).
+  Documentation.docc TODO item 002 (Design): a compact source entry on
+  narrow screens and the full card on wide ones. Parent of the design
+  ticket LTA-28 and the implementation ticket LTA-29.
+
+  Decisions:
+  - Switch by horizontal size class, not platform: compact width
+    (iPhone, narrow iPad split view) → compact card; regular width (iPad,
+    Mac) → full card. Mac window resizing and iPad multitasking follow
+    automatically.
+  - Compact card: one row — severity dot, name, refresh icon button —
+    plus a disclosure that expands the record count, last sync and
+    first/latest record dates inline.
+  - Wide layout: today's full card in an adaptive grid, so several
+    sources sit side by side.
+  - Selection, the Next bar and sync behaviour are unchanged.
 platform: macos
-status: refine
+status: ready
 phase: Backlog
 priority: low
 parent: null
