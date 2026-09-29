@@ -4,15 +4,37 @@ type: feature
 description: |
   Implement the chain model and executor specified in LTA-8, which LTA-9
   deliberately leaves out by running Count Unique Elements as a single
-  block. Chains are trees rooted at a source; each block has one input,
-  declares its input and output kind (Game, count result, number), and
-  the app rejects attaching a block whose input doesn't match its
-  parent's output. Every leaf yields one result. Adopt the count result
-  type from LTA-9 and move that block onto the engine. Execution details
-  (when trees run, sharing computed branches, cancellation) follow the
-  LTA-8 spec.
+  block. Engine only: Domain types, validation and execution with tests.
+  The UI for building chains is LTA-20; BlocksPage keeps running single
+  blocks until then.
+
+  Model:
+  - A chain is a tree rooted at a source. Each block node has exactly one
+    input (its parent) and any number of children.
+  - Every block declares its input and output kind (Game, count result,
+    number, per LTA-8). Attaching a block whose input kind doesn't match
+    its parent's output fails with a typed Domain error; the tree is left
+    unchanged. Blocks carry their parameters (x for filters, direction for
+    sorts).
+  - Chains live in memory for the session only, like the chosen source;
+    persisting them is a later ticket.
+
+  Execution:
+  - Runs on demand: an explicit run computes every leaf. Editing the tree
+    after a run marks its results stale rather than re-running.
+  - Within a run each node is evaluated once and its output fed to all its
+    children; nothing is cached between runs.
+  - Every leaf yields one result, keyed by its node. Execution goes
+    through an injected dependency and runs in an Effect; starting a new
+    run cancels one still in flight.
+  - Adopt the count result type from LTA-9 and move Count Unique Elements
+    onto the engine, keeping LTA-9's behaviour unchanged.
+
+  Tests (written first): attaching valid and invalid blocks; a linear
+  chain; a branching tree with a shared node evaluated once; stale
+  results after an edit; cancellation of an in-flight run.
 platform: ios
-status: refine
+status: ready
 phase: MVP
 priority: medium
 parent: null

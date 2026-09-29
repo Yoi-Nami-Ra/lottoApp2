@@ -1,0 +1,20 @@
+id: 20
+title: "Build the chain-builder UI"
+type: feature
+description: |
+  Let the user build and run processing chains on top of the engine from
+  LTA-19: attach blocks to the source or to another block, branch a
+  node into several children, set block parameters (x for filters,
+  direction for sorts), run the tree on demand, and see every leaf's
+  result. Blocks whose input doesn't match the chosen parent's output
+  are not offered, or are shown as unavailable. Stale results after an
+  edit must be visible as such. How several leaf results are presented
+  together is still open in LTA-8. Needs a design before
+  implementation.
+platform: ios
+status: refine
+phase: MVP
+priority: medium
+parent: null
+blocked_by: [19]
+designs: []

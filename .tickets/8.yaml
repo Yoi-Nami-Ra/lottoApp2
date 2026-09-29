@@ -35,14 +35,15 @@ description: |
     builds chains at runtime, so each block declares its input and output
     kind and the app rejects attaching a block whose input doesn't match
     its parent's output. Every leaf yields one result.
+  - Execution (settled in LTA-19): trees run on demand and an edit marks
+    results stale; within a run each node is evaluated once and shared by
+    its children, with no caching between runs; a new run cancels one in
+    flight. Chains are kept for the session only.
 
   Open for the spec:
   - Tie order when sorting by count (e.g. by item, ascending).
   - Parameter bounds, e.g. prefix(x) with x larger than the collection.
   - How the results of several leaves are presented together.
-  - Execution: when a tree runs (on demand vs on every edit), whether
-    shared branches are computed once, and cancellation of long runs.
-  - Whether chains are saved, and where.
 platform: ios
 status: ready
 phase: MVP
