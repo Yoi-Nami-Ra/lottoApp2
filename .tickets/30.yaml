@@ -1,0 +1,34 @@
+id: 30
+title: "Track source data state for out-of-date results"
+type: feature
+description: |
+  Give every result a way to tell that its source's data has changed
+  since it was computed (specs/003-block-pipeline FR-021, FR-030,
+  SC-007; plan research R8).
+
+  Scope:
+  1. SourceMeta gains contentDigest (SHA-256 over the merged,
+     index-sorted draws, via CryptoKit), computed by LocalStore.save.
+     Existing meta.json files without it still decode; the next sync
+     writes it.
+  2. SourceDataState (records count, latest record, content digest) in
+     Domain; SourcesRepo / SourcesBLogic gain dataStateFor(sourceID),
+     nil when the source is unavailable.
+  3. Freshness rules (Domain/BLogic): a shown result is out of date when
+     the chain's revision or its source's data state changed since the
+     run; a saved result only on data state, plus "chain changed since"
+     as information and "source unavailable" when the source is gone.
+
+  Out of scope: the RunStamp itself and chain revisions (LTA-19);
+  storing saved results (LTA-31); showing the states (LTA-23).
+
+  Done when (tests first): digest is equal for the same draws in any
+  input order and changes when a draw's numbers or date change; old
+  meta.json decodes; every freshness rule has a passing test.
+platform: ios
+status: ready
+phase: MVP
+priority: high
+parent: null
+blocked_by: []
+designs: []

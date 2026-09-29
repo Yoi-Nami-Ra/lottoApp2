@@ -2,37 +2,38 @@ id: 19
 title: "Build the processing-block tree engine"
 type: feature
 description: |
-  Implement the chain model and executor specified in LTA-8, which LTA-9
-  deliberately leaves out by running Count Unique Elements as a single
-  block. Engine only: Domain types, validation and execution with tests.
-  The UI for building chains is LTA-20; BlocksPage keeps running single
-  blocks until then.
+  Implement the chain model and runner of specs/003-block-pipeline
+  (plan: research R3–R6, contracts/domain-contracts.md §1–2).
 
-  Model:
-  - A chain is a tree rooted at a source. Each block node has exactly one
-    input (its parent) and any number of children.
-  - Every block declares its input and output kind (Game, count result,
-    number, per LTA-8). Attaching a block whose input kind doesn't match
-    its parent's output fails with a typed Domain error; the tree is left
-    unchanged. Blocks carry their parameters (x for filters, direction for
-    sorts).
-  - Chains live in memory for the session only, like the chosen source;
-    persisting them is a later ticket.
+  Scope:
+  1. Pipeline Domain types: ValueKind, BlockValue, CountItem,
+     UniqueCount, CountResult, SortDirection, the Block enum with its
+     accepts/output table (FR-003, FR-004, FR-010), ProcessingBlockKind
+     extended with every catalogue case and a defaultBlock.
+  2. Chain as a flat list of parent-pointer nodes rooted at an implicit
+     input that always outputs draws; not tied to any source (FR-013).
+     A revision counter increments on every edit.
+  3. Pure rules (ChainRules): attaching (refuses input mismatches with a
+     reason, leaving the chain unchanged — FR-015), updating parameters,
+     removingSubtree, outputKind, path, leaves (FR-012, FR-014, FR-016).
+  4. BlockEvaluator entry point and the ChainRunner dependency: runs a
+     chain against one source's Game, parents first, each node once
+     (FR-019), streaming a RunEvent per node for progress (FR-018),
+     isolating failures per node (FR-023), stopping on cancellation
+     (FR-020). The blocks themselves arrive in LTA-9, LTA-18, LTA-24,
+     LTA-25, LTA-26 and LTA-27.
+  5. RunStamp on every result: source, source data state, chain revision
+     (FR-021). The data-state side is LTA-30.
 
-  Execution:
-  - Runs on demand: an explicit run computes every leaf. Editing the tree
-    after a run marks its results stale rather than re-running.
-  - Within a run each node is evaluated once and its output fed to all its
-    children; nothing is cached between runs.
-  - Every leaf yields one result, keyed by its node. Execution goes
-    through an injected dependency and runs in an Effect; starting a new
-    run cancels one still in flight.
-  - Adopt the count result type from LTA-9 and move Count Unique Elements
-    onto the engine, keeping LTA-9's behaviour unchanged.
+  Out of scope: saving chains/results/drafts (LTA-31); UI (LTA-20 and
+  children).
 
-  Tests (written first): attaching valid and invalid blocks; a linear
-  chain; a branching tree with a shared node evaluated once; stale
-  results after an edit; cancellation of an in-flight run.
+  Done when (tests first):
+  - every (parent kind × block) pair accepted exactly per FR-010 (SC-002);
+  - revision bumps on add / edit / remove, not otherwise;
+  - a node with several children is evaluated once per run (SC-004);
+  - a failing node fails its subtree only; siblings still finish;
+  - a cancelled run emits nothing more.
 platform: ios
 status: ready
 phase: MVP

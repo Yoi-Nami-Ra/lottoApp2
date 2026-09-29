@@ -44,8 +44,13 @@ description: |
   - Sort ties and filter bounds (settled in LTA-10): equal counts fall
     back to item ascending; filters clamp x like Swift's prefix/suffix/
     dropFirst/dropLast, with x >= 0.
+
+  Delivered as specs/003-block-pipeline (spec, clarifications, plan).
+  The spec supersedes the session-only, source-rooted chains above:
+  chains are source-independent and saved, and results can be saved
+  (LTA-19, LTA-20, LTA-30, LTA-31).
 platform: ios
-status: ready
+status: done
 phase: MVP
 priority: high
 parent: null

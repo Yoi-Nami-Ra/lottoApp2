@@ -2,48 +2,36 @@ id: 23
 title: "Implement chain-builder UI"
 type: feature
 description: |
-  Build the screens designed in LTA-21 and LTA-22 on top of the engine
-  from LTA-19, following the decisions in LTA-20:
-  - the chain outline replacing BlocksPage (source header, indented
-    blocks, collapsible branches, "+" per row, swipe to remove with
-    subtree confirmation, Run in the bottom action bar, leaf summaries,
-    stale marking, empty state);
-  - the add-block sheet (sections, disabled blocks with reasons,
-    parameter step, edit mode);
-  - navigation from a leaf to its result screen (LTA-9's screen).
+  Build the screens designed in LTA-32, LTA-21 and LTA-22 on the engine
+  from LTA-19 and the persistence from LTA-31, following LTA-20 and
+  specs/003-block-pipeline/plan.md (research R10–R12,
+  contracts/domain-contracts.md §5).
 
-  Structure:
-  - Evolve the existing BlocksPage reducer and view in place — StartPage
-    already pushes it — growing `State` from the fixed catalogue into the
-    chain outline; no rename.
-  - The add-block sheet is its own AddBlock reducer, presented from
-    BlocksPage with `@Presents` / `.sheet`, holding its own `StackState`
-    for catalogue → parameter step. It hands the configured block (or
-    edited parameters) back through a delegate action; BlocksPage applies
-    it through the engine.
-  - The catalogue lists only implemented blocks, driven by
-    `ProcessingBlockKind.allCases`; LTA-24, LTA-25, LTA-26, LTA-18 and
-    LTA-27 make theirs appear by adding cases.
-  - Runs go through the engine's injected dependency inside `.run`
-    effects with a cancel id, so reducers stay pure and testable.
+  Scope:
+  1. BlocksPage becomes the chain list: saved chains, New chain, rename,
+     delete with the saved-result-count warning.
+  2. ChainEditor (new reducer + view): outline, "+" per row, swipe to
+     remove, Run with progress (cancelInFlight), leaf summaries,
+     out-of-date marking, save a block's output, the chain's saved
+     results, a custom back button driving the FR-032 warning, a draft
+     written on scenePhase .background and offered back on open.
+  3. AddBlock (new reducer + view, sheet with its own StackState):
+     sections, disabled blocks with reasons, parameter step, edit mode.
+  4. Navigation to result screens (ResultPage from LTA-9 / LTA-18).
 
-  Tests (written first):
-  - TestStore tests for BlocksPage and AddBlock covering add, branch,
-    edit, remove (with and without confirmation), run, stale after edit,
-    cancel of an in-flight run, and opening a leaf result.
-  - One XCUITest happy path: open a source → add a block → Run → open
-    the leaf's result. Needs stubbed data: add a launch argument that
-    swaps the live sources/engine dependencies for fixtures (the app has
-    no such switch yet).
-  - Views are thin, use design tokens, and ship light/dark #Previews for
-    every state in the LTA-21/LTA-22 frames.
+  Tests (written first): TestStore suites for BlocksPage, ChainEditor and
+  AddBlock covering add, branch, edit, remove, run → events, stale after
+  edit, new run cancels old, save result, back warning, background
+  draft, restore/decline, delete cascade warning. One XCUITest happy path
+  with a launch argument that swaps live dependencies for fixtures.
+  Views use design tokens with light/dark #Previews for every state.
 
-  Build from the approved files in design/final/ once LTA-21 and LTA-22
-  are promoted; add them to `designs` then.
+  Build from the approved files in design/final/ once LTA-32, LTA-21 and
+  LTA-22 are promoted; add them to `designs` then.
 platform: ios
 status: ready
 phase: MVP
 priority: medium
 parent: 20
-blocked_by: [19, 21, 22]
+blocked_by: [19, 21, 22, 30, 31, 32]
 designs: []

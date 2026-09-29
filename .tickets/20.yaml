@@ -2,32 +2,32 @@ id: 20
 title: "Build the chain-builder UI"
 type: feature
 description: |
-  Let the user build and run processing chains on top of the engine from
-  LTA-19. Parent of the design tickets LTA-21 and LTA-22 and the
-  implementation ticket LTA-23.
+  Let the user build, run, save and reuse processing chains
+  (specs/003-block-pipeline, US2–US8). Parent of LTA-21, LTA-22, LTA-32
+  (designs) and LTA-23 (implementation).
 
-  Decisions:
-  - Placement: the builder replaces BlocksPage. Opening it for the chosen
-    source shows that source's chain; the current block catalogue becomes
-    an "add block" sheet.
-  - Tree view: an indented outline — the source at the top, each block
-    indented under its parent, nodes with children collapsible. Built on
-    a native list so it fits phone width and works with VoiceOver and
-    Dynamic Type.
-  - Adding: selecting a node and adding opens the sheet, which offers only
-    blocks whose input matches that node's output. Adding a second child
-    to a node creates a branch. Block parameters (x for filters, direction
-    for sorts) are set when adding and editable afterwards.
-  - Running: an explicit run computes every leaf (on demand, per LTA-19);
-    after an edit, previous results are marked stale.
-  - Results: each leaf shows a short summary in the outline (e.g. "49
-    elements", "Total: 294"); tapping it pushes that leaf's full result,
-    reusing the results screen from LTA-9.
-  - Chains are kept for the session only.
+  Decisions (spec clarifications 2026-09-29):
+  - The Blocks page becomes the list of saved chains for the chosen
+    source's session: every saved chain by an editable name, plus "New
+    chain"; open, rename, delete. Deleting a chain deletes its saved
+    results after a warning naming how many (FR-017).
+  - Opening a chain shows the chain editor: an indented outline, "+" per
+    row, swipe to remove with subtree confirmation, Run in the bottom bar,
+    leaf summaries, out-of-date marking (LTA-21's decisions stand).
+  - Runs always use the source chosen on the start page; to switch, go
+    back and choose another (FR-018).
+  - The output of any block can be saved; each chain lists its saved
+    results, which read as out of date after their source changes and
+    show "chain changed since" after an edit (FR-027–FR-030).
+  - Leaving a chain with unsaved results asks Save / Discard / Cancel
+    (FR-032); unsaved results are kept as a draft when the app goes to the
+    background and offered back on the next open (FR-031).
+  - Results: each leaf shows a summary and opens its result screen
+    (LTA-9, LTA-18).
 platform: ios
 status: ready
 phase: MVP
 priority: medium
 parent: null
-blocked_by: [19]
+blocked_by: [19, 31]
 designs: []

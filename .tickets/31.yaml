@@ -1,0 +1,36 @@
+id: 31
+title: "Persist chains, saved results and drafts"
+type: feature
+description: |
+  Save chains across launches, let any block's output be saved, and
+  keep unsaved results as a per-chain draft (specs/003-block-pipeline
+  FR-017, FR-027–FR-031; plan research R9, R12;
+  contracts/domain-contracts.md §4).
+
+  Scope:
+  1. ChainsRepo contract in Domain/Repos (struct of closures +
+     DependencyKey): list/save/delete chains; list/save/delete a chain's
+     saved results; get/put/delete a chain's draft. liveValue,
+     previewValue (in-memory) and an unimplemented testValue.
+  2. ChainsRepoImpl in Data/Repos: a file-backed actor under
+     Application Support/lottoApp2/chains/<chainID>/ with chain.json,
+     results/<resultID>.json and draft.json, written atomically.
+     Deleting a chain removes its directory (results and draft go with
+     it).
+  3. SavedResult (chain, node, path of blocks, value, RunStamp, saved
+     at) and ChainDraft (one per chain, replaced by a newer one) as
+     Codable Domain types.
+
+  Out of scope: when drafts are written or offered back, and the
+  Save / Discard / Cancel warning (LTA-23); freshness rules (LTA-30).
+
+  Done when (tests first, temp directory): round-trip of chains,
+  results and drafts; listing results per chain; replacing a draft;
+  cascade delete; a missing or corrupt file is skipped, not a crash.
+platform: ios
+status: ready
+phase: MVP
+priority: high
+parent: null
+blocked_by: [19]
+designs: []
