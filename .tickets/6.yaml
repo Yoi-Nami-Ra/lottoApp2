@@ -25,9 +25,9 @@ description: |
     outside 1…y, or an entry whose CombinationType differs from the Game's.
   - Mapping `DrawDTO` → GameEntry skips draws that fail validation and
     reports how many were skipped, rather than failing the whole read.
-    (The MBNet parser checks count and range but not duplicates, so a
-    duplicate-number row can reach this point.) How the count is shown to
-    the user is LTA-2.
+    LTA-2 applies the same rules at sync so invalid draws are never
+    stored; the read-time skip is a safety net for data saved before
+    that. Showing the count to the user is LTA-2.
 
   Read path:
   - Add a `SourcesRepo` call returning a source's Game (from

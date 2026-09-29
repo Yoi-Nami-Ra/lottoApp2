@@ -7,13 +7,34 @@ description: |
   records were skipped. Today `SourcesRepoImpl.fetchAndSaveDataFrom` only
   writes a `Logger.sources.warning`; `FetchedDraws.skipped` never reaches
   the Domain `Source` or the card, so the user never learns about it.
-  Open questions: where to show it (card note, one-off alert, sync
-  summary) and whether the count persists until the next sync. Likely
-  shares error/result plumbing with LTA-1.
+
+  Decisions:
+  - What counts: validate fully at sync. Besides the rows the parser drops,
+    each draw is checked against LTA-6's Domain rules (e.g. duplicate
+    numbers, which the MBNet parser doesn't catch) before it is saved.
+    Invalid draws are never stored, and one count covers both kinds.
+  - Where: a warning note on the source card, e.g. "3 records skipped in
+    last sync", built with design tokens and keeping the card's
+    accessibility-size reflow working.
+  - Lifetime: persisted with the source metadata (`SourceMeta`), so it
+    survives relaunch. The next successful sync replaces it; a sync with
+    0 skipped clears the note. A failed sync leaves it unchanged.
+
+  Changes:
+  - `Source` gains the last sync's skipped count; `SourceMeta` stores it.
+  - `SourcesRepoImpl` counts parser skips plus Domain-validation skips and
+    saves only valid draws; keep the log line.
+  - `SourceEntry` maps the count to the note; no note when it is 0 or the
+    source never synced.
+
+  Tests (written first): repo sync with parser skips, Domain skips, both,
+  and none; persistence across a store reload; a failed sync keeping the
+  previous count; reducer/view state mapping. Previews (light/dark) for a
+  card with and without the note, including large Dynamic Type.
 platform: ios
-status: refine
+status: ready
 phase: MVP
 priority: medium
 parent: null
-blocked_by: []
+blocked_by: [6]
 designs: []
