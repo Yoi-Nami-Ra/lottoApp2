@@ -59,22 +59,35 @@ accept iff block.accepts.contains(parentOutput)
 | Type | Fields | Notes |
 |---|---|---|
 | `SourceDataState` | `recordsCount: Int`, `latestRecord: Date?`, `contentDigest: String` | from `SourceMeta`; digest computed by `LocalStore` on save (research R8) |
-| `RunStamp` | `sourceName: String`, `dataState: SourceDataState`, `chainRevision: Int` | carried by every result (FR-021) |
+| `RunStamp` | `sourceName: String`, `sourceDisplayName: String`, `dataState: SourceDataState`, `chainRevision: Int` | carried by every result (FR-021); `sourceName` is the source id used for lookups, `sourceDisplayName` is what screens show, kept so a removed source is still named (research R15) |
+| `SourceSnapshot` | `game: Game`, `dataState: SourceDataState` | what `gameFor` returns (research R16) |
 | `BlockFailure` | `.overBudget(limit: Int)`, `.invalidParameter(name: String)`, `.upstreamFailed`, `.cancelled` | per node (FR-022, FR-023, FR-011) |
 | `NodeResult` | `.notRun`, `.running`, `.value(BlockValue, RunStamp)`, `.failed(BlockFailure, RunStamp)` | per node, in editor state |
 | `RunEvent` | `.nodeFinished(UUID, Result<BlockValue, BlockFailure>)`, `.finished` | streamed by `ChainRunner` |
 | `SavedResult` | `id: UUID`, `chainID: UUID`, `nodeID: UUID`, `path: [Block]` (root → node), `value: BlockValue`, `stamp: RunStamp`, `savedAt: Date` | FR-027, FR-028 |
 | `ChainDraft` | `chainID: UUID`, `results: [UUID: NodeResult]` (only `.value`/`.failed`), `createdAt: Date` | at most one per chain (FR-031) |
+| `ValueSummary` | `.draws(count:)`, `.elements(count:)`, `.combinations(unique:repeating:)`, `.subCombinations(unique:size:)`, `.number(Int)`, `.empty(ValueKind)` | derived from a `BlockValue` by `ResultSummary` (FR-024, research R14); the view maps each case to copy |
+| `ResultFreshness` | `.current`, `.outOfDate`, `.sourceUnavailable` | derived; a saved result adds `chainChanged: Bool` as information only (FR-030) |
 
 ### Result freshness (FR-021, FR-030)
 
 ```text
-shown result is outOfDate   ⇔ stamp.chainRevision != chain.revision
-                             ∨ stamp.dataState   != currentDataState(stamp.sourceName)
-saved result is outOfDate   ⇔ stamp.dataState   != currentDataState(stamp.sourceName)
-saved result sourceMissing  ⇔ currentDataState(stamp.sourceName) == nil
-saved result chainChanged   ⇔ stamp.chainRevision != chain.revision     // information only
+current(s)                  = dataStates[s] ?? nil                       // lookup per source, research R13
+
+shown result sourceUnavailable ⇔ current(stamp.sourceName) == nil
+shown result outOfDate         ⇔ stamp.chainRevision != chain.revision
+                                ∨ stamp.dataState   != current(stamp.sourceName)
+saved result sourceUnavailable ⇔ current(stamp.sourceName) == nil
+saved result outOfDate         ⇔ stamp.dataState   != current(stamp.sourceName)
+saved result chainChanged      ⇔ stamp.chainRevision != chain.revision  // information only
 ```
+
+When the stamp's source has no current state, **source unavailable takes precedence** over out of date:
+the result reads "source unavailable", not "out of date".
+
+The state is always the one for **the stamp's own source**, never the chosen source's, so a result from
+source A keeps its freshness while B is chosen (SC-007). `dataStates` holds one entry per distinct source
+among the chosen source, the saved results and a restored draft.
 
 ### Node result lifecycle (editor)
 
@@ -117,7 +130,7 @@ Deleting a chain removes its directory (results and draft with it — FR-017). `
 
 | Reducer | New / changed state | Notes |
 |---|---|---|
-| `BlocksPage` (changed) | `sourceID`, `sourceName`, `chains: IdentifiedArrayOf<Chain>`, `@Presents editor: ChainEditor.State?`, `@Presents alert` (delete confirmation) | becomes the chain list (FR-017) |
-| `ChainEditor` (new) | `chain: Chain`, `source: (id, name)`, `results: [UUID: NodeResult]`, `currentDataState: SourceDataState?`, `isRunning`, `savedResults: IdentifiedArrayOf<SavedResult>`, `collapsed: Set<UUID>`, `@Presents addBlock`, `@Presents result`, `@Presents alert` | derived: `isOutOfDate(nodeID)`, `hasUnsavedResults` |
+| `BlocksPage` (changed) | `sourceID`, `sourceName`, `chains: IdentifiedArrayOf<Chain>`, `@Presents editor: ChainEditor.State?`, `@Presents alert` (delete confirmation naming the saved-result count and a draft) | becomes the chain list (FR-017, FR-032) |
+| `ChainEditor` (new) | `chain: Chain`, `source: ChainSource { id, name }`, `results: [UUID: NodeResult]`, `dataStates: [String: SourceDataState?]`, `isRunning`, `savedResults: IdentifiedArrayOf<SavedResult>`, `savedNodeIDs: Set<UUID>`, `collapsed: Set<UUID>`, `@Presents addBlock`, `@Presents result`, `@Presents alert` | derived: `freshness(nodeID)`, `summary(nodeID)` (every node that ran), `hasUnsavedResults` (`.value` nodes not in `savedNodeIDs`) |
 | `AddBlock` (new) | `parentID: UUID?`, `parentOutput: ValueKind`, `path: StackState<Step>`, `draft: Block?`, `validation: ChainError?` | delegate `.added(Block)` / `.edited(UUID, Block)` |
-| `ResultPage` (new, LTA-9/LTA-18) | `value: BlockValue`, `stamp: RunStamp`, `isOutOfDate` | grouped view for combinations (LTA-18) |
+| `ResultPage` (new, LTA-9/LTA-18) | `value: BlockValue`, `stamp: RunStamp`, `freshness: ResultFreshness`, `chainChanged: Bool` (saved results only) | opened for a shown result of any node that ran, or for a saved result; grouped view for combinations (LTA-18) |

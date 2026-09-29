@@ -81,6 +81,15 @@ triples about 140k.
 
 **Gate result**: PASS. Proceed to Phase 0.
 
+**Post-analysis re-check (2026-09-29)**: PASS. The `/speckit-analyze` findings that touched design are
+resolved in research R11 (revised) and R13–R16, and carried into data-model.md, contracts and quickstart:
+- **II**: leaf and intermediate summaries are a Domain function, not view code (R14), and every action
+  payload stays `Equatable` (`SourceSnapshot`, `ChainSource`, R16).
+- **III**: opening a saved result, per-source freshness and dismiss-cancels-run each have a named test
+  home (contracts §5, quickstart §1).
+- **IV**: new node ids come from `@Dependency(\.uuid)` through `attaching(_:under:id:)` (R16).
+- **V**: alert copy uses `AlertState` builders over `TextState` tokens, the `SourceEntry` pattern (R16).
+
 **Post-Phase-1 re-check**: PASS.
 - The design adds two injected seams and one Data implementation, with no layer crossing.
 - The one view-level behaviour, owning the back button, only sends an action; the decision stays in the reducer (research R11).
@@ -93,7 +102,7 @@ triples about 140k.
 ```text
 specs/003-block-pipeline/
 ├── plan.md                     # This file
-├── research.md                 # Phase 0 — decisions R1–R12
+├── research.md                 # Phase 0 — decisions R1–R16
 ├── data-model.md               # Phase 1 — types, invariants, lifecycles, storage layout
 ├── quickstart.md               # Phase 1 — tests to run and manual end-to-end checks
 ├── contracts/
@@ -114,12 +123,13 @@ lottoApp2/
 │   │   ├── Block.swift                  # NEW — Block enum + accepts/output table
 │   │   ├── ProcessingBlockKind.swift    # MODIFIED — every catalogue case + defaultBlock
 │   │   ├── Chain.swift                  # NEW — Chain, ChainNode, ChainError
-│   │   └── RunResults.swift             # NEW — SourceDataState, RunStamp, BlockFailure, NodeResult, RunEvent, SavedResult, ChainDraft
+│   │   └── RunResults.swift             # NEW — SourceDataState, SourceSnapshot, RunStamp, BlockFailure, NodeResult, RunEvent, SavedResult, ChainDraft, ValueSummary, ResultFreshness
 │   ├── BLogic/
 │   │   ├── ChainRules.swift             # NEW — attaching / updating / removingSubtree / outputKind / path
 │   │   ├── BlockEvaluator.swift         # NEW — filters, sorts, counts, sub-combination budget
 │   │   ├── ChainRunner.swift            # NEW — DependencyKey; live walks nodes parents-first, streams RunEvent
-│   │   ├── Freshness.swift              # NEW — out-of-date / chain-changed / source-missing rules
+│   │   ├── Freshness.swift              # NEW — ResultFreshness per result, judged against the stamp's own source (R13)
+│   │   ├── ResultSummary.swift          # NEW — BlockValue → ValueSummary for every node that ran (R14)
 │   │   └── SourcesBLogic.swift          # MODIFIED — gameFor, dataStateFor
 │   └── Repos/
 │       ├── SourcesRepo.swift            # MODIFIED — gameFor, dataStateFor
@@ -147,12 +157,14 @@ lottoApp2/
         └── PreviewFixtures.swift        # MODIFIED — sample games, chains, results
 
 lottoApp2Tests/
-├── Domain/                              # NEW folder — CombinationTests, BlockEvaluatorTests, ChainRulesTests, ChainRunnerTests, FreshnessTests
+├── Domain/                              # NEW folder — ReferenceDraws (fixture), CombinationTests, PipelineValuesTests, BlockEvaluatorTests, ChainRulesTests, ChainRunnerTests, FreshnessTests, ResultSummaryTests
 ├── Data/                                # NEW folder — ChainsRepoImplTests, LocalStoreDigestTests
 └── Reducers/
     ├── BlocksPageTests.swift            # MODIFIED — chain list
     ├── ChainEditorTests.swift           # NEW
-    └── AddBlockTests.swift              # NEW
+    ├── AddBlockTests.swift              # NEW
+    ├── ResultPageTests.swift            # NEW
+    └── PipelineMocks.swift              # NEW — in-memory ChainsRepo, scripted/controlled ChainRunner
 ```
 
 **Structure Decision**: the existing three-layer tree is kept.
@@ -168,7 +180,7 @@ lottoApp2Tests/
 4. LTA-9 and LTA-24 to LTA-27, LTA-18: blocks and result screens.
 5. LTA-23: editor and add-block UI, once the LTA-21 and LTA-22 designs are final.
 
-Several tickets are stale against the clarified spec. LTA-19 and LTA-20 describe chains rooted at a source that last for the session only. LTA-23 describes evolving `BlocksPage` into the outline, where this plan makes it the chain list. Update them before tasks are generated.
+The tickets that were stale against the clarified spec have been updated, in commit 4183d4c before tasks were generated. LTA-19 and LTA-20 had described chains rooted at a source that lasted for the session only. LTA-23 had described evolving `BlocksPage` into the outline, where this plan makes it the chain list. LTA-30 to LTA-32 were added.
 
 ## Complexity Tracking
 

@@ -45,6 +45,7 @@ and LTA-27 are recorded under Clarifications.
   its output shared by all its children; nothing is kept between runs.
 - Q: Are chains saved? → A: Superseded on 2026-09-29 — see that session.
 - Q: How are results presented? → A: Each leaf shows a short summary and opens its own result screen.
+  (Extended on 2026-09-29, analysis follow-up: every block that ran does the same.)
 
 ### Session 2026-09-29
 
@@ -70,6 +71,19 @@ and LTA-27 are recorded under Clarifications.
   No — it shows "chain changed since" as information; its recorded path stays authoritative.
 - Q: Are unsaved results kept automatically when the app goes to the background? → A: Yes, as a
   draft; the next time that chain is opened, the app offers to restore them.
+
+### Session 2026-09-29 (analysis follow-up)
+
+- Q: US7 said z = x is refused when set, but a chain isn't tied to a source — which holds? → A:
+  FR-011: z = 1 is refused when set; z not less than x fails only that leaf when the chain runs
+  against a source.
+- Q: What does "going back from the blocks page" mean now that the blocks page lists chains? → A:
+  Leaving the open chain. The blocks page is the list of saved chains; an open chain is "the chain".
+- Q: Which moments trigger the unsaved-results warning? → A: Leaving the chain (which also covers
+  opening another chain). Deleting a chain that has a draft says so in the delete warning, with no
+  save option from the list.
+- Q: Can an intermediate block's output be viewed, not only saved? → A: Yes — every block that ran
+  shows a summary and opens its result view.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -236,8 +250,10 @@ a known shared pair, run each block and compare with a hand count.
 2. **Given** a combination drawn once, **When** combinations are counted, **Then** it has count 1.
 3. **Given** z = 2 on 6-of-49 draws, **When** sub-combinations are counted, **Then** each draw
    contributes its 15 pairs, and a pair appearing in 3 draws has count 3.
-4. **Given** z = 1 or z = x, **When** the person sets it, **Then** the value is refused (z must be at
-   least 2 and less than x).
+4. **Given** z = 1, **When** the person sets it, **Then** the value is refused (z must be at least
+   2). **Given** a z that is not less than x of the source a run uses, **When** the chain runs,
+   **Then** only that leaf fails, naming the parameter — a chain is not tied to a source, so z < x
+   can only be checked against the source of a run (FR-011).
 5. **Given** a z whose work exceeds the limit in FR-022, **When** the chain runs, **Then** that leaf
    reports it was too large to compute and names the limit; other leaves still produce results.
 
@@ -269,8 +285,9 @@ date.
 4. **Given** a result saved from source A, **When** source A syncs new draws, **Then** that result
    reads as out of date, and results saved from source B do not.
 5. **Given** a saved result, **When** the person deletes it, **Then** it is no longer listed.
-6. **Given** a chain with unsaved results, **When** the person goes back from the blocks page,
-   **Then** the app warns the results will be lost and offers save, discard or cancel.
+6. **Given** a chain with unsaved results, **When** the person leaves the chain (goes back to the
+   list of chains), **Then** the app warns the results will be lost and offers save, discard or
+   cancel.
 7. **Given** a chain with unsaved results when the app went to the background, **When** the app is
    relaunched and the chain reopened, **Then** the app offers to restore them; declining leaves its
    leaves reading "not run".
@@ -295,11 +312,12 @@ date.
   only the affected leaf fails, naming the parameter.
 - A saved result whose source no longer exists: it stays viewable and reads as "source unavailable".
 - Deleting a chain that has saved results: the warning names how many results will be deleted with
-  it; cancelling keeps both.
+  it, and also says unsaved results will go when the chain has a draft; cancelling keeps all of
+  them.
 - The app is closed from the system (app switcher, system termination) with unsaved results: the
   platform gives no chance to ask, but the results were kept as a draft when the app went to the
   background (FR-031) and are offered back on the next open of that chain.
-- A run in progress when the person leaves the page: the run stops and produces no results; the
+- A run in progress when the person leaves the chain: the run stops and produces no results; the
   chain itself is kept. Results already shown from an earlier run trigger the FR-032 warning.
 - A leaf fails (e.g. over the sub-combination limit): only that leaf shows the failure.
 
@@ -361,7 +379,8 @@ date.
 - **FR-017**: Chains MUST be saved across launches. The processing blocks page MUST list the saved
   chains by a name the person can edit, plus a way to start a new chain; from there a person can
   open a chain, run it against the chosen source, and delete it. Deleting a chain also deletes the
-  results saved from it, after a warning that names how many will go. Edits to a chain are kept.
+  results saved from it and its draft, after a warning that names how many saved results will go
+  (and that unsaved results go too, when a draft exists — FR-032). Edits to a chain are kept.
 
 #### Running
 
@@ -386,8 +405,10 @@ date.
 
 #### Results
 
-- **FR-024**: Each leaf MUST offer a short summary of its result (e.g. "49 elements", "Total:
-  42,072", "7,009 unique, 3 repeat") and open a full result view.
+- **FR-024**: Every block that has run — a leaf or an intermediate block — MUST offer a short
+  summary of its output (e.g. "49 elements", "Total: 42,072", "7,009 unique, 3 repeat") and open a
+  full result view, so a person can see any output before saving it (FR-027). A leaf's output is
+  its branch's result.
 - **FR-025**: A count result that has not been sorted MUST be displayed by item ascending, and the
   display MUST NOT imply a ranking.
 - **FR-026**: An empty result MUST say there is nothing to show rather than appear as an error.
@@ -412,9 +433,11 @@ date.
   the draft: restoring shows the results again, with the usual out-of-date rules (FR-021); declining
   discards it and the leaves read as not run. Saving or discarding results (FR-032) also discards the
   draft.
-- **FR-032**: When the person is about to leave a chain that has unsaved results — going back from
-  the blocks page, opening another chain, or deleting the chain — the app MUST warn that those
-  results will be lost and offer to save them, discard them, or cancel.
+- **FR-032**: When the person is about to leave a chain that has unsaved results, the app MUST warn
+  that those results will be lost and offer to save them, discard them, or cancel. Leaving the chain
+  is the only way to reach another chain or the delete action, so this one warning covers opening
+  another chain too. Deleting a chain that has a draft (FR-031) MUST say, in the FR-017 delete
+  warning, that its unsaved results will be deleted as well; there is no save option from the list.
 
 ### Key Entities
 
@@ -473,7 +496,9 @@ date.
   (LTA-27); it is one tunable constant. No 6-of-49 history reaches it.
 - Screens — the chain outline, the add-block sheet, and result views — are specified by their own
   tickets (LTA-20 to LTA-23, LTA-9, LTA-18); this spec defines only the behaviour they present.
-- Leaving the processing blocks page keeps the chain (it is saved); a run in progress stops.
+- Leaving a chain keeps it (it is saved); a run in progress stops.
+- "Processing blocks page" means the list of saved chains (FR-017); an open chain is "the chain",
+  shown in its own view reached from that list.
 
 ## Out of Scope
 

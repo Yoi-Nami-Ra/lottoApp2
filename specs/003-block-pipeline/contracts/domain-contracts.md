@@ -16,9 +16,10 @@ extension Block {
 
 extension Chain {
     func outputKind(of nodeID: ChainNode.ID?) throws(ChainError) -> ValueKind   // nil → .draws
-    func attaching(_ block: Block, under parentID: ChainNode.ID?) throws(ChainError) -> (Chain, ChainNode.ID)
+    func attaching(_ block: Block, under parentID: ChainNode.ID?, id: ChainNode.ID) throws(ChainError) -> (Chain, ChainNode.ID)   // id from @Dependency(\.uuid)
     func updating(_ nodeID: ChainNode.ID, to block: Block) throws(ChainError) -> Chain
     func removingSubtree(_ nodeID: ChainNode.ID) throws(ChainError) -> (Chain, removed: Int)
+    func renamed(_ name: String) -> Chain                                // does not bump revision
     func children(of nodeID: ChainNode.ID?) -> [ChainNode]
     func path(to nodeID: ChainNode.ID) -> [Block]                       // root → node
     var leaves: [ChainNode] { get }
@@ -28,10 +29,23 @@ enum BlockEvaluator {
     static let subCombinationBudget = 5_000_000                        // FR-022, one tunable constant
     static func evaluate(_ block: Block, on input: BlockValue) throws(BlockFailure) -> BlockValue
 }
+
+enum ResultSummary {                                                   // FR-024, research R14
+    static func summary(of value: BlockValue) -> ValueSummary
+}
+
+extension NodeResult {                                                 // FR-021, research R13
+    func freshness(chainRevision: Int, dataStates: [String: SourceDataState?]) -> ResultFreshness
+}
+
+extension SavedResult {                                                // FR-030
+    func freshness(dataStates: [String: SourceDataState?]) -> ResultFreshness   // never outOfDate from chain edits
+    func chainChanged(since chain: Chain) -> Bool                                // information only
+}
 ```
 
-Guarantees: `attaching` never returns a chain containing a mismatched edge (FR-015); every mutating
-function increments `revision`; `evaluate` is deterministic for equal inputs (SC-001).
+Guarantees: `attaching` never returns a chain containing a mismatched edge (FR-015); every structural or
+parameter edit increments `revision` (`renamed` does not); `evaluate` is deterministic for equal inputs (SC-001).
 
 ## 2. `ChainRunner` (Domain/BLogic, `@Dependency(\.chainRunner)`)
 
@@ -49,7 +63,7 @@ nonisolated struct ChainRunner: Sendable {
 ## 3. `SourcesBLogic` additions (Domain/BLogic, existing `@Dependency(\.blSources)`)
 
 ```swift
-var gameFor: @Sendable (_ sourceID: String) async -> Result<(Game, SourceDataState), SourcesBLogic.Error>
+var gameFor: @Sendable (_ sourceID: String) async -> Result<SourceSnapshot, SourcesBLogic.Error>   // research R16
 var dataStateFor: @Sendable (_ sourceID: String) async -> SourceDataState?     // nil → source unavailable
 ```
 
@@ -90,26 +104,35 @@ nonisolated struct ChainsRepo: Sendable {
 | `newChainTapped` | creates an empty named chain, saves it, presents `editor` |
 | `chainTapped(Chain.ID)` | presents `editor` for that chain |
 | `renameChain(Chain.ID, String)` | saves the chain |
-| `deleteChainTapped(Chain.ID)` | loads its saved-result count → alert "Delete chain and N saved results?" → `deleteChain` |
+| `deleteChainTapped(Chain.ID)` | loads its saved-result count and `draft(id)` → alert naming both ("Delete chain, N saved results and its unsaved results?") → `deleteChain`; no save option (FR-017, FR-032) |
+| `editor(.dismiss)` / editor sends `dismiss` | `ifLet` cancels the editor's in-flight run — tested here, not in `ChainEditor` (research R11) |
 | `editor(.presented(.delegate(.chainChanged(Chain))))` | replaces the row |
 
 ### `ChainEditor` (new — chain outline, LTA-21/LTA-23)
 
 | Action | Behaviour |
 |---|---|
-| `onAppear` | loads saved results and `dataStateFor(source)`; if a draft exists → restore alert |
+| `onAppear` | loads saved results and the draft, then `dataStateFor` once per distinct source among the chosen source, saved results and draft (`dataStates`, research R13); if a draft exists → restore alert |
 | `addTapped(parent: ChainNode.ID?)` | presents `AddBlock` with the parent's output kind |
 | `addBlock(.presented(.delegate(.added(Block))))` | `attaching` → save chain; new leaf `.notRun` |
-| `nodeTapped(ChainNode.ID)` | leaf with a value → push `result`; otherwise present `AddBlock` in edit mode |
+| `nodeTapped(ChainNode.ID)` | any node that ran (leaf or intermediate, FR-024) → push `result` with its value, stamp and freshness; not run → nothing |
+| `editTapped(ChainNode.ID)` | presents `AddBlock` in edit mode for that node (research R16) |
+| `savedResultTapped(SavedResult.ID)` | push `result` with the saved value, stamp, freshness and `chainChanged` (FR-029, FR-030) |
+| `deleteSavedResultTapped(SavedResult.ID)` | `deleteResult` → removes the row |
 | `removeTapped(ChainNode.ID)` | confirm if it has children → `removingSubtree` → save chain |
-| `runTapped` | `gameFor(source)` then `chainRunner.run`, `cancelInFlight`; every node → `.running` |
+| `runTapped` | `gameFor(source)` → `SourceSnapshot`, stamp `(source.id, source.name, dataState, chain.revision)`, then `chainRunner.run`, `cancelInFlight`; every node → `.running`; a `gameFor` failure restores the previous results and shows an alert |
 | `runEvent(RunEvent)` | sets `NodeResult`; `.finished` clears `isRunning` |
 | `saveResultTapped(ChainNode.ID)` | builds `SavedResult` (path, value, stamp) → `saveResult` |
 | `backTapped` | unsaved results → alert Save / Discard / Cancel; else dismiss (FR-032) |
 | `scenePhaseChanged(.background)` | unsaved results → `putDraft` (FR-031) |
 | delegate `.chainChanged(Chain)` | tells `BlocksPage` to refresh its row |
 
-`hasUnsavedResults` = any `.value`/`.failed` node whose value has not been saved since the last run.
+`hasUnsavedResults` = any `.value` node not in `savedNodeIDs` since the last run. Failures can't be saved,
+so they don't trigger the warning, but the draft keeps both `.value` and `.failed` (research R16).
+
+Alerts in `BlocksPage` and `ChainEditor` are `AlertState` static builders in `extension AlertState where
+Action == <Feature>.Action.Alert`, with text from `TextState(.token)` tokens — the `SourceEntry.syncFailed`
+pattern.
 
 ### `AddBlock` (new — sheet, LTA-22)
 

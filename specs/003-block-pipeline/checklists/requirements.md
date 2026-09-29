@@ -39,3 +39,8 @@
   existing results out of date (FR-021), and leaving the blocks page stops a run in progress
   (Assumptions).
 - FR-022's 5,000,000 limit is the LTA-27 default.
+- 2026-09-29 re-validation after `/speckit-analyze` (all items still pass): US7 AS4 aligned with
+  FR-011 (z < x is a run-time check); "blocks page" pinned to the chain list and "leaving the chain"
+  used for the FR-032 warning; FR-032 narrowed to leaving the chain plus a draft notice in the FR-017
+  delete warning; FR-024 extended to every block that ran. Recorded under Clarifications →
+  "Session 2026-09-29 (analysis follow-up)".

@@ -196,10 +196,20 @@ generic path reducer.
 **Decision**: `ChainEditorView` hides the system back button and provides its own, which sends
 `backTapped`; the reducer either dismisses or presents a confirmation (`Save` / `Discard` / `Cancel`,
 FR-032). Hiding the back button also disables the interactive swipe-back, so every in-app exit passes
-through the reducer. Opening another chain and deleting a chain go through the same check in `BlocksPage`.
+through the reducer. *(Revised 2026-09-29, analysis follow-up.)* Opening another chain and deleting a
+chain happen only from the chain list, after the editor has been left through this check, so
+`BlocksPage` runs no second copy of it. What `BlocksPage` does check is the draft: `deleteChainTapped`
+reads `chainsRepo.draft(id)` alongside the saved-result count, and the delete confirmation names both
+("Delete chain, 3 saved results and its unsaved results?"). There is no save option from the list
+(spec FR-017, FR-032).
+
+Leaving the editor (the reducer sends `dismiss`, or the parent nils `editor`) cancels a run in progress
+with no extra code: TCA's `ifLet` for a non-ephemeral `@Presents` child emits a cancel for that child's
+effects when it is dismissed. This is tested once at the `BlocksPage` level (dismiss the editor mid-run
+→ no further `runEvent`), not inside `ChainEditor`, which cannot observe its own dismissal.
 
 **Rationale**: SwiftUI offers no hook to veto a `NavigationStack` pop; owning the back action is the
-reliable way to ask first.
+reliable way to ask first. One check at the one exit keeps the rule in one reducer.
 
 **Alternatives considered**: re-pushing after an unwanted pop (visible flicker, racy); disabling the
 swipe gesture through UIKit (reaches past SwiftUI for one behaviour).
@@ -219,3 +229,79 @@ terminate it; iOS gives no callback on swipe-to-close.
 
 **Alternatives considered**: writing a draft after every run (unnecessary writes; the rule is "on
 background"); saving drafts as regular saved results (rejected in clarification, option C).
+
+---
+
+## R13 — Freshness is judged against each result's own source *(added 2026-09-29, analysis follow-up)*
+
+**Decision**: A result is compared with the current data state of **the source named in its stamp**, not
+with the source the editor happens to have chosen. The freshness rules take a lookup rather than one
+state: `isOutOfDate(chainRevision:, dataStates: [String: SourceDataState?])`. `ChainEditor` keeps
+`dataStates: [String: SourceDataState?]`, filled on `onAppear` with one `blSources.dataStateFor` call per
+distinct source among the chosen source, the saved results' stamps and a restored draft's stamps. A
+missing key or a `nil` value means "source unavailable".
+
+**Rationale**: FR-021 and FR-030 define staleness against *its* source. Saved results from source A are
+listed while B is chosen (US8 AS4, SC-007), and a draft can be restored after the person switched source.
+Comparing with the chosen source's state would mark A's untouched results out of date, or hide a real
+change.
+
+**Alternatives considered**: one `currentDataState` for the chosen source (wrong for every other source's
+result); reading the state lazily when a row is drawn (puts I/O in the view path).
+
+---
+
+## R14 — Result summaries are Domain values *(added 2026-09-29, analysis follow-up)*
+
+**Decision**: `ResultSummary` (Domain/BLogic) is a pure, tested function `BlockValue → ValueSummary`, with
+`ValueSummary` = `.draws(count:)`, `.elements(count:)`, `.combinations(unique:, repeating:)`,
+`.subCombinations(unique:, size:)`, `.number(Int)`, `.empty(ValueKind)`. `ChainEditor` exposes the
+summary per node that has run (a leaf or an intermediate block, FR-024), and the view only maps each case
+to a `LocalizedStringKey` token.
+
+**Rationale**: "7,009 unique, 3 repeat" means counting repeats, which is data transformation. Principle II
+keeps that out of views, and Principle III wants it under test.
+
+**Alternatives considered**: formatting in a view-file extension (untested logic in Presentation);
+storing the summary in `NodeResult` (duplicates the value and must be kept in step with it).
+
+---
+
+## R15 — The stamp carries the source's display name *(added 2026-09-29, analysis follow-up)*
+
+**Decision**: `RunStamp` gains `sourceDisplayName: String`, taken from the editor's `ChainSource` when
+the run starts. `sourceName` stays the id used for lookups (R13).
+
+**Rationale**: US8 AS1 wants results to name their source, and a saved result must still name it when
+the source no longer exists ("source unavailable", FR-030). A later lookup through `knownSources()`
+cannot do that.
+
+**Alternatives considered**: resolving the name through `blSources.knownSources()` on display (fails for
+a removed source, and adds I/O to every list); showing the id (not user-facing copy).
+
+---
+
+## R16 — Small shapes that keep reducers testable *(added 2026-09-29, analysis follow-up)*
+
+**Decision**:
+- `gameFor` returns `Result<SourceSnapshot, SourcesBLogic.Error>` with `struct SourceSnapshot: Equatable,
+  Sendable { game: Game, dataState: SourceDataState }`, not a tuple, so the action carrying it stays
+  `Equatable`.
+- `Chain.attaching(_:under:id:)` takes the new node's id from the caller (`@Dependency(\.uuid)` in the
+  reducer), which keeps the rule pure and deterministic under `TestStore`.
+- `ChainEditor.State.source` is `struct ChainSource: Equatable, Sendable { id: String, name: String }`
+  (a tuple isn't `Equatable`).
+- `editTapped(ChainNode.ID)` is its own action; `nodeTapped` on any node that has run opens its result
+  (FR-024 now covers intermediate blocks), so editing can't hang off the same tap.
+- `hasUnsavedResults` counts `.value` nodes not saved since the last run. A failure cannot be saved, so it
+  doesn't trigger the FR-032 warning, but it still goes into the draft.
+- Alert copy follows the existing pattern in `SourceEntry.swift`: `extension AlertState where Action ==
+  <Feature>.Action.Alert` with `static` builders whose text comes from `TextState(.token)` tokens, so
+  reducers never hold inline copy (Principle V).
+
+**Rationale**: each is a small signature choice that the contracts need to fix before tasks. Together they
+keep state `Equatable` (Principle II), ids injected (Principle IV) and copy in tokens (Principle V).
+
+**Alternatives considered**: `UUID()` inside `attaching` (non-deterministic tests); `nodeTapped` doing
+double duty (ambiguous for a node that has a result); counting failures as unsaved (the warning could only
+be cleared by discarding).
