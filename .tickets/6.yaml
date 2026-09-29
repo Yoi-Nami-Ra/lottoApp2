@@ -2,28 +2,50 @@ id: 6
 title: "Add core Domain entities for games"
 type: feature
 description: |
-  Implement the target Domain model from CLAUDE.md in `Domain/Ents`:
-  Element (`UInt` for now), CombinationType ("x of y", x <= y),
-  Combination (a CombinationType plus exactly x non-repeating Elements),
-  GameEntry (index, date, Combination), Game ([GameEntry] + GameType) and
-  GameType (mainly carries the CombinationType).
+  Implement the target Domain model from CLAUDE.md in `Domain/Ents`, and a
+  read path that returns a source's stored draws as a Game.
 
-  Rules:
-  - Every combination in the app is a combination without repetition
-    where order doesn't matter: {1, 5, 9} and {9, 1, 5} are the same
-    combination. Model the elements as a set (or a canonically sorted
-    list) so equality and hashing ignore draw order.
-  - A collection (a Game's entries) holds combinations of x elements from
-    a set of y elements, with x and y the same for every entry. The
-    CombinationType lives on the GameType, and constructing a Game must
-    reject entries of a different type.
+  Entities:
+  - Element — `UInt`. Elements of a y-element pool are numbered 1…y.
+  - CombinationType — "x of y": pick count x, pool size y, 1 <= x <= y.
+  - Combination — a CombinationType plus exactly x distinct Elements,
+    each within 1…y. Combinations are without repetition and order
+    doesn't matter: {1, 5, 9} == {9, 1, 5}. Store the elements as a
+    `Set<Element>` (or a canonically sorted array) so equality and hashing
+    ignore draw order.
+  - GameType — a stable `id`, a display name, and its CombinationType
+    (e.g. id "lotto", "Lotto 6/49", 6 of 49). Many Games can share one.
+  - GameEntry — index, date and Combination.
+  - Game — a GameType plus [GameEntry]. Every entry's CombinationType must
+    equal the GameType's: a collection is homogeneous x-of-y.
 
-  Enforce the invariants (x <= y, exactly x elements, no repeats, elements
-  within the pool, one CombinationType per collection) with tests. Map the
-  Data layer's `DrawDTO` onto these types at the repository boundary.
-  SubCombination is excluded until LTA-7 settles its shape.
+  Validation:
+  - Constructors throw a typed Domain error naming the broken rule:
+    x > y or x == 0, wrong element count, duplicate element, element
+    outside 1…y, or an entry whose CombinationType differs from the Game's.
+  - Mapping `DrawDTO` → GameEntry skips draws that fail validation and
+    reports how many were skipped, rather than failing the whole read.
+    (The MBNet parser checks count and range but not duplicates, so a
+    duplicate-number row can reach this point.) How the count is shown to
+    the user is LTA-2.
+
+  Read path:
+  - Add a `SourcesRepo` call returning a source's Game (from
+    `LocalStore.listDrawsFor`), mapping DTOs at the repository boundary in
+    `SourcesRepoImpl`, and expose it through `SourcesBLogic` so reducers
+    (LTA-9) consume Domain types only.
+  - The source's GameType is declared by its `SourceModule` (MBNet →
+    Lotto 6/49), keeping `SourceRegistry.all` the single place a source is
+    declared.
+
+  Tests (swift-testing, written first): every invariant and its error;
+  order-independent equality/hashing; DTO mapping including skipped
+  draws; the repo and BLogic read path with `localStore` overridden.
+
+  Out of scope: SubCombination (LTA-7), running blocks (LTA-9), showing
+  the skipped count (LTA-2).
 platform: ios
-status: refine
+status: ready
 phase: MVP
 priority: high
 parent: null
