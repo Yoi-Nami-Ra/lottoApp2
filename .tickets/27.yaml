@@ -6,19 +6,37 @@ description: |
   the processed collection — e.g. the most frequent pairs (z = 2) or
   triples (z = 3). For every entry it takes all C(x, z) sub-combinations
   of its Combination (LTA-7) and counts how many times each occurs
-  across the collection.
+  across the collection. Only sub-combinations that occur appear.
+
+  Block:
   - Game → count result (LTA-8), reusing the unique-count result type
     from LTA-9 with the sub-combination as the item.
   - Parameter z with 2 <= z < x of the collection's CombinationType.
-  - Runs as a block on the engine (LTA-19).
-  Open questions:
-  - Results presentation: reuse LTA-18's grouped-by-count screen?
-  - Performance limits: 6-of-49 gives 20 triples per draw; is any z
-    capped for large histories?
+  - Runs as a block on the engine (LTA-19), so long runs are cancellable.
+
+  Limit:
+  - Work is capped by C(x, z) × entries. When it exceeds a fixed budget
+    (5,000,000 sub-combinations; one named constant, tunable), that leaf
+    fails with a typed Domain error naming the limit instead of running.
+    The check happens at run time, when the entry count is known. For
+    6-of-49 no z reaches it (at most 20 sub-combinations per draw).
+
+  Results:
+  - Reuse LTA-18's results screen: grouped by count (count == 1, == 2,
+    …), up to 20 per group with "N more" and a full-list action, with
+    sub-combinations as the items.
+  - Leaf summary in the chain outline: z, the number of unique
+    sub-combinations and how many of them repeat, as in LTA-18
+    (e.g. "Pairs: 1,176 unique, 1,012 repeat").
+  - The over-budget error shows as that leaf's result.
+
+  Tests (written first): counting pairs and triples across entries,
+  order independence, z bounds, the budget check just below and above
+  the limit, and the reused screen fed with sub-combination items.
 platform: ios
-status: refine
+status: ready
 phase: Backlog
 priority: medium
 parent: null
-blocked_by: [7, 9, 19]
+blocked_by: [7, 9, 18, 19]
 designs: []
