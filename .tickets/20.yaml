@@ -3,16 +3,29 @@ title: "Build the chain-builder UI"
 type: feature
 description: |
   Let the user build and run processing chains on top of the engine from
-  LTA-19: attach blocks to the source or to another block, branch a
-  node into several children, set block parameters (x for filters,
-  direction for sorts), run the tree on demand, and see every leaf's
-  result. Blocks whose input doesn't match the chosen parent's output
-  are not offered, or are shown as unavailable. Stale results after an
-  edit must be visible as such. How several leaf results are presented
-  together is still open in LTA-8. Needs a design before
-  implementation.
+  LTA-19. Parent of the design tickets LTA-21 and LTA-22 and the
+  implementation ticket LTA-23.
+
+  Decisions:
+  - Placement: the builder replaces BlocksPage. Opening it for the chosen
+    source shows that source's chain; the current block catalogue becomes
+    an "add block" sheet.
+  - Tree view: an indented outline — the source at the top, each block
+    indented under its parent, nodes with children collapsible. Built on
+    a native list so it fits phone width and works with VoiceOver and
+    Dynamic Type.
+  - Adding: selecting a node and adding opens the sheet, which offers only
+    blocks whose input matches that node's output. Adding a second child
+    to a node creates a branch. Block parameters (x for filters, direction
+    for sorts) are set when adding and editable afterwards.
+  - Running: an explicit run computes every leaf (on demand, per LTA-19);
+    after an edit, previous results are marked stale.
+  - Results: each leaf shows a short summary in the outline (e.g. "49
+    elements", "Total: 294"); tapping it pushes that leaf's full result,
+    reusing the results screen from LTA-9.
+  - Chains are kept for the session only.
 platform: ios
-status: refine
+status: ready
 phase: MVP
 priority: medium
 parent: null

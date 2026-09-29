@@ -1,0 +1,22 @@
+id: 23
+title: "Implement chain-builder UI"
+type: feature
+description: |
+  Build the screens designed in LTA-21 and LTA-22 on top of the engine
+  from LTA-19, following the decisions in LTA-20:
+  - the chain outline replacing BlocksPage (source header, indented
+    blocks, collapsible branches, run action, leaf summaries, stale
+    marking, empty state);
+  - the add-block sheet (only fitting blocks offered, parameter entry,
+    editing parameters of an existing block);
+  - navigation from a leaf to its result screen (LTA-9's screen).
+  All behaviour lives in reducers with TestStore tests written first;
+  views are thin, use design tokens, and ship light/dark #Previews for
+  each state.
+platform: ios
+status: refine
+phase: MVP
+priority: medium
+parent: 20
+blocked_by: [19, 21, 22]
+designs: []

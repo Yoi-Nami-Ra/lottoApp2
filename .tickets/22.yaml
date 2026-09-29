@@ -1,0 +1,28 @@
+id: 22
+title: "Design: add-block sheet"
+type: task
+description: |
+  Why it's needed: LTA-20 turns the block catalogue into a sheet for
+  adding a block under the selected node, offering only blocks that fit
+  that node's output, and it has no design.
+  When it shows: when the user adds a block to the source or to a block
+  in the chain outline (LTA-21).
+  Built from: the current BlocksPage block list.
+  Proposal: none yet.
+  Open questions:
+  - Whether blocks that don't fit are hidden or shown as unavailable
+    with a reason.
+  - How the catalogue is grouped (filters, sorts, counts) as it grows
+    (LTA-10, LTA-18).
+  - How parameters are entered: x for filters (stepper, field?) and
+    direction for sorts; and how an existing block's parameters are
+    edited later.
+  Done when: an approved design exists and this ticket's `designs`
+  points at it.
+platform: ios
+status: refine
+phase: MVP
+priority: medium
+parent: 20
+blocked_by: []
+designs: []

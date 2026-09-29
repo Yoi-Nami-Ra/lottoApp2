@@ -39,11 +39,12 @@ description: |
     results stale; within a run each node is evaluated once and shared by
     its children, with no caching between runs; a new run cancels one in
     flight. Chains are kept for the session only.
+  - Presentation (settled in LTA-20): each leaf shows a summary in the
+    chain outline and opens its own result screen.
 
   Open for the spec:
   - Tie order when sorting by count (e.g. by item, ascending).
   - Parameter bounds, e.g. prefix(x) with x larger than the collection.
-  - How the results of several leaves are presented together.
 platform: ios
 status: ready
 phase: MVP

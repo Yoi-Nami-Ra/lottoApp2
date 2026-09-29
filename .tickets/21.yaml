@@ -1,0 +1,29 @@
+id: 21
+title: "Design: chain builder outline"
+type: task
+description: |
+  Why it's needed: LTA-20 replaces BlocksPage with a chain builder, and
+  no design exists for it.
+  When it shows: after choosing a source and tapping Next on the start
+  page; it shows that source's processing chain.
+  Built from: the current BlocksPage (source name header over a list)
+  and the start page's source cards and bottom action bar.
+  Proposal: none yet.
+  Open questions:
+  - How the indented outline shows depth, branches and collapsed nodes
+    on a phone-width screen, including at large Dynamic Type sizes.
+  - Where the run action lives (bottom bar, like Next on the start
+    page?) and how an in-progress run looks.
+  - How a leaf's result summary and the stale-results state look.
+  - How a node is selected as the parent for adding, and how blocks are
+    edited and removed (does removing a node remove its subtree?).
+  - The empty state: a source with no blocks yet.
+  Done when: an approved design exists and this ticket's `designs`
+  points at it.
+platform: ios
+status: refine
+phase: MVP
+priority: medium
+parent: 20
+blocked_by: []
+designs: []
