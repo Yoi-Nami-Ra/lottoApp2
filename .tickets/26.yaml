@@ -1,0 +1,16 @@
+id: 26
+title: "Add count all elements block"
+type: feature
+description: |
+  Add the count-all-elements block to the engine (LTA-19), per LTA-10:
+  Game → number, the total number of element occurrences across all
+  entries (entries × x for a homogeneous collection). It ends a branch.
+  Its leaf summary in the chain outline (LTA-20) shows the total.
+  Tests (written first): several entries, a single entry, empty Game.
+platform: ios
+status: ready
+phase: Backlog
+priority: medium
+parent: 10
+blocked_by: [19]
+designs: []

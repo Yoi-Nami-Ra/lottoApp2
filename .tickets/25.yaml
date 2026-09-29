@@ -1,0 +1,19 @@
+id: 25
+title: "Add sort by date, index and count blocks"
+type: feature
+description: |
+  Add the three sort blocks to the engine (LTA-19), per LTA-10:
+  - Sort by date and sort by index: Game → Game.
+  - Sort by count: count result → count result, turning the set into an
+    ordered list. Equal counts fall back to item ascending (combinations
+    compared by their sorted elements), whatever the direction.
+  - Each sort takes an ascending/descending direction.
+  - Equal dates in sort by date fall back to index ascending.
+  Tests (written first): each sort in both directions, ties, empty input.
+platform: ios
+status: ready
+phase: Backlog
+priority: medium
+parent: 10
+blocked_by: [19]
+designs: []

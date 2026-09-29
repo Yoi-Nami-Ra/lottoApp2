@@ -3,11 +3,23 @@ title: "Add filter, sort and count-all blocks"
 type: feature
 description: |
   Extend the block catalogue with the remaining blocks from the target
-  design: filters `dropFirst(x)`, `dropLast(x)`, `prefix(x)`,
-  `suffix(x)`; sorts by date, index and count; and "count all elements".
-  Filters need a parameter UI. Shape follows the spec from LTA-8.
+  design, split into LTA-24 (filters), LTA-25 (sorts) and LTA-26 (count
+  all elements). Each builds on the engine from LTA-19 and follows the
+  input/output kinds in LTA-8.
+
+  Decisions:
+  - Filters dropFirst(x), dropLast(x), prefix(x), suffix(x) accept a Game
+    or a count result and return the same kind. x >= 0 (0 allowed) and
+    is clamped like Swift's collection methods: prefix/suffix with x
+    larger than the collection return everything, dropFirst/dropLast
+    return an empty collection.
+  - Sorts take an ascending/descending direction. Sort by count orders a
+    count result; equal counts fall back to item ascending (combinations
+    compared by their sorted elements), whatever the direction.
+  - Count all elements returns the total number of element occurrences
+    across the entries, i.e. entries × x for a homogeneous collection.
 platform: ios
-status: idea
+status: ready
 phase: Backlog
 priority: medium
 parent: null

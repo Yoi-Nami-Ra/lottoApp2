@@ -1,0 +1,21 @@
+id: 24
+title: "Add dropFirst, dropLast, prefix and suffix blocks"
+type: feature
+description: |
+  Add the four filter blocks to the engine (LTA-19), per LTA-10:
+  - Input: a Game or a count result; output: the same kind.
+  - Parameter x >= 0, clamped: prefix(x)/suffix(x) with x larger than
+    the collection return everything; dropFirst(x)/dropLast(x) return an
+    empty collection. x = 0 is allowed.
+  - On a Game they act on entries in the Game's current order; on a count
+    result they only make sense after sort by count (LTA-25), since an
+    unsorted count result has no order.
+  Tests (written first): each filter on both kinds, x = 0, x equal to
+  and larger than the size, empty input.
+platform: ios
+status: ready
+phase: Backlog
+priority: medium
+parent: 10
+blocked_by: [19]
+designs: []

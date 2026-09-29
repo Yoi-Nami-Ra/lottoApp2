@@ -41,10 +41,9 @@ description: |
     flight. Chains are kept for the session only.
   - Presentation (settled in LTA-20): each leaf shows a summary in the
     chain outline and opens its own result screen.
-
-  Open for the spec:
-  - Tie order when sorting by count (e.g. by item, ascending).
-  - Parameter bounds, e.g. prefix(x) with x larger than the collection.
+  - Sort ties and filter bounds (settled in LTA-10): equal counts fall
+    back to item ascending; filters clamp x like Swift's prefix/suffix/
+    dropFirst/dropLast, with x >= 0.
 platform: ios
 status: ready
 phase: MVP
