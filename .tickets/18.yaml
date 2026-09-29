@@ -16,12 +16,32 @@ description: |
     throughout, so no CombinationType check is needed between entries.
   - Counts whole combinations only; sub-combinations are not counted.
 
-  The block's I/O types follow the spec from LTA-8, and the combination
-  rules come from LTA-6.
+  Running:
+  - A block on the engine from LTA-19 (Game → count result, per LTA-8),
+    offered in the chain builder (LTA-20). Not run standalone from
+    BlocksPage.
+
+  Results screen (opened from the block's leaf):
+  - The result is split by count into separate groups: one for count ==
+    1, one for count == 2, and so on, one group per count that occurs.
+  - Each group shows up to 20 combinations, then how many more it holds
+    (e.g. "and 1,204 more"), with an action to see that group's full list.
+  - Within a group, combinations are ordered ascending by their sorted
+    elements. Groups are ordered by count descending, so repeats come
+    first (my default — confirm).
+  - The leaf summary in the chain outline shows the number of unique
+    combinations and how many of them repeat (my default — confirm).
+
+  The block's I/O types follow LTA-8, and the combination rules come
+  from LTA-6. The results screen has no design yet.
+
+  Tests (written first): counting with repeated, reordered and single
+  combinations; grouping by count; the 20-item cap and the "more" count;
+  reducers via TestStore. Views ship light/dark #Previews.
 platform: ios
-status: idea
+status: ready
 phase: Backlog
 priority: medium
 parent: null
-blocked_by: [9]
+blocked_by: [9, 19]
 designs: []
