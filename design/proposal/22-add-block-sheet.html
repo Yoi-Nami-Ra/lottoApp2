@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>LTA-22 Add-block sheet — proposal</title>
+<style>
+  /* Asset-catalog tokens (Assets.xcassets), light and dark. */
+  .light {
+    --backgroundPrimary: #FFFFFF; --backgroundSecondary: #F2F2F7; --backgroundTertiary: #EBEBF0;
+    --textPrimary: #1C1C1E; --textSecondary: #707075; --textTertiary: #ADADB3;
+    --borderPrimary: #D9D9DE; --borderSecondary: #EBEBF0;
+    --primaryBlue: #007AFF; --warningYellow: #FFCC00; --errorRed: #FF453A; --undefinedGrey: #9CA3AF;
+    --overlayColor: rgba(0,0,0,.4);
+  }
+  .dark {
+    --backgroundPrimary: #000000; --backgroundSecondary: #1C1C1E; --backgroundTertiary: #2C2C2E;
+    --textPrimary: #FEFFFF; --textSecondary: #C7C7CC; --textTertiary: #8C8C94;
+    --borderPrimary: #545459; --borderSecondary: #404045;
+    --primaryBlue: #1A94FF; --warningYellow: #FFE633; --errorRed: #FF5E54; --undefinedGrey: #4B5563;
+    --overlayColor: rgba(0,0,0,.6);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 32px; background: #E4E4E9; color: #1C1C1E;
+    font: 15px/1.35 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
+  }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  .lede { color: #55555A; margin: 0 0 24px; max-width: 900px; }
+  .frames { display: grid; grid-template-columns: repeat(4, 375px); gap: 28px 24px; }
+  figure { margin: 0; }
+  figcaption { font-size: 13px; color: #55555A; margin-top: 8px; }
+  figcaption b { color: #1C1C1E; }
+
+  /* Phone with the chain outline dimmed behind a sheet */
+  .phone {
+    position: relative; width: 375px; height: 740px; border-radius: 36px; overflow: hidden;
+    background: var(--backgroundSecondary); color: var(--textPrimary); border: 1px solid #C8C8CE;
+  }
+  .behind { position: absolute; inset: 0; padding: 100px 16px 0; background: var(--backgroundSecondary); }
+  .behind .row { height: 48px; border-radius: 12px; background: var(--backgroundPrimary); margin-bottom: 8px; }
+  .dim { position: absolute; inset: 0; background: var(--overlayColor); }
+
+  .sheet {
+    position: absolute; left: 0; right: 0; top: 54px; bottom: 0; border-radius: 12px 12px 0 0;
+    background: var(--backgroundSecondary); display: flex; flex-direction: column; overflow: hidden;
+  }
+  .grabber { width: 36px; height: 5px; border-radius: 3px; background: var(--textTertiary); margin: 6px auto 0; opacity: .6; }
+  .nav { height: 44px; display: flex; align-items: center; justify-content: space-between; padding: 0 16px; }
+  .nav .t { font-weight: 600; font-size: 17px; }
+  .nav .l, .nav .r { color: var(--primaryBlue); min-width: 60px; }
+  .nav .r { text-align: right; font-weight: 600; }
+  .nav .r.off { color: var(--textTertiary); }
+  .parent {
+    margin: 4px 16px 8px; font-size: 13px; color: var(--textSecondary);
+    display: flex; gap: 6px; align-items: center;
+  }
+  .kind {
+    font-size: 11px; font-weight: 600; padding: 2px 6px; border-radius: 6px;
+    background: var(--backgroundTertiary); color: var(--textSecondary);
+  }
+  .scroll { flex: 1; overflow: hidden; padding: 0 16px 16px; }
+
+  .section { font-size: 13px; color: var(--textSecondary); text-transform: uppercase; letter-spacing: .02em; margin: 14px 4px 6px; }
+  .group { background: var(--backgroundPrimary); border-radius: 12px; overflow: hidden; }
+  .item { display: flex; gap: 12px; align-items: center; padding: 10px 14px; border-bottom: 1px solid var(--borderSecondary); }
+  .item:last-child { border-bottom: 0; }
+  .icon { color: var(--primaryBlue); font-size: 18px; width: 22px; text-align: center; flex: none; font-style: italic; font-weight: 600; }
+  .txt { flex: 1; min-width: 0; }
+  .name { font-weight: 500; }
+  .desc { font-size: 13px; color: var(--textSecondary); }
+  .chev { color: var(--textTertiary); }
+  .item.off .name, .item.off .icon { color: var(--textTertiary); }
+  .item.off .desc { color: var(--textTertiary); }
+  .item.off .why { font-size: 12px; color: var(--textSecondary); margin-top: 2px; }
+  .item.off .why::before { content: "ⓘ "; }
+
+  /* Parameter step */
+  .hero { text-align: center; padding: 18px 16px 6px; }
+  .hero .icon { font-size: 30px; width: auto; display: block; }
+  .hero .name { font-size: 20px; font-weight: 600; margin-top: 6px; }
+  .hero .desc { margin-top: 4px; }
+  .field { display: flex; align-items: center; gap: 12px; padding: 12px 14px; }
+  .field .lbl { flex: 1; }
+  .input {
+    width: 92px; text-align: right; padding: 6px 10px; border-radius: 8px; font-variant-numeric: tabular-nums;
+    background: var(--backgroundTertiary); font-weight: 600;
+  }
+  .input.bad { outline: 2px solid var(--errorRed); }
+  .stepper { display: flex; border-radius: 8px; overflow: hidden; background: var(--backgroundTertiary); }
+  .stepper span { width: 44px; height: 32px; display: grid; place-items: center; font-size: 20px; color: var(--textPrimary); }
+  .stepper span + span { border-left: 1px solid var(--borderPrimary); }
+  .hint { font-size: 13px; color: var(--textSecondary); padding: 6px 4px 0; }
+  .err { font-size: 13px; color: var(--errorRed); padding: 6px 4px 0; }
+  .seg { display: flex; background: var(--backgroundTertiary); border-radius: 9px; padding: 2px; margin: 12px 14px; }
+  .seg span { flex: 1; text-align: center; padding: 6px 0; border-radius: 7px; font-size: 14px; font-weight: 500; }
+  .seg span.on { background: var(--backgroundPrimary); box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+  .preview { font-size: 13px; color: var(--textSecondary); padding: 0 14px 12px; }
+
+  .cta { padding: 12px 16px 30px; background: var(--backgroundSecondary); }
+  .btn {
+    border-radius: 12px; padding: 14px; text-align: center; font-weight: 600; font-size: 17px;
+    background: var(--primaryBlue); color: var(--backgroundPrimary);
+  }
+  .btn.off { background: color-mix(in srgb, var(--undefinedGrey) 20%, transparent); color: var(--textTertiary); }
+
+  .notes { margin-top: 32px; max-width: 1560px; columns: 2; column-gap: 40px; font-size: 14px; }
+  .notes h2 { font-size: 16px; margin: 0 0 8px; column-span: all; }
+  .notes li { margin-bottom: 6px; break-inside: avoid; }
+</style>
+</head>
+<body>
+<h1>LTA-22 · Add-block sheet — proposal</h1>
+<p class="lede">Opened by "+" on a chain-outline row (LTA-21). Step 1 picks a block from a sectioned catalogue —
+blocks that don't fit the parent's output stay visible but disabled, with the reason. Step 2 sets the block's
+parameters and adds it. The same parameter step edits an existing block. Lo-fi: layout and states, not final visuals.</p>
+
+<div class="frames">
+
+  <!-- 1. Catalogue, parent outputs draws -->
+  <figure>
+    <div class="phone light">
+      <div class="behind"><div class="row"></div><div class="row"></div><div class="row"></div></div><div class="dim"></div>
+      <div class="sheet">
+        <div class="grabber"></div>
+        <div class="nav"><span class="l">Cancel</span><span class="t">Add Block</span><span class="r"></span></div>
+        <div class="parent">Under <b>MBNet Server</b><span class="kind">Draws</span></div>
+        <div class="scroll">
+          <div class="section">Filter</div>
+          <div class="group">
+            <div class="item"><span class="icon">ƒ</span><div class="txt"><div class="name">Drop First</div><div class="desc">Skip the first x</div></div><span class="chev">›</span></div>
+            <div class="item"><span class="icon">ƒ</span><div class="txt"><div class="name">Drop Last</div><div class="desc">Skip the last x</div></div><span class="chev">›</span></div>
+            <div class="item"><span class="icon">ƒ</span><div class="txt"><div class="name">Prefix</div><div class="desc">Keep the first x</div></div><span class="chev">›</span></div>
+            <div class="item"><span class="icon">ƒ</span><div class="txt"><div class="name">Suffix</div><div class="desc">Keep the last x</div></div><span class="chev">›</span></div>
+          </div>
+          <div class="section">Sort</div>
+          <div class="group">
+            <div class="item"><span class="icon">ƒ</span><div class="txt"><div class="name">Sort by Date</div></div><span class="chev">›</span></div>
+            <div class="item"><span class="icon">ƒ</span><div class="txt"><div class="name">Sort by Index</div></div><span class="chev">›</span></div>
+            <div class="item off"><span class="icon">ƒ</span><div class="txt"><div class="name">Sort by Count</div><div class="why">Needs counts — add a count block first</div></div></div>
+          </div>
+          <div class="section">Count</div>
+          <div class="group">
+            <div class="item"><span class="icon">ƒ</span><div class="txt"><div class="name">Count Unique Elements</div></div><span class="chev">›</span></div>
+            <div class="item"><span class="icon">ƒ</span><div class="txt"><div class="name">Count Unique Combinations</div></div><span class="chev">›</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <figcaption><b>Catalogue under draws.</b> Sections in fixed order. Sort by Count stays listed, disabled, with its reason.</figcaption>
+  </figure>
+
+  <!-- 2. Catalogue, parent outputs counts -->
+  <figure>
+    <div class="phone light">
+      <div class="behind"><div class="row"></div><div class="row"></div><div class="row"></div></div><div class="dim"></div>
+      <div class="sheet">
+        <div class="grabber"></div>
+        <div class="nav"><span class="l">Cancel</span><span class="t">Add Block</span><span class="r"></span></div>
+        <div class="parent">Under <b>Count Unique Elements</b><span class="kind">Counts</span></div>
+        <div class="scroll">
+          <div class="section">Filter</div>
+          <div class="group">
+            <div class="item"><span class="icon">ƒ</span><div class="txt"><div class="name">Drop First</div><div class="desc">Skip the first x</div></div><span class="chev">›</span></div>
+            <div class="item"><span class="icon">ƒ</span><div class="txt"><div class="name">Prefix</div><div class="desc">Keep the first x</div></div><span class="chev">›</span></div>
+          </div>
+          <div class="section">Sort</div>
+          <div class="group">
+            <div class="item"><span class="icon">ƒ</span><div class="txt"><div class="name">Sort by Count</div></div><span class="chev">›</span></div>
+            <div class="item off"><span class="icon">ƒ</span><div class="txt"><div class="name">Sort by Date</div><div class="why">Needs draws — add it under the source or a filter</div></div></div>
+            <div class="item off"><span class="icon">ƒ</span><div class="txt"><div class="name">Sort by Index</div><div class="why">Needs draws — add it under the source or a filter</div></div></div>
+          </div>
+          <div class="section">Count</div>
+          <div class="group">
+            <div class="item off"><span class="icon">ƒ</span><div class="txt"><div class="name">Count Unique Elements</div><div class="why">Needs draws</div></div></div>
+            <div class="item off"><span class="icon">ƒ</span><div class="txt"><div class="name">Count Unique Combinations</div><div class="why">Needs draws</div></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <figcaption><b>Catalogue under counts.</b> Same list, different availability. (Drop Last / Suffix trimmed from this frame for space.)</figcaption>
+  </figure>
+
+  <!-- 3. Parameter step: filter x -->
+  <figure>
+    <div class="phone light">
+      <div class="behind"><div class="row"></div><div class="row"></div><div class="row"></div></div><div class="dim"></div>
+      <div class="sheet">
+        <div class="grabber"></div>
+        <div class="nav"><span class="l">‹ Blocks</span><span class="t">Prefix</span><span class="r"></span></div>
+        <div class="scroll">
+          <div class="hero"><span class="icon">ƒ</span><div class="name">Prefix</div><div class="desc">Keeps the first x draws in their current order.</div></div>
+          <div class="section">Parameter</div>
+          <div class="group">
+            <div class="field"><span class="lbl">x</span><span class="input">10</span><span class="stepper"><span>−</span><span>+</span></span></div>
+          </div>
+          <div class="hint">Of 7,012 draws. A larger x keeps them all.</div>
+        </div>
+        <div class="cta"><div class="btn">Add Block</div></div>
+      </div>
+    </div>
+    <figcaption><b>Filter parameter.</b> Number field + stepper, default 10, 0 allowed. The parent's size is shown when known.</figcaption>
+  </figure>
+
+  <!-- 4. Invalid x -->
+  <figure>
+    <div class="phone light">
+      <div class="behind"><div class="row"></div><div class="row"></div><div class="row"></div></div><div class="dim"></div>
+      <div class="sheet">
+        <div class="grabber"></div>
+        <div class="nav"><span class="l">‹ Blocks</span><span class="t">Prefix</span><span class="r"></span></div>
+        <div class="scroll">
+          <div class="hero"><span class="icon">ƒ</span><div class="name">Prefix</div><div class="desc">Keeps the first x draws in their current order.</div></div>
+          <div class="section">Parameter</div>
+          <div class="group">
+            <div class="field"><span class="lbl">x</span><span class="input bad"></span><span class="stepper"><span>−</span><span>+</span></span></div>
+          </div>
+          <div class="err">Enter a whole number, 0 or more.</div>
+        </div>
+        <div class="cta"><div class="btn off">Add Block</div></div>
+      </div>
+    </div>
+    <figcaption><b>Invalid x.</b> Empty or non-numeric input: inline error, Add disabled. Stepper "−" is disabled at 0.</figcaption>
+  </figure>
+
+  <!-- 5. Sort direction -->
+  <figure>
+    <div class="phone light">
+      <div class="behind"><div class="row"></div><div class="row"></div><div class="row"></div></div><div class="dim"></div>
+      <div class="sheet">
+        <div class="grabber"></div>
+        <div class="nav"><span class="l">‹ Blocks</span><span class="t">Sort by Count</span><span class="r"></span></div>
+        <div class="scroll">
+          <div class="hero"><span class="icon">ƒ</span><div class="name">Sort by Count</div><div class="desc">Orders counts; equal counts by item, ascending.</div></div>
+          <div class="section">Direction</div>
+          <div class="group">
+            <div class="seg"><span>Ascending</span><span class="on">Descending</span></div>
+            <div class="preview">Most frequent first.</div>
+          </div>
+        </div>
+        <div class="cta"><div class="btn">Add Block</div></div>
+      </div>
+    </div>
+    <figcaption><b>Sort parameter.</b> Segmented control. Default: descending for count, ascending for date and index.</figcaption>
+  </figure>
+
+  <!-- 6. No parameters -->
+  <figure>
+    <div class="phone light">
+      <div class="behind"><div class="row"></div><div class="row"></div><div class="row"></div></div><div class="dim"></div>
+      <div class="sheet">
+        <div class="grabber"></div>
+        <div class="nav"><span class="l">‹ Blocks</span><span class="t">Count Unique Elements</span><span class="r"></span></div>
+        <div class="scroll">
+          <div class="hero"><span class="icon">ƒ</span><div class="name">Count Unique Elements</div><div class="desc">Each element drawn, with how many times it occurs.</div></div>
+          <div class="hint" style="text-align:center;padding-top:16px">No parameters.</div>
+        </div>
+        <div class="cta"><div class="btn">Add Block</div></div>
+      </div>
+    </div>
+    <figcaption><b>No parameters.</b> Blocks without parameters still show step 2, so every add is confirmed the same way.</figcaption>
+  </figure>
+
+  <!-- 7. Edit existing block -->
+  <figure>
+    <div class="phone light">
+      <div class="behind"><div class="row"></div><div class="row"></div><div class="row"></div></div><div class="dim"></div>
+      <div class="sheet">
+        <div class="grabber"></div>
+        <div class="nav"><span class="l">Cancel</span><span class="t">Edit Suffix</span><span class="r"></span></div>
+        <div class="scroll">
+          <div class="hero"><span class="icon">ƒ</span><div class="name">Suffix</div><div class="desc">Keeps the last x draws in their current order.</div></div>
+          <div class="section">Parameter</div>
+          <div class="group">
+            <div class="field"><span class="lbl">x</span><span class="input">50</span><span class="stepper"><span>−</span><span>+</span></span></div>
+          </div>
+          <div class="hint">Was 100. Saving marks this block's results out of date.</div>
+        </div>
+        <div class="cta"><div class="btn">Save</div></div>
+      </div>
+    </div>
+    <figcaption><b>Edit mode.</b> Tapping a block row in the outline opens its parameter step directly, with Save instead of Add.</figcaption>
+  </figure>
+
+  <!-- 8. Dark -->
+  <figure>
+    <div class="phone dark">
+      <div class="behind"><div class="row"></div><div class="row"></div><div class="row"></div></div><div class="dim"></div>
+      <div class="sheet">
+        <div class="grabber"></div>
+        <div class="nav"><span class="l">Cancel</span><span class="t">Add Block</span><span class="r"></span></div>
+        <div class="parent">Under <b>MBNet Server</b><span class="kind">Draws</span></div>
+        <div class="scroll">
+          <div class="section">Filter</div>
+          <div class="group">
+            <div class="item"><span class="icon">ƒ</span><div class="txt"><div class="name">Prefix</div><div class="desc">Keep the first x</div></div><span class="chev">›</span></div>
+            <div class="item"><span class="icon">ƒ</span><div class="txt"><div class="name">Suffix</div><div class="desc">Keep the last x</div></div><span class="chev">›</span></div>
+          </div>
+          <div class="section">Sort</div>
+          <div class="group">
+            <div class="item"><span class="icon">ƒ</span><div class="txt"><div class="name">Sort by Date</div></div><span class="chev">›</span></div>
+            <div class="item off"><span class="icon">ƒ</span><div class="txt"><div class="name">Sort by Count</div><div class="why">Needs counts — add a count block first</div></div></div>
+          </div>
+          <div class="section">Count</div>
+          <div class="group">
+            <div class="item"><span class="icon">ƒ</span><div class="txt"><div class="name">Count Unique Elements</div></div><span class="chev">›</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <figcaption><b>Dark mode.</b> Catalogue in dark appearance, a disabled row included.</figcaption>
+  </figure>
+
+</div>
+
+<div class="notes">
+  <h2>Notes for the implementer</h2>
+  <ul>
+    <li><b>Presentation.</b> A sheet at the large detent over the chain outline, with its own navigation stack: catalogue → parameter step. Cancel dismisses without changes.</li>
+    <li><b>Parent line.</b> "Under &lt;parent&gt;" plus a kind chip (Draws / Counts) so the reason behind disabled rows is visible at a glance.</li>
+    <li><b>Availability.</b> Every block in the catalogue is always listed. Blocks whose input kind doesn't match the parent's output are disabled (not tappable) with a one-line reason under the name. Blocks that end a branch never open this sheet as a parent (see LTA-21).</li>
+    <li><b>Sections.</b> Filter, Sort, Count — fixed order; blocks within a section in the order shown. New blocks (LTA-24, LTA-25, LTA-26, LTA-18, LTA-27) join their section.</li>
+    <li><b>x.</b> Numeric keypad field plus a stepper; default 10; whole numbers ≥ 0; the stepper's "−" disables at 0. Invalid or empty input shows an inline error and disables Add/Save. The hint shows the parent's size when a previous run knows it.</li>
+    <li><b>Direction.</b> Segmented Ascending / Descending with a one-line preview of what it means. Defaults: count descending, date and index ascending.</li>
+    <li><b>z (LTA-27).</b> Same field + stepper, bounded 2 … x − 1 of the collection's type; not drawn here.</li>
+    <li><b>Edit.</b> Opens the parameter step alone, titled "Edit &lt;block&gt;", button "Save", with "Was &lt;old value&gt;" in the hint. Saving marks results stale (LTA-19).</li>
+    <li><b>Accessibility.</b> Disabled rows read "&lt;block&gt;, unavailable, &lt;reason&gt;". The stepper exposes adjustable actions. At accessibility sizes the field and stepper stack vertically.</li>
+  </ul>
+</div>
+</body>
+</html>

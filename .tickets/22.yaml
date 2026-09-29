@@ -5,24 +5,42 @@ description: |
   Why it's needed: LTA-20 turns the block catalogue into a sheet for
   adding a block under the selected node, offering only blocks that fit
   that node's output, and it has no design.
-  When it shows: when the user adds a block to the source or to a block
-  in the chain outline (LTA-21).
-  Built from: the current BlocksPage block list.
-  Proposal: none yet.
-  Open questions:
-  - Whether blocks that don't fit are hidden or shown as unavailable
-    with a reason.
-  - How the catalogue is grouped (filters, sorts, counts) as it grows
-    (LTA-10, LTA-18).
-  - How parameters are entered: x for filters (stepper, field?) and
-    direction for sorts; and how an existing block's parameters are
-    edited later.
-  Done when: an approved design exists and this ticket's `designs`
-  points at it.
+  When it shows: when the user taps "+" on a row of the chain outline
+  (LTA-21), and — for the parameter step alone — when a block row is
+  tapped to edit it.
+  Built from: the current BlocksPage block list and the LTA-21 proposal.
+
+  Decided:
+  - Blocks that don't fit the parent's output stay listed but disabled,
+    each with a one-line reason (e.g. "Needs counts — add a count block
+    first").
+  - The catalogue is grouped into sections in a fixed order: Filter,
+    Sort, Count, each block with a one-line description.
+  - A filter's x is entered with a number field plus a stepper: default
+    10, whole numbers >= 0, the parent's size shown when known
+    ("Of 7,012 draws").
+
+  Proposal: design/proposal/22-add-block-sheet.html (+ .png) — eight
+  frames: catalogue under draws, catalogue under counts, filter
+  parameter, invalid x, sort direction, a block without parameters, edit
+  mode, dark mode. It also suggests:
+  - a two-step sheet (catalogue → parameter step) with an "Under
+    <parent>" line and a Draws / Counts chip explaining availability;
+  - sort direction as a segmented control, defaulting to descending for
+    count and ascending for date and index;
+  - a parameter step even for blocks without parameters, so every add is
+    confirmed the same way;
+  - edit mode: the parameter step alone, "Edit <block>", "Save", and the
+    old value in the hint; saving marks results stale;
+  - z for LTA-27 using the same field + stepper, bounded 2 … x − 1.
+  Open questions: approve or change the suggestions above.
+  Done when: an approved file exists in design/final/ and this ticket's
+  `designs` points at it.
 platform: ios
-status: refine
+status: ready
 phase: MVP
 priority: medium
 parent: 20
 blocked_by: []
-designs: []
+designs:
+  - design/proposal/22-add-block-sheet.html
