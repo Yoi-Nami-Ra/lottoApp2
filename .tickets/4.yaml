@@ -2,14 +2,45 @@ id: 4
 title: "Estimate missing records from last two weeks"
 type: feature
 description: |
-  Documentation.docc scenario S01, option "(o2) update 01": instead of (or
-  in addition to) the day-based severity, look at the last two full weeks
-  of draws to learn the source's draw cadence and estimate how many
-  records are missing since the latest record. Needs a spec: how cadence
-  is derived, how the estimate maps onto severity colours, and how it is
-  shown on the card. Must use the injected `\.date` clock.
+  Documentation.docc scenario S01, option "(o2) update 01": use the last
+  two full weeks of draws to learn a source's draw cadence and estimate
+  how many records are missing since the latest stored record. Today
+  severity is purely day-based (`SourceEntry.SyncSeverity`: green under
+  2 days since last sync, yellow under 4, red from 4).
+
+  Decisions:
+  - Severity: the estimate replaces the day-based rule — 0 missing is
+    green (low), 1 is yellow (medium), 2 or more is red (high). When
+    there isn't enough history to estimate, the existing day-based rule
+    applies unchanged. A never-synced source stays "not synced".
+  - Window: the two full Monday–Sunday weeks before the week that holds
+    the latest stored draw, so a source left unsynced for weeks still has
+    data to measure. "Not enough history" means stored draws don't reach
+    back to the start of that window, or the window holds no draws.
+  - Formula: rate = draws in the window ÷ 14 (draws per day);
+    missing = floor(rate × days from the latest record to now), with
+    days as a fractional interval.
+  - Card: a "~N missing" line next to Latest Record, hidden when N is 0
+    or when there's no estimate.
+
+  Implementation:
+  - `Source` gains the cadence (draws per day, `nil` without enough
+    history), computed by `SourcesRepoImpl` from the stored draws when
+    listing and after a sync — the repo already has the draws; the
+    Domain entity carries only the result.
+  - `SourceEntry` computes missing and severity from the cadence, the
+    latest record and the injected `\.date` clock (never `Date()`), so
+    the estimate stays current without re-reading storage.
+  - Weeks use a Gregorian calendar with Monday as the first weekday
+    (my default — confirm), injected so tests are deterministic.
+
+  Tests (written first): cadence over a full window, a window with no
+  draws, history shorter than the window; missing = 0, 1, many;
+  severity mapping and the day-based fallback; the "~N missing" line
+  shown and hidden. Previews (light/dark) for each severity with and
+  without an estimate.
 platform: ios
-status: refine
+status: ready
 phase: Backlog
 priority: low
 parent: null
