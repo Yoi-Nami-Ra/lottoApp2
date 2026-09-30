@@ -26,17 +26,63 @@ struct BlockParameters {
         case direction
     }
 
+    /// What the step knows beyond the block itself, for its hints and bounds (spec 006).
+    struct Context: Equatable {
+        /// The parent's size in its last run, or the source's record count directly under it; `nil` when unknown.
+        var parentSize: ParentSize?
+        /// How many elements each draw of the chosen source has; `nil` until its draws have been read.
+        var drawSize: Int?
+
+        static let unknown = Context(parentSize: nil, drawSize: nil)
+    }
+
+    /// The line under the parameter: the parent's size when adding x, the original value when editing (FR-001, FR-003).
+    enum Hint: Equatable {
+        case parentSize(ParentSize)
+        case was(Block)
+    }
+
+    /// What the chosen sort direction means, in words (FR-004).
+    enum DirectionPreview: Equatable {
+        case mostFrequent
+        case leastFrequent
+        case oldest
+        case newest
+        case lowestIndex
+        case highestIndex
+    }
+
+    /// Why the typed number is refused (FR-005–FR-008).
+    enum InvalidReason: Equatable {
+        case atLeast(UInt)
+        case range(UInt, UInt)
+        /// No z fits between 2 and the draw size − 1.
+        case drawsTooSmall
+    }
+
+    struct ParentSize: Equatable {
+        enum Unit: Equatable {
+            case draws
+            case items
+        }
+
+        let count: Int
+        let unit: Unit
+    }
+
     @ObservableState
     struct State: Equatable {
         let kind: ProcessingBlockKind
         let mode: Mode
+        let context: Context
         /// x for filters, as typed. Kept as text so an invalid entry can be shown and refused (FR-006).
         var countText = ""
         var direction: SortDirection = .ascending
 
-        init(kind: ProcessingBlockKind, mode: Mode) {
+        init(kind: ProcessingBlockKind, mode: Mode, context: Context = .unknown) {
             self.kind = kind
             self.mode = mode
+            self.context = context
             let start: Block = switch mode {
             case .add: kind.defaultBlock
             case .edit(_, let original): original
@@ -62,10 +108,48 @@ struct BlockParameters {
         /// The smallest value the number field accepts: 0 for x, 2 for z (FR-006, FR-011).
         var minimum: UInt { parameter == .size ? 2 : 0 }
 
-        /// The typed number when it is whole and at least `minimum`, else `nil`.
+        /// The largest z below the source's draw size, once it is known (FR-005). It can fall below `minimum`,
+        /// and then no z fits.
+        var maximum: UInt? {
+            guard parameter == .size, let drawSize = context.drawSize else { return nil }
+            return UInt(max(drawSize - 1, 0))
+        }
+
+        /// The typed text as a whole number, in range or not.
+        var typed: UInt? { UInt(countText.trimmingCharacters(in: .whitespaces)) }
+
+        /// Whether any value fits between `minimum` and `maximum`.
+        private var hasRange: Bool { maximum.map { $0 >= minimum } ?? true }
+
+        /// The typed number when it is whole and within `minimum` … `maximum`, else `nil`.
         var count: UInt? {
-            guard let value = UInt(countText.trimmingCharacters(in: .whitespaces)), value >= minimum else { return nil }
+            guard let value = typed, value >= minimum else { return nil }
+            if let maximum, value > maximum { return nil }
             return value
+        }
+
+        /// Why the typed number is refused; `nil` while it is valid or there is no number to type.
+        var invalidReason: InvalidReason? {
+            guard parameter == .count || parameter == .size, count == nil else { return nil }
+            guard let maximum else { return .atLeast(minimum) }
+            return maximum < minimum ? .drawsTooSmall : .range(minimum, maximum)
+        }
+
+        var hint: Hint? {
+            if case .edit(_, let original) = mode { return parameter == .none ? nil : .was(original) }
+            guard parameter == .count else { return nil }
+            return context.parentSize.map(Hint.parentSize)
+        }
+
+        var directionPreview: DirectionPreview? {
+            // Exhaustive, so a new sort kind can't compile without its preview.
+            switch kind {
+            case .sortByCount: direction == .descending ? .mostFrequent : .leastFrequent
+            case .sortByDate: direction == .ascending ? .oldest : .newest
+            case .sortByIndex: direction == .ascending ? .lowestIndex : .highestIndex
+            case .dropFirst, .dropLast, .prefix, .suffix, .countUniqueElements, .countUniqueCombinations,
+                 .countUniqueSubCombinations, .countAllElements: nil
+            }
         }
 
         /// The configured block, or `nil` while a parameter is invalid.
@@ -86,7 +170,15 @@ struct BlockParameters {
         }
 
         var isValid: Bool { block != nil }
-        var canDecrement: Bool { (count ?? 0) > minimum }
+        /// "−" works from any typed number above the minimum, so a value past `maximum` can step back into range.
+        var canDecrement: Bool { hasRange && (typed ?? 0) > minimum }
+
+        /// The stepper's "+" stops at `maximum` (FR-006); an entry that isn't a number restarts from the minimum.
+        var canIncrement: Bool {
+            guard hasRange else { return false }
+            guard let maximum, let typed else { return true }
+            return typed < maximum
+        }
     }
 
     enum Action {
@@ -114,7 +206,9 @@ struct BlockParameters {
                 return .none
 
             case .incrementTapped:
-                // An invalid entry restarts from the minimum rather than guessing what was meant.
+                guard state.canIncrement else { return .none }
+                // An entry that isn't a number, or is below the minimum, restarts from the minimum rather than
+                // guessing what was meant.
                 guard let current = state.count else {
                     state.countText = String(state.minimum)
                     return .none
@@ -124,8 +218,8 @@ struct BlockParameters {
                 return .none
 
             case .decrementTapped:
-                guard state.canDecrement, let count = state.count else { return .none }
-                state.countText = String(count - 1)
+                guard state.canDecrement, let typed = state.typed else { return .none }
+                state.countText = String(min(typed - 1, state.maximum ?? .max))
                 return .none
 
             case .directionChanged(let direction):

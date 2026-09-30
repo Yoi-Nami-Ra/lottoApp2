@@ -29,14 +29,17 @@ struct AddBlock {
         let parent: Parent
         /// What the parent outputs — the kind the new block must take (FR-010).
         let parentOutput: ValueKind
+        /// Handed to the parameter step for its hints and bounds.
+        let context: BlockParameters.Context
         /// Every kind the app offers, in catalogue order.
         var catalogue: [ProcessingBlockKind] = ProcessingBlockKind.allCases
         @Presents var parameters: BlockParameters.State?
 
-        init(parentID: ChainNode.ID?, parent: Parent, parentOutput: ValueKind) {
+        init(parentID: ChainNode.ID?, parent: Parent, parentOutput: ValueKind, context: BlockParameters.Context = .unknown) {
             self.parentID = parentID
             self.parent = parent
             self.parentOutput = parentOutput
+            self.context = context
         }
 
         func availability(_ kind: ProcessingBlockKind) -> Availability {
@@ -64,7 +67,7 @@ struct AddBlock {
             switch action {
             case .kindTapped(let kind):
                 guard state.availability(kind) == .available else { return .none }
-                state.parameters = BlockParameters.State(kind: kind, mode: .add)
+                state.parameters = BlockParameters.State(kind: kind, mode: .add, context: state.context)
                 return .none
 
             case .cancelTapped:

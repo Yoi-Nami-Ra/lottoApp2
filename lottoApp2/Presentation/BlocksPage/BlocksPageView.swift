@@ -4,8 +4,7 @@
 //
 //  Created by Jarosław Wojtasik on 16/08/2026.
 //
-//  The chain list (spec 003 FR-017), per design/final/chain-list.html (LTA-32; LTA-33 closes where this
-//  still differs).
+//  The chain list (spec 003 FR-017), per design/final/chain-list.html (LTA-32, completed by LTA-33).
 //
 
 import ComposableArchitecture
@@ -13,11 +12,6 @@ import SwiftUI
 
 struct BlocksPageView: View {
     @Bindable var store: StoreOf<BlocksPage>
-
-    /// The chain being renamed and its draft name. Transient text entry, not feature state: the reducer only
-    /// hears the confirmed name through `renameChain`.
-    @State private var renaming: Chain?
-    @State private var draftName = ""
 
     var body: some View {
         VStack(alignment: .leading, spacing: .headerListSpacing) {
@@ -37,16 +31,16 @@ struct BlocksPageView: View {
         }
         .alert($store.scope(state: \.alert, action: \.alert))
         .alert(LocalizedStringKey.renameTitle, isPresented: isRenaming) {
-            TextField(LocalizedStringKey.renamePlaceholder, text: $draftName)
-            Button(LocalizedStringKey.renameConfirm) {
-                if let renaming { store.send(.renameChain(renaming.id, draftName)) }
-            }
-            Button(LocalizedStringKey.cancel, role: .cancel) {}
+            TextField(LocalizedStringKey.renamePlaceholder, text: $store.renameDraft.sending(\.renameDraftChanged))
+            Button(LocalizedStringKey.renameConfirm) { store.send(.renameConfirmed) }
+            Button(LocalizedStringKey.cancel, role: .cancel) { store.send(.renameCancelled) }
         }
     }
 
+    /// Shown while the reducer has a rename in progress. Both buttons end it through an action, so the
+    /// alert's own dismissal has nothing left to report.
     private var isRenaming: Binding<Bool> {
-        Binding(get: { renaming != nil }, set: { if !$0 { renaming = nil } })
+        Binding(get: { store.renaming != nil }, set: { _ in })
     }
 
     /// The name only — record counts and sync status stay on the screen the person just left, so nothing
@@ -80,14 +74,32 @@ struct BlocksPageView: View {
                             Label(LocalizedStringKey.delete, systemImage: .deleteIcon)
                         }
                     }
-                    .contextMenu {
-                        Button {
-                            draftName = chain.name
-                            renaming = chain
-                        } label: {
+                    .swipeActions(edge: .leading) {
+                        Button { store.send(.renameTapped(chain.id)) } label: {
                             Label(LocalizedStringKey.rename, systemImage: .renameIcon)
                         }
+                        .tint(Color.renameTint)
                     }
+                    .contextMenu {
+                        Button { store.send(.renameTapped(chain.id)) } label: {
+                            Label(LocalizedStringKey.rename, systemImage: .renameIcon)
+                        }
+                        Button(role: .destructive) { store.send(.deleteChainTapped(chain.id)) } label: {
+                            Label(LocalizedStringKey.delete, systemImage: .deleteIcon)
+                        }
+                    }
+                    // Neither action depends on knowing the swipes (FR-019).
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel(Text(.chainReading(name: chain.name, blocks: chain.nodes.count)))
+                    .accessibilityAddTraits(.isButton)
+                    .accessibilityAction { store.send(.chainTapped(chain.id)) }
+                    .accessibilityAction(named: Text(.rename)) { store.send(.renameTapped(chain.id)) }
+                    .accessibilityAction(named: Text(.delete)) { store.send(.deleteChainTapped(chain.id)) }
+            }
+            if store.showsEmptyState {
+                emptyState
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
             }
             newChainRow
                 .listRowBackground(Color.clear)
@@ -125,6 +137,25 @@ struct BlocksPageView: View {
         .buttonStyle(.plain)
     }
 
+    /// Before the first chain: what a chain is, above the New chain row (FR-016).
+    private var emptyState: some View {
+        VStack(spacing: .emptySpacing) {
+            Image(.blockIcon)
+                .font(.emptyIcon)
+                .foregroundStyle(Color.emptyIcon)
+            Text(.emptyTitle)
+                .font(.emptyTitle)
+                .foregroundStyle(Color.emptyText)
+            Text(.emptyMessage)
+                .font(.emptyMessage)
+                .foregroundStyle(Color.emptyText)
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, .emptyVPadding)
+        .padding(.horizontal, .emptyHPadding)
+    }
+
     private var newChainRow: some View {
         Button { store.send(.newChainTapped) } label: {
             HStack(spacing: .rowSpacing) {
@@ -152,6 +183,9 @@ extension Color {
     fileprivate static let headerName: Self = .textPrimary
     fileprivate static let blockIcon: Self = .primaryBlue
     fileprivate static let blockLabel: Self = .textPrimary
+    fileprivate static let renameTint: Self = .primaryBlue
+    fileprivate static let emptyIcon: Self = .textTertiary
+    fileprivate static let emptyText: Self = .textSecondary
 }
 
 extension Font {
@@ -159,6 +193,9 @@ extension Font {
     fileprivate static let headerName: Self = .title2
     fileprivate static let blockIcon: Self = .title3
     fileprivate static let blockLabel: Self = .body
+    fileprivate static let emptyIcon: Self = .largeTitle
+    fileprivate static let emptyTitle: Self = .headline
+    fileprivate static let emptyMessage: Self = .footnote
 }
 
 extension Font.Weight {
@@ -195,6 +232,9 @@ extension CGFloat {
     fileprivate static let rowVInset: Self = 6
     /// The source name shrinks rather than truncating, down to this fraction of its size.
     fileprivate static let headerNameScale: Self = 0.6
+    fileprivate static let emptySpacing: Self = 6
+    fileprivate static let emptyVPadding: Self = 24
+    fileprivate static let emptyHPadding: Self = 8
 }
 
 extension Int {
@@ -211,20 +251,28 @@ extension LocalizedStringKey {
     fileprivate static let renamePlaceholder: Self = "Name"
     fileprivate static let renameConfirm: Self = "Save"
     fileprivate static let cancel: Self = "Cancel"
+    fileprivate static let emptyTitle: Self = "No chains yet"
+    fileprivate static let emptyMessage: Self =
+        "A chain is a set of blocks that counts and sorts a source's draws. Tap New chain to build your first one."
+
+    /// A chain row as VoiceOver reads it: "<name>, <N> blocks".
+    fileprivate static func chainReading(name: String, blocks count: Int) -> Self {
+        count == 1 ? "\(name), 1 block" : "\(name), \(count.formatted()) blocks"
+    }
 
     fileprivate static func blockCount(_ count: Int) -> Self {
         count == 1 ? "1 block" : "\(count.formatted()) blocks"
     }
 }
 
-#Preview("Blocks page - no chains - light") {
+#Preview("Blocks page - empty chain list - light") {
     NavigationStack {
         BlocksPageView(store: .preview(sourceName: .previewName))
     }
     .preferredColorScheme(.light)
 }
 
-#Preview("Blocks page - no chains - dark") {
+#Preview("Blocks page - empty chain list - dark") {
     NavigationStack {
         BlocksPageView(store: .preview(sourceName: .previewName))
     }

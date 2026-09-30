@@ -22,6 +22,11 @@ struct BlocksPage {
         /// The chosen source's display name, which the page header shows.
         let sourceName: String
         var chains: IdentifiedArrayOf<Chain> = []
+        /// Whether the saved chains have been read, so the empty state never flashes before them (spec 006).
+        var hasLoaded = false
+        /// The chain whose rename alert is showing, and the name being typed (spec 006 FR-020).
+        var renaming: Chain.ID?
+        var renameDraft = ""
         @Presents var editor: ChainEditor.State?
         @Presents var alert: AlertState<Action.Alert>?
 
@@ -31,6 +36,9 @@ struct BlocksPage {
         }
 
         var source: ChainSource { ChainSource(id: sourceID, name: sourceName) }
+
+        /// "No chains yet" above New chain, once the list is known to be empty (FR-016).
+        var showsEmptyState: Bool { hasLoaded && chains.isEmpty }
     }
 
     enum Action {
@@ -38,7 +46,11 @@ struct BlocksPage {
         case chainsLoaded([Chain])
         case newChainTapped
         case chainTapped(Chain.ID)
-        case renameChain(Chain.ID, String)
+        /// From the leading swipe, the long-press menu or the accessibility action alike.
+        case renameTapped(Chain.ID)
+        case renameDraftChanged(String)
+        case renameConfirmed
+        case renameCancelled
         case deleteChainTapped(Chain.ID)
         case deleteConfirmationLoaded(Chain.ID, savedCount: Int, hasDraft: Bool)
         case saveFailed
@@ -62,6 +74,7 @@ struct BlocksPage {
 
             case .chainsLoaded(let chains):
                 state.chains = IdentifiedArray(uniqueElements: chains)
+                state.hasLoaded = true
                 return .none
 
             case .newChainTapped:
@@ -75,9 +88,28 @@ struct BlocksPage {
                 state.editor = ChainEditor.State(chain: chain, source: state.source)
                 return .none
 
-            case let .renameChain(id, name):
-                let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
-                guard !trimmed.isEmpty, let chain = state.chains[id: id], chain.name != trimmed else { return .none }
+            case .renameTapped(let id):
+                guard let chain = state.chains[id: id] else { return .none }
+                state.renaming = id
+                state.renameDraft = chain.name
+                return .none
+
+            case .renameDraftChanged(let draft):
+                state.renameDraft = draft
+                return .none
+
+            case .renameCancelled:
+                state.renaming = nil
+                state.renameDraft = ""
+                return .none
+
+            case .renameConfirmed:
+                let id = state.renaming
+                let trimmed = state.renameDraft.trimmingCharacters(in: .whitespacesAndNewlines)
+                state.renaming = nil
+                state.renameDraft = ""
+                // A blank or unchanged name is ignored, as is a chain deleted meanwhile.
+                guard let id, !trimmed.isEmpty, let chain = state.chains[id: id], chain.name != trimmed else { return .none }
                 let renamed = chain.renamed(trimmed)
                 state.chains[id: id] = renamed
                 return save(renamed)
