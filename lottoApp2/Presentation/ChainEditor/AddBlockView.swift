@@ -41,6 +41,11 @@ struct AddBlockView: View {
                 BlockParametersView(store: parameters)
             }
         }
+        #if os(macOS)
+        // A macOS sheet takes its content's ideal size, and a List has no ideal height, so without a
+        // minimum the sheet collapses to its toolbar and every block row is hidden.
+        .frame(minWidth: .sheetMinWidth, minHeight: .sheetMinHeight)
+        #endif
     }
 
     /// "Under <parent>" plus the kind chip, so the reason behind any unavailable row is visible at a glance.
@@ -122,6 +127,8 @@ extension CGFloat {
     fileprivate static let chipCorners: Self = 4
     fileprivate static let rowSpacing: Self = 12
     fileprivate static let rowVSpacing: Self = 2
+    fileprivate static let sheetMinWidth: Self = 440
+    fileprivate static let sheetMinHeight: Self = 560
 }
 
 extension EdgeInsets {

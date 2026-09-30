@@ -105,6 +105,10 @@ struct ChainEditorView: View {
         }
         .sheet(item: $store.scope(state: \.editBlock, action: \.editBlock)) { editBlock in
             NavigationStack { BlockParametersView(store: editBlock) }
+                #if os(macOS)
+                // Same as the add-block sheet: a macOS sheet would collapse around the List.
+                .frame(minWidth: .sheetMinWidth, minHeight: .sheetMinHeight)
+                #endif
         }
         .navigationDestination(item: $store.scope(state: \.result, action: \.result)) { result in
             ResultPageView(store: result)
@@ -399,6 +403,8 @@ extension CGFloat {
     fileprivate static let runCorners: Self = 12
     fileprivate static let barHPadding: Self = 16
     fileprivate static let barVPadding: Self = 12
+    fileprivate static let sheetMinWidth: Self = 440
+    fileprivate static let sheetMinHeight: Self = 560
 }
 
 extension EdgeInsets {
