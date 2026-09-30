@@ -8,7 +8,7 @@ description: |
   Its leaf summary in the chain outline (LTA-20) shows the total.
   Tests (written first): several entries, a single entry, empty Game.
 platform: ios
-status: ready
+status: in-review
 phase: Backlog
 priority: medium
 parent: 10

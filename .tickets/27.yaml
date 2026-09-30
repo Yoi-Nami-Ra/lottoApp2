@@ -34,7 +34,7 @@ description: |
   order independence, z bounds, the budget check just below and above
   the limit, and the reused screen fed with sub-combination items.
 platform: ios
-status: ready
+status: in-review
 phase: Backlog
 priority: medium
 parent: null

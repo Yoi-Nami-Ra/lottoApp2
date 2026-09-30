@@ -29,7 +29,7 @@ description: |
   Build from the approved files in design/final/ once LTA-32, LTA-21 and
   LTA-22 are promoted; add them to `designs` then.
 platform: ios
-status: ready
+status: in-review
 phase: MVP
 priority: medium
 parent: 20

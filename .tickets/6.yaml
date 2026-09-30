@@ -45,7 +45,7 @@ description: |
   Out of scope: SubCombination (LTA-7), running blocks (LTA-9), showing
   the skipped count (LTA-2).
 platform: ios
-status: ready
+status: in-review
 phase: MVP
 priority: high
 parent: null
