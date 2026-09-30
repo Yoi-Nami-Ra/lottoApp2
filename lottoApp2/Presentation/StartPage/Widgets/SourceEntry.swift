@@ -75,11 +75,12 @@ struct SourceEntry {
 }
 
 extension AlertState where Action == SourceEntry.Action.Alert {
-    static var syncFailed: AlertState {
+    /// The failed-sync alert, worded for why it failed (spec 004 FR-003, contracts §4).
+    static func syncFailed(_ failure: SyncFailure, sourceName: String) -> AlertState {
         AlertState {
             TextState(.syncFailedTitle)
         } message: {
-            TextState(.syncFailedMessage)
+            TextState(LocalizedStringResource.syncFailedMessage(failure, sourceName: sourceName))
         }
     }
 }
@@ -137,6 +138,31 @@ extension TimeInterval {
 
 extension LocalizedStringResource {
     fileprivate static let syncFailedTitle: Self = "Sync failed"
-    fileprivate static let syncFailedMessage: Self =
-        "Couldn't refresh this source. Check your connection and try again."
+
+    fileprivate static func syncFailedMessage(_ failure: SyncFailure, sourceName name: String) -> Self {
+        switch failure {
+        case .offline:
+            "Your device appears to be offline. Check your connection and try again."
+        case .serverUnreachable:
+            "Couldn't reach \(name). Try again later."
+        case .serverError(let status) where status >= .serverSideErrorStatus:
+            "\(name) reported a problem (error \(status)). Try again later."
+        case .serverError(let status):
+            "\(name) answered with error \(status). Its address may have changed, so retrying won't help until the app is updated."
+        case .unreadableData:
+            "\(name) sent data in a format this app doesn't recognise. Retrying won't help until the app is updated."
+        case .sourceUnavailable:
+            "\(name) is no longer available."
+        case .storageFailure:
+            "The downloaded draws couldn't be saved on this device. Free up some space and try again."
+        // `cancelled` never reaches an alert (StartPage drops it); the general wording is only a fallback.
+        case .unknown, .cancelled:
+            "Couldn't refresh \(name). Try again."
+        }
+    }
+}
+
+extension Int {
+    /// 5xx: the server's own trouble, which retrying later can fix (spec 004 FR-004).
+    fileprivate static let serverSideErrorStatus = 500
 }

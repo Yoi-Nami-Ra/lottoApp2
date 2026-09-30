@@ -16,11 +16,11 @@ extension SourcesBLogic {
         knownSources: { Source.mocks },
         fetchFrom: { name in
             guard let source = Source.mocks.first(where: { $0.name == name })
-            else { return .failure(.somethingWentWrong) }
+            else { return .failure(.sourceUnavailable) }
             return .success(source)
         },
         gameFor: { name in
-            guard Source.mocks.contains(where: { $0.name == name }) else { return .failure(.somethingWentWrong) }
+            guard Source.mocks.contains(where: { $0.name == name }) else { return .failure(.sourceUnavailable) }
             return .success(SourceSnapshot(game: .previewMock, dataState: .previewMock))
         },
         dataStateFor: { name in

@@ -51,7 +51,7 @@ struct StartPage {
     enum Action {
         case task
         case sourcesResponse([Source])
-        case refreshResponse(id: SourceEntry.State.ID, Result<Source, SourcesBLogic.Error>)
+        case refreshResponse(id: SourceEntry.State.ID, Result<Source, SyncFailure>)
         case sources(IdentifiedActionOf<SourceEntry>)
         case nextButtonTapped
         case blocks(PresentationAction<BlocksPage.Action>)
@@ -107,12 +107,15 @@ struct StartPage {
             case let .refreshResponse(id: id, response):
                 // The entry can be gone if the list reloaded mid-flight. Bail out rather than writing through
                 // the id-subscript, which would append a ghost row and silently swallow the alert.
-                guard state.sources[id: id] != nil else { return .none }
+                guard let name = state.sources[id: id]?.name else { return .none }
                 state.sources[id: id]?.isRefreshing = false
                 switch response {
-                case .failure:
-                    // FR-021: surface a failure alert; leave prior analytics unchanged.
-                    state.sources[id: id]?.alert = .syncFailed
+                case .failure(.cancelled):
+                    // Spec 004 FR-007: a cancelled sync isn't a failure — stop the spinner, show nothing.
+                    break
+                case .failure(let failure):
+                    // FR-021: surface a failure alert worded for its kind (spec 004); leave prior analytics unchanged.
+                    state.sources[id: id]?.alert = .syncFailed(failure, sourceName: name)
                 case .success(let result):
                     state.sources[id: id]?.apply(result, now: date.now)
                 }

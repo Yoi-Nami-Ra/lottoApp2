@@ -128,19 +128,30 @@ struct ChainEditor_Tests {
     }
 
     @MainActor
-    @Test
-    func aFailedRead_endsTheRun_keepsThePreviousResults_andAlerts() async throws {
+    @Test(arguments: [SourceReadFailure.sourceUnavailable, .unreadableStoredDraws])
+    func aFailedRead_endsTheRun_keepsThePreviousResults_andSaysWhy(_ failure: SourceReadFailure) async throws {
+        // Spec 004 US2 / FR-008: the alert says which of the two read failures stopped the run.
         var state = ChainEditor.State(chain: .countOnlyMock, source: source)
         state.results = [countNode: .value(try countValue, stamp)]
-        let store = makeStore(state, blSources: .failureMock)
+        let store = makeStore(state, blSources: .failing(read: failure))
 
         await store.send(.runTapped) {
             $0.isRunning = true
         }
         await store.receive(\.gameLoaded) {
             $0.isRunning = false
-            $0.alert = .readFailed
+            $0.alert = .readFailed(failure, sourceName: "MBNet Server")
         }
+    }
+
+    @Test
+    func theTwoReadFailures_haveTheirOwnMessages_underTheSameTitle() {
+        // SC-004: distinct messages; the title stays "Couldn't run the chain".
+        let unavailable = AlertState<ChainEditor.Action.Alert>.readFailed(.sourceUnavailable, sourceName: "MBNet Server")
+        let unreadable = AlertState<ChainEditor.Action.Alert>.readFailed(.unreadableStoredDraws, sourceName: "MBNet Server")
+
+        #expect(unavailable.message != unreadable.message)
+        #expect(unavailable.title == unreadable.title)
     }
 
     // MARK: - Opening results (FR-024)

@@ -37,19 +37,20 @@ struct SourceBLogicTests {
         #expect(testResult == .success(Source.mbnetMock))
     }
 
-    @Test
+    @Test(arguments: [
+        SyncFailure.offline, .serverUnreachable, .serverError(status: 503), .unreadableData,
+        .sourceUnavailable, .storageFailure, .unknown, .cancelled,
+    ])
     @MainActor
-    func fetchSourceDataMapsRepoFailure() async throws {
+    func fetchSourceDataPassesTheRepoFailureThrough(_ failure: SyncFailure) async throws {
+        // Spec 004 FR-002: the kind reaches the UI unchanged — no layer widens it.
         let testResult = await withDependencies {
-            $0.sourcesRepo.fetchAndSaveDataFrom = { _ in .failure(.failedToFetchData) }
+            $0.sourcesRepo.fetchAndSaveDataFrom = { _ in .failure(failure) }
         } operation: {
             await SourcesBLogic.liveValue.fetchFrom("mbnet")
         }
 
-        guard case .failure(.somethingWentWrong) = testResult else {
-            Issue.record("expected .somethingWentWrong, got \(testResult)")
-            return
-        }
+        #expect(testResult == .failure(failure))
     }
 }
 
@@ -67,16 +68,16 @@ extension SourceBLogicTests {
         #expect(result == .success(snapshot))
     }
 
-    @Test
+    @Test(arguments: [SourceReadFailure.sourceUnavailable, .unreadableStoredDraws])
     @MainActor
-    func gameForMapsRepoFailure() async throws {
+    func gameForPassesTheRepoFailureThrough(_ failure: SourceReadFailure) async throws {
         let result = await withDependencies {
-            $0.sourcesRepo.gameFor = { _ in .failure(.unknownSource) }
+            $0.sourcesRepo.gameFor = { _ in .failure(failure) }
         } operation: {
             await SourcesBLogic.liveValue.gameFor("nope")
         }
 
-        #expect(result == .failure(.somethingWentWrong))
+        #expect(result == .failure(failure))
     }
 
     @Test

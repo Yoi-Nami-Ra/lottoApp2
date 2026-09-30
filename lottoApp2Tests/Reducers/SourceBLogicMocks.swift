@@ -17,12 +17,20 @@ nonisolated extension SourcesBLogic {
         dataStateFor: { _ in .mbnetMock }
     )
 
-    static let failureMock = SourcesBLogic(
-        knownSources: { [] },
-        fetchFrom: { _ in .failure(.somethingWentWrong) },
-        gameFor: { _ in .failure(.somethingWentWrong) },
-        dataStateFor: { _ in nil }
-    )
+    static let failureMock = failing()
+
+    /// Every source-reading call fails with the given kinds (spec 004), so a test can pick the one it asserts.
+    static func failing(
+        sync: SyncFailure = .unknown,
+        read: SourceReadFailure = .unreadableStoredDraws
+    ) -> SourcesBLogic {
+        SourcesBLogic(
+            knownSources: { [] },
+            fetchFrom: { _ in .failure(sync) },
+            gameFor: { _ in .failure(read) },
+            dataStateFor: { _ in nil }
+        )
+    }
 }
 
 nonisolated extension Source {

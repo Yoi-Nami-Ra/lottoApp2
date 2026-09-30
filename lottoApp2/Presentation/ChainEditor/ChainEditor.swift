@@ -140,7 +140,7 @@ struct ChainEditor {
         case removeTapped(ChainNode.ID)
         case toggleCollapsed(ChainNode.ID)
         case runTapped
-        case gameLoaded(Result<SourceSnapshot, SourcesBLogic.Error>)
+        case gameLoaded(Result<SourceSnapshot, SourceReadFailure>)
         case runEvent(RunEvent)
         case saveResultTapped(ChainNode.ID)
         case savedResultTapped(SavedResult.ID)
@@ -275,9 +275,9 @@ struct ChainEditor {
                 }
                 .cancellable(id: CancelID.run, cancelInFlight: true)
 
-            case .gameLoaded(.failure):
+            case .gameLoaded(.failure(let failure)):
                 state.isRunning = false
-                state.alert = .readFailed
+                state.alert = .readFailed(failure, sourceName: state.source.name)
                 return .none
 
             case .gameLoaded(.success(let snapshot)):
@@ -422,11 +422,12 @@ struct ChainEditor {
 }
 
 extension AlertState where Action == ChainEditor.Action.Alert {
-    static var readFailed: AlertState {
+    /// The failed-run alert, worded for why the draws couldn't be read (spec 004 FR-008, contracts §4).
+    static func readFailed(_ failure: SourceReadFailure, sourceName: String) -> AlertState {
         AlertState {
             TextState(.readFailedTitle)
         } message: {
-            TextState(.readFailedMessage)
+            TextState(LocalizedStringResource.readFailedMessage(failure, sourceName: sourceName))
         }
     }
 
@@ -490,7 +491,12 @@ extension AlertState where Action == ChainEditor.Action.Alert {
 // MARK: - Resources
 extension LocalizedStringResource {
     fileprivate static let readFailedTitle: Self = "Couldn't run the chain"
-    fileprivate static let readFailedMessage: Self = "This source's stored draws couldn't be read."
+    fileprivate static func readFailedMessage(_ failure: SourceReadFailure, sourceName name: String) -> Self {
+        switch failure {
+        case .sourceUnavailable: "\(name) is no longer available."
+        case .unreadableStoredDraws: "\(name)'s stored draws couldn't be read. Refresh the source and try again."
+        }
+    }
     fileprivate static let saveFailedTitle: Self = "Couldn't save the chain"
     fileprivate static let saveFailedMessage: Self = "Your last change may not be kept after the app closes."
     fileprivate static func removeTitle(_ below: Int) -> Self {

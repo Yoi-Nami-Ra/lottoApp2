@@ -92,7 +92,7 @@ lottoApp2/
     Results/      ResultPage — one block's full output (elements, ranking, grouped combinations, draws, number)
     Previews/     PreviewFixtures.swift — sample data for #Previews (kept out of Domain)
   Domain/         Inner layer — no Data imports
-    Ents/         Entities (Source, Draws, PipelineValues, Block, ProcessingBlockKind, Chain, RunResults)
+    Ents/         Entities (Source, SourceFailures, Draws, PipelineValues, Block, ProcessingBlockKind, Chain, RunResults)
     Repos/        Repository *contracts* (SourcesRepo, ChainsRepo) as struct-of-closures + DependencyKey
     BLogic/       Business logic (SourcesBLogic, ChainRules, BlockEvaluator, ChainRunner, Freshness,
                   ResultSummary) — depends on repo contracts, not impls

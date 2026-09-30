@@ -507,6 +507,20 @@ extension LocalizedStringKey {
         .preferredColorScheme(.light)
 }
 
+#Preview("Dark Mode - format changed alert") {
+    SourceEntryView(store: Store(initialState: .mock1aFormatChanged) { SourceEntry() })
+        .padding()
+        .background(.backgroundSecondary)
+        .preferredColorScheme(.dark)
+}
+
+#Preview("Light Mode - format changed alert") {
+    SourceEntryView(store: Store(initialState: .mock1aFormatChanged) { SourceEntry() })
+        .padding()
+        .background(.backgroundSecondary)
+        .preferredColorScheme(.light)
+}
+
 // The largest accessibility text size — `accessibility-extra-extra-extra-large` — is where the header
 // and details rows used to squeeze their columns until the labels broke mid-word. These previews are the
 // canvas check that both reflow instead.
@@ -617,7 +631,14 @@ extension SourceEntry.State {
             lastRecordDate: Date(timeIntervalSinceNow: -180_000),
             recordsCount: 7380
         )
-        state.alert = .syncFailed
+        state.alert = .syncFailed(.serverUnreachable, sourceName: "MBNet Server")
+        return state
+    }()
+
+    /// `mock1a` after a sync whose response was in a format the app doesn't recognise (spec 004 US1-AS5).
+    static let mock1aFormatChanged: Self = {
+        var state = mock1a
+        state.alert = .syncFailed(.unreadableData, sourceName: "MBNet Server")
         return state
     }()
 }

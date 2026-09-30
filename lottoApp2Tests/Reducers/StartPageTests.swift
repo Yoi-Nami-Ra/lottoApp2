@@ -86,9 +86,49 @@ struct StartPage_Tests {
         }
         await store.receive(\.refreshResponse) {
             $0.sources[id: "mbnet"]?.isRefreshing = false
-            $0.sources[id: "mbnet"]?.alert = .syncFailed
+            $0.sources[id: "mbnet"]?.alert = .syncFailed(.unknown, sourceName: "MBNet Server")
         }
         #expect(store.state.sources[id: "mbnet"]?.recordsCount == 100)
+    }
+
+    @MainActor
+    @Test(arguments: SourceEntry_Tests.shownFailures)
+    func refresh_failure_showsTheMessageForItsKind(_ failure: SyncFailure) async throws {
+        // Spec 004 US1 / FR-002–FR-003: the card's alert is the one for this kind, and analytics stay put.
+        let store = TestStore(initialState: StartPage.State(sources: [seededEntry()])) {
+            StartPage()
+                .dependency(\.blSources, .failing(sync: failure))
+                .dependency(\.date, .constant(.fixedNow))
+        }
+
+        await store.send(.sources(.element(id: "mbnet", action: .refreshButtonTapped)))
+        await store.receive(\.sources[id: "mbnet"].delegate.refreshRequested) {
+            $0.sources[id: "mbnet"]?.isRefreshing = true
+        }
+        await store.receive(\.refreshResponse) {
+            $0.sources[id: "mbnet"]?.isRefreshing = false
+            $0.sources[id: "mbnet"]?.alert = .syncFailed(failure, sourceName: "MBNet Server")
+        }
+        #expect(store.state.sources[id: "mbnet"]?.recordsCount == 100)
+    }
+
+    @MainActor
+    @Test
+    func refresh_cancelled_clearsRefreshingWithoutAnAlert() async throws {
+        // Spec 004 FR-007: a cancelled sync isn't a failure — the spinner stops and nothing is shown.
+        let store = TestStore(initialState: StartPage.State(sources: [seededEntry()])) {
+            StartPage()
+                .dependency(\.blSources, .failing(sync: .cancelled))
+                .dependency(\.date, .constant(.fixedNow))
+        }
+
+        await store.send(.sources(.element(id: "mbnet", action: .refreshButtonTapped)))
+        await store.receive(\.sources[id: "mbnet"].delegate.refreshRequested) {
+            $0.sources[id: "mbnet"]?.isRefreshing = true
+        }
+        await store.receive(\.refreshResponse) {
+            $0.sources[id: "mbnet"]?.isRefreshing = false
+        }
     }
 
     @MainActor
@@ -97,7 +137,7 @@ struct StartPage_Tests {
         // FR-020 regression: a reload landing mid-sync must not clear `isRefreshing` (which would drop the
         // child's re-entrancy guard and let a second concurrent sync start) or dismiss an unseen alert.
         var refreshing = seededEntry(isRefreshing: true)
-        refreshing.alert = .syncFailed
+        refreshing.alert = .syncFailed(.serverError(status: 503), sourceName: "MBNet Server")
 
         let store = TestStore(initialState: StartPage.State(sources: [refreshing])) {
             StartPage()
@@ -107,7 +147,7 @@ struct StartPage_Tests {
         await store.send(.sourcesResponse([.mbnetMock])) {
             $0.sources[id: "mbnet"]?.apply(.mbnetMock, now: .fixedNow)
             $0.sources[id: "mbnet"]?.isRefreshing = true
-            $0.sources[id: "mbnet"]?.alert = .syncFailed
+            $0.sources[id: "mbnet"]?.alert = .syncFailed(.serverError(status: 503), sourceName: "MBNet Server")
             // New state this response also settles: sole source → chosen, screen → loaded.
             $0.sources[id: "mbnet"]?.isSelected = true
             $0.selectedSourceID = "mbnet"
@@ -126,7 +166,7 @@ struct StartPage_Tests {
         }
 
         await store.send(.refreshResponse(id: "mbnet", .success(.refreshedMbnetMock)))
-        await store.send(.refreshResponse(id: "mbnet", .failure(.somethingWentWrong)))
+        await store.send(.refreshResponse(id: "mbnet", .failure(.unknown)))
         #expect(store.state.sources.isEmpty)
     }
 
@@ -384,7 +424,7 @@ struct StartPage_Tests {
         }
         await failing.receive(\.refreshResponse) {
             $0.sources[id: Source.mbnetMock.name]?.isRefreshing = false
-            $0.sources[id: Source.mbnetMock.name]?.alert = .syncFailed
+            $0.sources[id: Source.mbnetMock.name]?.alert = .syncFailed(.unknown, sourceName: Source.mbnetMock.displayName)
         }
         #expect(failing.state.selectedSourceID == Source.lottoMock.name)
     }

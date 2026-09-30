@@ -12,9 +12,14 @@ import ComposableArchitecture
 struct lottoApp2App: App {
     var body: some Scene {
         WindowGroup {
-            StartPageView(store: Store(initialState: StartPage.State()) {
-                StartPage()
-            })
+            // The unit tests are hosted in this app. Building the real store there runs its `.task` effect
+            // against unimplemented test dependencies while swift-testing is still bootstrapping, which
+            // crashes the test process — so the host shows nothing under test.
+            if !isTesting {
+                StartPageView(store: Store(initialState: StartPage.State()) {
+                    StartPage()
+                })
+            }
         }
     }
 }

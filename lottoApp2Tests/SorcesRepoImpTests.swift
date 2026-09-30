@@ -136,7 +136,7 @@ struct SorcesRepoImp_Tests {
 
     @Test
     func fetchFailsOnNonSuccessStatusAndPersistsNothing() async throws {
-        // FR-006: a non-2xx / transport error surfaces as a failure and writes nothing.
+        // FR-006: a non-2xx status surfaces as a server error carrying its code (spec 004 FR-004) and writes nothing.
         let root = tempRoot()
         let store = LocalStore.fileBacked(root: root)
 
@@ -150,10 +150,7 @@ struct SorcesRepoImp_Tests {
             await SourcesRepoImpl.live.fetchAndSaveDataFrom("mbnet")
         }
 
-        guard case .failure = result else {
-            Issue.record("expected failure, got \(result)")
-            return
-        }
+        #expect(result == .failure(.serverError(status: 500)))
         #expect(await store.listDrawsFor("mbnet").isEmpty)
         #expect(await store.listSourceMetaFor(["mbnet"]).isEmpty)
     }
@@ -178,10 +175,7 @@ struct SorcesRepoImp_Tests {
             await SourcesRepoImpl.live.fetchAndSaveDataFrom("mbnet")
         }
 
-        guard case .failure = result else {
-            Issue.record("expected failure, got \(result)")
-            return
-        }
+        #expect(result == .failure(.unreadableData))
         #expect(await store.listDrawsFor("mbnet").isEmpty)
         #expect(await store.listSourceMetaFor(["mbnet"]).isEmpty)
     }
@@ -212,10 +206,7 @@ struct SorcesRepoImp_Tests {
             await SourcesRepoImpl.live.fetchAndSaveDataFrom("mbnet")
         }
 
-        guard case .failure = result else {
-            Issue.record("expected failure, got \(result)")
-            return
-        }
+        #expect(result == .failure(.serverError(status: 503)))
         #expect(await store.listSourceMetaFor(["mbnet"])["mbnet"] == metaBefore)
         #expect(await store.listDrawsFor("mbnet").count == 1)
     }
@@ -254,6 +245,89 @@ struct SorcesRepoImp_Tests {
             return
         }
         #expect(source.recordsCount == 2)
+    }
+
+    // MARK: - Failure kinds (spec 004)
+
+    private func syncMBNet(
+        _ id: String = "mbnet",
+        network: @escaping @Sendable (URL) async throws -> Data,
+        store: LocalStore
+    ) async -> Result<Source, SyncFailure> {
+        await withDependencies {
+            // Integration test: exercise the real `sourceFor` wiring, stubbing only network + disk.
+            $0.remoteSourcesManager = RemoteSourcesManagerImp.live
+            $0.networkClient.data = network
+            $0.localStore = store
+            $0.date = .constant(syncDate)
+        } operation: {
+            await SourcesRepoImpl.live.fetchAndSaveDataFrom(id)
+        }
+    }
+
+    private nonisolated static let goodBody = Data("1. 27.01.1957 8,12,31,39,43,45".utf8)
+
+    @Test(arguments: [
+        (URLError.Code.notConnectedToInternet, SyncFailure.offline),
+        (.timedOut, .serverUnreachable),
+        (.cancelled, .cancelled),
+    ])
+    func aTransportFailure_isClassified_andPersistsNothing(_ code: URLError.Code, _ expected: SyncFailure) async {
+        // US1-AS1/AS2, FR-007: the transport error keeps its kind up to the repo result.
+        let store = LocalStore.inMemory()
+
+        let result = await syncMBNet(network: { _ in throw URLError(code) }, store: store)
+
+        #expect(result == .failure(expected))
+        #expect(await store.listDrawsFor("mbnet").isEmpty)
+        #expect(await store.listSourceMetaFor(["mbnet"]).isEmpty)
+    }
+
+    @Test
+    func aBodyThatIsNotText_isUnreadableData_andPersistsNothing() async {
+        // US1-AS5: bytes that aren't UTF-8 are a format change, not a connection problem.
+        let store = LocalStore.inMemory()
+
+        let result = await syncMBNet(network: { _ in Data([0xFF, 0xFE]) }, store: store)
+
+        #expect(result == .failure(.unreadableData))
+        #expect(await store.listDrawsFor("mbnet").isEmpty)
+    }
+
+    @Test
+    func anUnregisteredSource_isUnavailable_andPersistsNothing() async {
+        // US1-AS6: the registry no longer knows the id.
+        let store = LocalStore.inMemory()
+
+        let result = await syncMBNet("nope", network: { _ in Self.goodBody }, store: store)
+
+        #expect(result == .failure(.sourceUnavailable))
+        #expect(await store.listDrawsFor("nope").isEmpty)
+    }
+
+    @Test
+    func aSaveThatThrows_isAStorageFailure_andPersistsNothing() async {
+        // US1-AS7: the draws downloaded fine but couldn't be written on the device.
+        let backing = LocalStore.inMemory()
+        var store = backing
+        store.save = { _, _, _ in throw CocoaError(.fileWriteOutOfSpace) }
+
+        let result = await syncMBNet(network: { _ in Self.goodBody }, store: store)
+
+        #expect(result == .failure(.storageFailure))
+        #expect(await backing.listDrawsFor("mbnet").isEmpty)
+        #expect(await backing.listSourceMetaFor(["mbnet"]).isEmpty)
+    }
+
+    @Test
+    func savedDetailsThatCantBeReadBack_areAStorageFailure() async {
+        // Spec 004 Edge Cases → Saved but not read back.
+        var store = LocalStore.inMemory()
+        store.listSourceMetaFor = { _ in [:] }
+
+        let result = await syncMBNet(network: { _ in Self.goodBody }, store: store)
+
+        #expect(result == .failure(.storageFailure))
     }
 
     // MARK: - gameFor / dataStateFor (LTA-6, LTA-30)
@@ -316,7 +390,7 @@ struct SorcesRepoImp_Tests {
             (await SourcesRepoImpl.live.gameFor("nope"), await SourcesRepoImpl.live.dataStateFor("nope"))
         }
 
-        #expect(result == .failure(.unknownSource))
+        #expect(result == .failure(.sourceUnavailable))
         #expect(state == nil)
     }
 
@@ -330,7 +404,7 @@ struct SorcesRepoImp_Tests {
             await SourcesRepoImpl.live.gameFor("mbnet")
         }
 
-        #expect(result == .failure(.invalidStoredDraw))
+        #expect(result == .failure(.unreadableStoredDraws))
     }
 
     @Test

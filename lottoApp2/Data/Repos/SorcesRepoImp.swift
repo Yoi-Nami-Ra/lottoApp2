@@ -31,38 +31,44 @@ nonisolated struct SourcesRepoImpl: Sendable {
             @Dependency(\.localStore) var store
             @Dependency(\.date) var date
 
+            // - fetch from the selected source. Each step maps its own failure (spec 004 contracts §2): the
+            //   fetch step by the error's type, the store steps by the fact that they are the store steps.
+            let source = await remotes.sourceFor(sourceId)
+            let fetched: FetchedDraws
             do {
-                // - fetch from the selected source
-                let source = await remotes.sourceFor(sourceId)
-                let fetched = try await source.fetchData()
-
-                // FR-007 / US3-AS2: malformed rows don't fail the sync, but they must not pass silently.
-                if fetched.skipped > 0 {
-                    Logger.sources.warning(
-                        """
-                        \(source.name, privacy: .public): kept \(fetched.draws.count, privacy: .public) \
-                        draw(s), skipped \(fetched.skipped, privacy: .public) malformed row(s)
-                        """
-                    )
-                }
-
-                // - save (additive-union merge) into the local store
-                try await store.save(fetched.draws, source, date.now)
-
-                // Report the *persisted, merged* metadata so the card reflects the full stored set
-                // (FR-005/SC-002), not just this fetch's draws.
-                guard let meta = await store.listSourceMetaFor([source.name])[source.name] else {
-                    return .failure(.failedToFetchData)
-                }
-                return .success(meta.source(displayName: source.displayName))
+                fetched = try await source.fetchData()
             } catch {
-                Logger.sources.error("\(sourceId, privacy: .public): sync failed — \(error)")
-                return .failure(.failedToFetchData)
+                return .failure(SourcesRepoImpl.logged(SyncFailure(classifying: error), sourceId, error))
             }
+
+            // FR-007 / US3-AS2: malformed rows don't fail the sync, but they must not pass silently.
+            if fetched.skipped > 0 {
+                Logger.sources.warning(
+                    """
+                    \(source.name, privacy: .public): kept \(fetched.draws.count, privacy: .public) \
+                    draw(s), skipped \(fetched.skipped, privacy: .public) malformed row(s)
+                    """
+                )
+            }
+
+            // - save (additive-union merge) into the local store
+            do {
+                try await store.save(fetched.draws, source, date.now)
+            } catch {
+                return .failure(SourcesRepoImpl.logged(error is CancellationError ? .cancelled : .storageFailure, sourceId, error))
+            }
+
+            // Report the *persisted, merged* metadata so the card reflects the full stored set
+            // (FR-005/SC-002), not just this fetch's draws. Saved but unreadable is still a storage failure.
+            guard let meta = await store.listSourceMetaFor([source.name])[source.name] else {
+                Logger.sources.error("\(sourceId, privacy: .public): sync failed (storageFailure) — saved meta not found")
+                return .failure(.storageFailure)
+            }
+            return .success(meta.source(displayName: source.displayName))
         },
         gameFor: { sourceId in
             @Dependency(\.localStore) var store
-            guard let module = SourceRegistry.module(for: sourceId) else { return .failure(.unknownSource) }
+            guard let module = SourceRegistry.module(for: sourceId) else { return .failure(.sourceUnavailable) }
 
             let draws = await store.listDrawsFor(module.name).sorted { $0.index < $1.index }
             let meta = await store.listSourceMetaFor([module.name])[module.name]
@@ -82,7 +88,7 @@ nonisolated struct SourcesRepoImpl: Sendable {
                 return .success(SourceSnapshot(game: game, dataState: .of(meta)))
             } catch {
                 Logger.sources.error("\(sourceId, privacy: .public): a stored draw breaks the game shape — \(error)")
-                return .failure(.invalidStoredDraw)
+                return .failure(.unreadableStoredDraws)
             }
         },
         dataStateFor: { sourceId in
@@ -91,6 +97,14 @@ nonisolated struct SourcesRepoImpl: Sendable {
             return .of(await store.listSourceMetaFor([module.name])[module.name])
         }
     )
+}
+
+extension SourcesRepoImpl {
+    /// Logs the raw error next to the kind the user will be told about (spec 004 FR-009), then returns the kind.
+    fileprivate nonisolated static func logged(_ failure: SyncFailure, _ sourceId: String, _ error: any Error) -> SyncFailure {
+        Logger.sources.error("\(sourceId, privacy: .public): sync failed (\(String(describing: failure), privacy: .public)) — \(error)")
+        return failure
+    }
 }
 
 nonisolated extension SourceDataState {

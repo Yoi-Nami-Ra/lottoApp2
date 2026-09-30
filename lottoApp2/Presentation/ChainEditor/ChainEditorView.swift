@@ -567,6 +567,24 @@ extension LocalizedStringKey {
         .preferredColorScheme(.light)
 }
 
+#Preview("Chain - read failed alert - light") {
+    NavigationStack {
+        ChainEditorView(store: .preview(
+            .previewCountOnly, alert: .readFailed(.unreadableStoredDraws, sourceName: "MBNet Server")
+        ))
+    }
+    .preferredColorScheme(.light)
+}
+
+#Preview("Chain - read failed alert - dark") {
+    NavigationStack {
+        ChainEditorView(store: .preview(
+            .previewCountOnly, alert: .readFailed(.sourceUnavailable, sourceName: "MBNet Server")
+        ))
+    }
+    .preferredColorScheme(.dark)
+}
+
 #Preview("Chain - has result - dark") {
     NavigationStack {
         ChainEditorView(store: .preview(

@@ -110,7 +110,7 @@ struct SourceEntry_Tests {
             lastRecordDate: .fixedNow,
             recordsCount: 100
         )
-        initialState.alert = .syncFailed
+        initialState.alert = .syncFailed(.serverUnreachable, sourceName: "MBNet Server")
 
         let store = TestStore(initialState: initialState) {
             SourceEntry()
@@ -127,7 +127,7 @@ struct SourceEntry_Tests {
         // The in-place update keeps the entry's identity (so `IdentifiedArray` can't trap) while refreshing
         // every displayed field and dismissing a stale failure alert.
         var state = SourceEntry.State(id: "mbnet", name: "Old Name", recordsCount: 1)
-        state.alert = .syncFailed
+        state.alert = .syncFailed(.serverUnreachable, sourceName: "MBNet Server")
 
         state.apply(.refreshedMbnetMock, now: .fixedNow)
 
@@ -139,5 +139,46 @@ struct SourceEntry_Tests {
         #expect(state.lastRecordDate == Source.refreshedMbnetMock.latestRecord)
         #expect(state.lastSyncSeverity == .low)
         #expect(state.alert == nil)
+    }
+}
+
+// MARK: - Failure messages (spec 004)
+
+extension SourceEntry_Tests {
+    /// Every kind the card can show: the 7 sync failure kinds, with the server error split by range (FR-004).
+    nonisolated static let shownFailures: [SyncFailure] = [
+        .offline, .serverUnreachable, .serverError(status: 503), .serverError(status: 404),
+        .unreadableData, .sourceUnavailable, .storageFailure, .unknown,
+    ]
+
+    @Test
+    func everyShownFailure_hasItsOwnMessage_underTheSameTitle() {
+        // SC-001 / FR-003: 8 distinct messages; the title stays "Sync failed" for all of them.
+        let alerts = Self.shownFailures.map { AlertState.syncFailed($0, sourceName: "MBNet Server") }
+
+        for (i, a) in alerts.enumerated() {
+            for b in alerts[(i + 1)...] {
+                #expect(a.message != b.message, "\(String(describing: a.message)) is shared")
+            }
+            #expect(a.title == alerts[0].title)
+            #expect(a.message != nil)
+        }
+    }
+
+    @Test
+    func messagesThatReferToTheSource_nameIt() {
+        // FR-005: the sentence names the source where it refers to it — and only there.
+        // Offline and storage failures are about this device, not the source.
+        let aboutTheDevice: [SyncFailure] = [.offline, .storageFailure]
+
+        for failure in Self.shownFailures {
+            let a = AlertState.syncFailed(failure, sourceName: "Source A").message
+            let b = AlertState.syncFailed(failure, sourceName: "Source B").message
+            if !aboutTheDevice.contains(failure) {
+                #expect(a != b, "\(failure) should name the source")
+            } else {
+                #expect(a == b, "\(failure) should not depend on the source")
+            }
+        }
     }
 }
