@@ -19,7 +19,7 @@ description: |
   - Count all elements returns the total number of element occurrences
     across the entries, i.e. entries × x for a homogeneous collection.
 platform: ios
-status: ready
+status: done
 phase: Backlog
 priority: medium
 parent: null

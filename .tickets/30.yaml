@@ -26,7 +26,7 @@ description: |
   input order and changes when a draw's numbers or date change; old
   meta.json decodes; every freshness rule has a passing test.
 platform: ios
-status: in-review
+status: done
 phase: MVP
 priority: high
 parent: null

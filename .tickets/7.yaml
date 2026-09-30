@@ -29,7 +29,7 @@ description: |
   order-independent equality and hashing; generating sub-combinations of
   a Combination (count equals C(x, z), no duplicates).
 platform: ios
-status: in-review
+status: done
 phase: Backlog
 priority: medium
 parent: null

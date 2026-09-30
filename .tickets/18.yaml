@@ -39,7 +39,7 @@ description: |
   combinations; grouping by count; the 20-item cap and the "more" count;
   reducers via TestStore. Views ship light/dark #Previews.
 platform: ios
-status: in-review
+status: done
 phase: Backlog
 priority: medium
 parent: null

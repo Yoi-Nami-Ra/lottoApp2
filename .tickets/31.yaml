@@ -28,7 +28,7 @@ description: |
   results and drafts; listing results per chain; replacing a draft;
   cascade delete; a missing or corrupt file is skipped, not a crash.
 platform: ios
-status: in-review
+status: done
 phase: MVP
 priority: high
 parent: null

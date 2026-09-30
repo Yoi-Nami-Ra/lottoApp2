@@ -35,7 +35,7 @@ description: |
   - a failing node fails its subtree only; siblings still finish;
   - a cancelled run emits nothing more.
 platform: ios
-status: in-review
+status: done
 phase: MVP
 priority: medium
 parent: null

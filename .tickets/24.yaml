@@ -13,7 +13,7 @@ description: |
   Tests (written first): each filter on both kinds, x = 0, x equal to
   and larger than the size, empty input.
 platform: ios
-status: in-review
+status: done
 phase: Backlog
 priority: medium
 parent: 10

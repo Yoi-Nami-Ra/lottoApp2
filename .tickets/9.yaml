@@ -26,7 +26,7 @@ description: |
   ResultPage reducer via TestStore; light/dark #Previews for loaded,
   empty and out-of-date states.
 platform: ios
-status: in-review
+status: done
 phase: MVP
 priority: high
 parent: null

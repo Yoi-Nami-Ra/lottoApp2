@@ -11,7 +11,7 @@ description: |
   - Equal dates in sort by date fall back to index ascending.
   Tests (written first): each sort in both directions, ties, empty input.
 platform: ios
-status: in-review
+status: done
 phase: Backlog
 priority: medium
 parent: 10
