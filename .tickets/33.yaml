@@ -50,4 +50,7 @@ phase: MVP
 priority: medium
 parent: 20
 blocked_by: [21, 22, 32]
-designs: []
+designs:
+  - design/final/add-block-sheet.html
+  - design/final/chain-builder.html
+  - design/final/chain-list.html

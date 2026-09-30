@@ -29,8 +29,8 @@ description: |
   - Leave warning (FR-032) and restore prompt (FR-031) are system alerts
     with the build's copy.
 
-  Proposal: design/proposal/21-chain-builder.html (+ .png), rev. 2 —
-  fourteen frames: results, out of date, running, empty, failed block,
+  Final: design/final/chain-builder.html (+ .png), approved 2026-09-30
+  from proposal rev. 2 — fourteen frames: results, out of date, running, empty, failed block,
   save a result, long-press menu, saved results, swipe to remove, confirm
   removal, leave with unsaved results, restore prompt, dark mode,
   collapsed branch. Frames new since rev. 1 are marked NEW.
@@ -40,14 +40,13 @@ description: |
   reading, and the accessibility-size layout (summary under the title,
   12 pt indent).
 
-  Open questions: none — approve the rev. 2 proposal or mark changes.
   Done when: an approved file exists in design/final/ and this ticket's
   `designs` points at it.
 platform: ios
-status: ready
+status: done
 phase: MVP
 priority: medium
 parent: 20
 blocked_by: []
 designs:
-  - design/proposal/21-chain-builder.html
+  - design/final/chain-builder.html

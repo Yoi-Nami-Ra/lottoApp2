@@ -33,19 +33,18 @@ description: |
     unavailable, <reason>", the stepper is adjustable, and the field and
     stepper stack at accessibility sizes (fixed in LTA-33).
 
-  Proposal: design/proposal/22-add-block-sheet.html (+ .png) — eight
-  frames: catalogue under draws, catalogue under counts, filter
+  Final: design/final/add-block-sheet.html (+ .png), approved 2026-09-30
+  — eight frames: catalogue under draws, catalogue under counts, filter
   parameter, invalid x, sort direction, a block without parameters, edit
   mode, dark mode; the z bound and its copy are in the notes.
 
-  Open questions: none — approve the proposal or mark changes.
   Done when: an approved file exists in design/final/ and this ticket's
   `designs` points at it.
 platform: ios
-status: ready
+status: done
 phase: MVP
 priority: medium
 parent: 20
 blocked_by: []
 designs:
-  - design/proposal/22-add-block-sheet.html
+  - design/final/add-block-sheet.html

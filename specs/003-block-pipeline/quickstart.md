@@ -60,5 +60,5 @@ Run the app (`xcodebuild build …` then launch, or Xcode ▶).
 
 ## 3. Light / dark and Dynamic Type
 
-Every new view's `#Preview`s cover light and dark and the states in the LTA-21 / LTA-22 proposals
-(`design/proposal/21-chain-builder.html`, `design/proposal/22-add-block-sheet.html`).
+Every new view's `#Preview`s cover light and dark and the states in the LTA-21 / LTA-22 designs
+(`design/final/chain-builder.html`, `design/final/add-block-sheet.html`).

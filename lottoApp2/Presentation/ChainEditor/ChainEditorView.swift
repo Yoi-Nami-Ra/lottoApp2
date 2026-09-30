@@ -2,8 +2,8 @@
 //  ChainEditorView.swift
 //  lottoApp2
 //
-//  The chain outline, per design/proposal/21-chain-builder.html (LTA-21 is still in refine; built to the
-//  current proposal). Renders `ChainEditor.State` and sends actions — every decision is in the reducer.
+//  The chain outline, per design/final/chain-builder.html (LTA-21; LTA-33 closes where this still differs).
+//  Renders `ChainEditor.State` and sends actions — every decision is in the reducer.
 //
 
 import ComposableArchitecture

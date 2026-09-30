@@ -23,23 +23,22 @@ description: |
     the rename alert with the current name.
   - Delete is a trailing swipe and always asks first, naming the saved
     results and the draft that go with the chain (as built).
-  - Picked by default (change them if you disagree): Delete also sits in
+  - Delete also sits in
     the long-press menu, and a row exposes Rename and Delete as
     accessibility actions.
 
-  Proposal: design/proposal/32-chain-list.html (+ .png) — eight frames:
-  chains, empty, swipe to rename, swipe to delete, confirm delete, long
+  Final: design/final/chain-list.html (+ .png), approved 2026-09-30 —
+  eight frames: chains, empty, swipe to rename, swipe to delete, confirm delete, long
   press, rename alert, dark mode. What the build lacks is marked NEW and
   fixed in LTA-33.
 
-  Open questions: none — approve the proposal or mark changes.
   Done when: an approved file exists in design/final/ and this ticket's
   `designs` points at it.
 platform: ios
-status: ready
+status: done
 phase: MVP
 priority: medium
 parent: 20
 blocked_by: []
 designs:
-  - design/proposal/32-chain-list.html
+  - design/final/chain-list.html

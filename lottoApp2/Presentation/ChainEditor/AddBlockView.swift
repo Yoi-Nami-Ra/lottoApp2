@@ -2,7 +2,7 @@
 //  AddBlockView.swift
 //  lottoApp2
 //
-//  The add-block sheet's catalogue step, per design/proposal/22-add-block-sheet.html.
+//  The add-block sheet's catalogue step, per design/final/add-block-sheet.html.
 //
 
 import ComposableArchitecture

@@ -4,8 +4,8 @@
 //
 //  Created by Jarosław Wojtasik on 16/08/2026.
 //
-//  The chain list (spec 003 FR-017). LTA-32 (its design) is still in refine with no proposal file, so it
-//  keeps this page's existing header and row language.
+//  The chain list (spec 003 FR-017), per design/final/chain-list.html (LTA-32; LTA-33 closes where this
+//  still differs).
 //
 
 import ComposableArchitecture

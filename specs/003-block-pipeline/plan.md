@@ -147,9 +147,9 @@ lottoApp2/
     │   └── BlocksPageView.swift         # MODIFIED
     ├── ChainEditor/
     │   ├── ChainEditor.swift            # NEW — outline, run, results, save, back-warning, draft
-    │   ├── ChainEditorView.swift        # NEW — per design/proposal/21-chain-builder.html
+    │   ├── ChainEditorView.swift        # NEW — per design/final/chain-builder.html
     │   ├── AddBlock.swift               # NEW — catalogue + parameter step (sheet)
-    │   └── AddBlockView.swift           # NEW — per design/proposal/22-add-block-sheet.html
+    │   └── AddBlockView.swift           # NEW — per design/final/add-block-sheet.html
     ├── Results/
     │   ├── ResultPage.swift             # NEW — element list (LTA-9), grouped combinations (LTA-18)
     │   └── ResultPageView.swift         # NEW
