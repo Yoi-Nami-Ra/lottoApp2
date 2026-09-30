@@ -17,10 +17,34 @@ nonisolated struct DrawDTO: Equatable, Codable, Sendable {
 
 /// The outcome of fetching one source: the well-formed draws plus how many rows were unusable.
 ///
-/// `skipped` travels with the draws so the caller can report it (FR-007) instead of it dying at the parser.
+/// The counts travel with the draws so the caller can report them (FR-007) instead of them dying at the parser.
 nonisolated struct FetchedDraws: Equatable, Sendable {
     var draws: [DrawDTO]
+    /// Rows the parser could not read.
     var skipped: Int
+    /// Parsed draws dropped because they break the source's game rules (spec 005 FR-001).
+    var invalid: Int = 0
+
+    /// Everything this fetch left out — the one count the user is told about (spec 005 FR-003).
+    var skippedTotal: Int { skipped + invalid }
+}
+
+extension FetchedDraws {
+    /// Keeps only the draws that make a valid combination of `gameType`, counting the rest as `invalid`.
+    ///
+    /// Throws when rows arrived but none survived: a format change, not an empty history (spec 005 FR-007).
+    /// Idempotent, so validating twice counts nothing twice.
+    nonisolated func validated(against gameType: GameType) throws(RemoteSourceError) -> FetchedDraws {
+        let valid = draws.filter { draw in
+            // A negative number can't be an element; dropping it fails the count check, as in `gameFor`.
+            (try? Combination(type: gameType.combinationType, elements: draw.numbers.compactMap(Element.init(exactly:)))) != nil
+        }
+        let result = FetchedDraws(draws: valid, skipped: skipped, invalid: invalid + (draws.count - valid.count))
+        guard !(result.draws.isEmpty && result.skippedTotal > 0) else {
+            throw .unparseableBody(skipped: result.skippedTotal)
+        }
+        return result
+    }
 }
 
 /// Description of a single remote source and how to fetch its draws.
@@ -68,7 +92,9 @@ nonisolated struct RemoteSourcesManagerImp {
                 }
             }
             return RemoteSource(name: module.name, displayName: module.displayName) {
-                try await module.fetchDraws()
+                // Checked here, once for every module, because only here are both the draws and their game
+                // type at hand (spec 005 R1).
+                try await module.fetchDraws().validated(against: module.gameType)
             }
         }
     )

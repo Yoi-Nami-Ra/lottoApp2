@@ -29,7 +29,7 @@ struct SorcesRepoImp_Tests {
                 sourceFor: { name in RemoteSource(name: name, displayName: "MBNet Server") { .init(draws: [], skipped: 0) } }
             )
             $0.localStore = LocalStore(
-                save: { _, _, _ in },
+                save: { _, _, _, _ in },
                 listSourceMetaFor: { _ in [:] },
                 listDrawsFor: { _ in [] }
             )
@@ -59,7 +59,7 @@ struct SorcesRepoImp_Tests {
                 sourceFor: { name in RemoteSource(name: name, displayName: "MBNet Server") { .init(draws: [], skipped: 0) } }
             )
             $0.localStore = LocalStore(
-                save: { _, _, _ in },
+                save: { _, _, _, _ in },
                 listSourceMetaFor: { _ in ["mbnet": meta] },
                 listDrawsFor: { _ in [] }
             )
@@ -74,9 +74,39 @@ struct SorcesRepoImp_Tests {
                 lastSync: syncDate,
                 recordsCount: 7380,
                 latestRecord: meta.latestRecord,
-                firstRecord: meta.firstRecord
+                firstRecord: meta.firstRecord,
+                // A synced source always has a count; meta without one reads as 0 (spec 005 FR-013).
+                lastSyncSkipped: 0
             )
         ])
+    }
+
+    @Test
+    func listsTheStoredSkippedCount_andNoneForANeverSyncedSource() async throws {
+        // Spec 005 contracts §2: the last sync's skipped count is lifted from the stored meta; a source that
+        // never synced has no count at all (not 0).
+        let meta = SourceMeta(
+            name: "mbnet", lastSync: syncDate, recordsCount: 1, latestRecord: nil, firstRecord: nil,
+            contentDigest: "", lastSyncSkipped: 4
+        )
+        let known: [String: SourceMeta] = ["mbnet": meta]
+
+        let sources = await withDependencies {
+            $0.remoteSourcesManager = RemoteSourcesManager(
+                listAllSources: { ["mbnet", "other"] },
+                listDisplayNamesFor: { _ in ["mbnet": "MBNet Server", "other": "Other"] },
+                sourceFor: { name in RemoteSource(name: name, displayName: name) { .init(draws: [], skipped: 0) } }
+            )
+            $0.localStore = LocalStore(
+                save: { _, _, _, _ in },
+                listSourceMetaFor: { names in known.filter { names.contains($0.key) } },
+                listDrawsFor: { _ in [] }
+            )
+        } operation: {
+            await SourcesRepoImpl.live.listKnownSources()
+        }
+
+        #expect(sources.map(\.lastSyncSkipped) == [4, nil])
     }
 
     @Test
@@ -94,7 +124,7 @@ struct SorcesRepoImp_Tests {
                 sourceFor: { name in RemoteSource(name: name, displayName: "MBNet Server (renamed)") { .init(draws: [], skipped: 0) } }
             )
             $0.localStore = LocalStore(
-                save: { _, _, _ in },
+                save: { _, _, _, _ in },
                 listSourceMetaFor: { _ in ["mbnet": meta] },
                 listDrawsFor: { _ in [] }
             )
@@ -245,6 +275,147 @@ struct SorcesRepoImp_Tests {
             return
         }
         #expect(source.recordsCount == 2)
+        #expect(source.lastSyncSkipped == 1)
+    }
+
+    // MARK: - Skipped records (spec 005)
+
+    /// Syncs `body` through the live wiring into `store` and returns the synced source, recording an issue
+    /// when the sync fails.
+    private func syncedSource(_ body: String, into store: LocalStore) async -> Source? {
+        let data = Data(body.utf8)
+        let result = await syncMBNet(network: { _ in data }, store: store)
+        guard case let .success(source) = result else {
+            Issue.record("expected success, got \(result)")
+            return nil
+        }
+        return source
+    }
+
+    private nonisolated static let valid1 = "1. 27.01.1957 8,12,31,39,43,45"
+    private nonisolated static let valid3 = "3. 10.02.1957 18,19,20,26,45,49"
+    private nonisolated static let repeated2 = "2. 03.02.1957 5,5,11,22,25,27"
+    private nonisolated static let repeated4 = "4. 17.02.1957 1,9,9,20,30,40"
+
+    @Test
+    func unreadableRowsOnly_areCounted_andTheRestStored() async {
+        let store = LocalStore.inMemory()
+        let source = await syncedSource([Self.valid1, "garbage line", Self.valid3].joined(separator: "\n"), into: store)
+
+        #expect(source?.lastSyncSkipped == 1)
+        #expect(await store.listDrawsFor("mbnet").map(\.index) == [1, 3])
+    }
+
+    @Test
+    func drawsThatBreakTheRules_areNotStored_andAreCounted() async {
+        // FR-001/FR-002: a repeated number passes the MBNet parser but breaks the 6-of-49 rules.
+        let store = LocalStore.inMemory()
+        let source = await syncedSource([Self.valid1, Self.repeated2, Self.repeated4].joined(separator: "\n"), into: store)
+
+        #expect(source?.lastSyncSkipped == 2)
+        #expect(source?.recordsCount == 1)
+        #expect(await store.listDrawsFor("mbnet").map(\.index) == [1])
+    }
+
+    @Test
+    func bothKinds_makeOneCount() async {
+        // FR-003: one count covers unreadable rows and rule-breaking draws.
+        let store = LocalStore.inMemory()
+        let body = ["garbage line", Self.repeated2, Self.repeated4, Self.valid3].joined(separator: "\n")
+        let source = await syncedSource(body, into: store)
+
+        #expect(source?.lastSyncSkipped == 3)
+        #expect(await store.listDrawsFor("mbnet").map(\.index) == [3])
+    }
+
+    @Test
+    func aCleanResponse_skipsNothing() async {
+        let source = await syncedSource([Self.valid1, Self.valid3].joined(separator: "\n"), into: .inMemory())
+
+        #expect(source?.lastSyncSkipped == 0)
+    }
+
+    @Test
+    func rowsThatAllBreakTheRules_failAsAFormatChange_andStoreNothing() async {
+        // FR-007: rows arrived but none survived — the same outcome as a body no row of which parses.
+        let store = LocalStore.inMemory()
+        let body = Data([Self.repeated2, Self.repeated4].joined(separator: "\n").utf8)
+
+        let result = await syncMBNet(network: { _ in body }, store: store)
+
+        #expect(result == .failure(.unreadableData))
+        #expect(await store.listDrawsFor("mbnet").isEmpty)
+        #expect(await store.listSourceMetaFor(["mbnet"]).isEmpty)
+    }
+
+    @Test
+    func aRuleBreakingDraw_neverReplacesAStoredValidOne() async throws {
+        // Spec Edge Cases: the additive merge must not let an invalid draw overwrite a valid one at its index.
+        let store = LocalStore.inMemory()
+        _ = await syncedSource(Self.valid1, into: store)
+        let storedBefore = await store.listDrawsFor("mbnet")
+
+        let source = await syncedSource(["1. 27.01.1957 8,8,31,39,43,45", Self.valid3].joined(separator: "\n"), into: store)
+
+        #expect(source?.lastSyncSkipped == 1)
+        let stored = await store.listDrawsFor("mbnet")
+        #expect(stored.first == storedBefore.first)
+        #expect(stored.map(\.index) == [1, 3])
+    }
+
+    @Test
+    func anEmptyResponse_clearsTheCount_andKeepsTheDraws() async {
+        // Spec Edge Cases → Empty response: a successful empty history has skipped nothing.
+        let store = LocalStore.inMemory()
+        _ = await syncedSource([Self.valid1, "garbage line"].joined(separator: "\n"), into: store)
+
+        let source = await syncedSource("", into: store)
+
+        #expect(source?.lastSyncSkipped == 0)
+        #expect(await store.listDrawsFor("mbnet").map(\.index) == [1])
+    }
+
+    // MARK: - Lifetime of the skipped count (spec 005 US2)
+
+    private nonisolated static let threeSkipped = ["garbage", Self.repeated2, Self.repeated4, Self.valid1].joined(separator: "\n")
+
+    @Test
+    func aFailedSync_keepsTheStoredSkippedCount() async throws {
+        // FR-006 / US2-AS4.
+        let store = LocalStore.fileBacked(root: tempRoot())
+        _ = await syncedSource(Self.threeSkipped, into: store)
+
+        let result = await syncMBNet(network: { _ in throw NetworkClient.Failure.badStatus(503) }, store: store)
+
+        #expect(result == .failure(.serverError(status: 503)))
+        #expect(await store.listSourceMetaFor(["mbnet"])["mbnet"]?.lastSyncSkipped == 3)
+    }
+
+    @Test
+    func aCleanSync_replacesTheSkippedCountWithZero() async {
+        // FR-005 / US2-AS3.
+        let store = LocalStore.fileBacked(root: tempRoot())
+        _ = await syncedSource(Self.threeSkipped, into: store)
+
+        let source = await syncedSource(Self.valid3, into: store)
+
+        #expect(source?.lastSyncSkipped == 0)
+    }
+
+    @Test
+    func theSkippedCountIsListedAgainAfterARelaunch() async {
+        // US2-AS1: a relaunch lists the sources from a fresh store over the same directory.
+        let root = tempRoot()
+        _ = await syncedSource(Self.threeSkipped, into: .fileBacked(root: root))
+
+        let sources = await withDependencies {
+            $0.remoteSourcesManager = RemoteSourcesManagerImp.live
+            $0.localStore = .fileBacked(root: root)
+        } operation: {
+            await SourcesRepoImpl.live.listKnownSources()
+        }
+
+        #expect(sources.first { $0.name == "mbnet" }?.lastSyncSkipped == 3)
     }
 
     // MARK: - Failure kinds (spec 004)
@@ -310,7 +481,7 @@ struct SorcesRepoImp_Tests {
         // US1-AS7: the draws downloaded fine but couldn't be written on the device.
         let backing = LocalStore.inMemory()
         var store = backing
-        store.save = { _, _, _ in throw CocoaError(.fileWriteOutOfSpace) }
+        store.save = { _, _, _, _ in throw CocoaError(.fileWriteOutOfSpace) }
 
         let result = await syncMBNet(network: { _ in Self.goodBody }, store: store)
 
@@ -336,7 +507,7 @@ struct SorcesRepoImp_Tests {
 
     private func seededStore(_ draws: [DrawDTO]) async throws -> LocalStore {
         let store = LocalStore.inMemory()
-        try await store.save(draws, mbnet, syncDate)
+        try await store.save(draws, mbnet, syncDate, 0)
         return store
     }
 

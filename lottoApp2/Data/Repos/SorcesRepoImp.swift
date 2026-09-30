@@ -41,19 +41,21 @@ nonisolated struct SourcesRepoImpl: Sendable {
                 return .failure(SourcesRepoImpl.logged(SyncFailure(classifying: error), sourceId, error))
             }
 
-            // FR-007 / US3-AS2: malformed rows don't fail the sync, but they must not pass silently.
-            if fetched.skipped > 0 {
+            // FR-007 / US3-AS2: malformed rows don't fail the sync, but they must not pass silently. The user
+            // sees one total (spec 005 FR-003); the log keeps the two kinds apart (FR-012).
+            if fetched.skippedTotal > 0 {
                 Logger.sources.warning(
                     """
                     \(source.name, privacy: .public): kept \(fetched.draws.count, privacy: .public) \
-                    draw(s), skipped \(fetched.skipped, privacy: .public) malformed row(s)
+                    draw(s), skipped \(fetched.skipped, privacy: .public) unreadable row(s) and \
+                    \(fetched.invalid, privacy: .public) draw(s) that break the game rules
                     """
                 )
             }
 
             // - save (additive-union merge) into the local store
             do {
-                try await store.save(fetched.draws, source, date.now)
+                try await store.save(fetched.draws, source, date.now, fetched.skippedTotal)
             } catch {
                 return .failure(SourcesRepoImpl.logged(error is CancellationError ? .cancelled : .storageFailure, sourceId, error))
             }
@@ -127,7 +129,8 @@ nonisolated extension SourceMeta {
             lastSync: lastSync,
             recordsCount: recordsCount,
             latestRecord: latestRecord,
-            firstRecord: firstRecord
+            firstRecord: firstRecord,
+            lastSyncSkipped: lastSyncSkipped
         )
     }
 }

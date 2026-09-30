@@ -140,6 +140,36 @@ struct SourceEntry_Tests {
         #expect(state.lastSyncSeverity == .low)
         #expect(state.alert == nil)
     }
+
+    // MARK: - Skipped-records note (spec 005 contracts §3)
+
+    private static func source(skipped: Int?) -> Source {
+        Source(name: "mbnet", displayName: "MBNet Server", lastSync: .fixedNow, recordsCount: 7380, lastSyncSkipped: skipped)
+    }
+
+    @Test(arguments: [
+        (Int?.none, Int?.none),
+        (0, nil),
+        (1, 1),
+        (1204, 1204),
+    ])
+    func sourceEntryState_showsTheNoteOnlyForAPositiveCount(_ skipped: Int?, _ expected: Int?) {
+        let state = Self.source(skipped: skipped).sourceEntryState(now: .fixedNow)
+
+        #expect(state.skippedInLastSync == expected)
+    }
+
+    @Test
+    func apply_setsTheNote_andAZeroCountClearsIt() {
+        // FR-005: each successful sync replaces the note; one that skipped nothing removes it.
+        var state = Self.source(skipped: nil).sourceEntryState(now: .fixedNow)
+
+        state.apply(Self.source(skipped: 3), now: .fixedNow)
+        #expect(state.skippedInLastSync == 3)
+
+        state.apply(Self.source(skipped: 0), now: .fixedNow)
+        #expect(state.skippedInLastSync == nil)
+    }
 }
 
 // MARK: - Failure messages (spec 004)

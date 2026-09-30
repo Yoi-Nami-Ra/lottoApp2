@@ -25,7 +25,7 @@ struct LocalStoreDigestTests {
 
     private func storedMeta(after saves: [[DrawDTO]]) async throws -> SourceMeta {
         let store = LocalStore.fileBacked(root: tempRoot())
-        for draws in saves { try await store.save(draws, mbnet, asOf) }
+        for draws in saves { try await store.save(draws, mbnet, asOf, 0) }
         return try #require(await store.listSourceMetaFor(["mbnet"])["mbnet"])
     }
 

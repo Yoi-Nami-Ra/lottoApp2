@@ -11,8 +11,10 @@ import Foundation
 
 nonisolated struct LocalStore: Sendable {
     /// Additively merges `draws` into the stored set for `source` (keyed on ordinal index — never deletes)
-    /// and persists them together with the derived `SourceMeta`, stamped `asOf`.
-    var save: @Sendable ([DrawDTO], RemoteSource, _ asOf: Date) async throws -> Void
+    /// and persists them together with the derived `SourceMeta`, stamped `asOf` and carrying the number of
+    /// records this sync `skipped` (spec 005 FR-004). Only a successful sync saves, so a failed one leaves
+    /// the previous count in place (FR-006).
+    var save: @Sendable ([DrawDTO], RemoteSource, _ asOf: Date, _ skipped: Int) async throws -> Void
     var listSourceMetaFor: @Sendable ([String]) async -> [String: SourceMeta]
     /// Reads back the persisted draws for a source (used to verify persistence; no UI consumer yet).
     var listDrawsFor: @Sendable (String) async -> [DrawDTO]
@@ -31,11 +33,14 @@ nonisolated struct SourceMeta: Codable, Equatable, Sendable {
     /// SHA-256 over the stored draws, so results can tell a sync that changed a draw in place (spec 003 R8).
     /// Empty for a `meta.json` written before the digest existed; the next sync writes it.
     let contentDigest: String
+    /// Records the last successful sync skipped — unreadable rows plus draws that break the game rules
+    /// (spec 005 FR-003). 0 for a `meta.json` written before the count existed (FR-013).
+    var lastSyncSkipped: Int = 0
 }
 
 nonisolated extension SourceMeta {
     private enum CodingKeys: String, CodingKey {
-        case name, lastSync, recordsCount, latestRecord, firstRecord, contentDigest
+        case name, lastSync, recordsCount, latestRecord, firstRecord, contentDigest, lastSyncSkipped
     }
 
     init(from decoder: any Decoder) throws {
@@ -46,7 +51,8 @@ nonisolated extension SourceMeta {
             recordsCount: try container.decode(Int.self, forKey: .recordsCount),
             latestRecord: try container.decodeIfPresent(Date.self, forKey: .latestRecord),
             firstRecord: try container.decodeIfPresent(Date.self, forKey: .firstRecord),
-            contentDigest: try container.decodeIfPresent(String.self, forKey: .contentDigest) ?? ""
+            contentDigest: try container.decodeIfPresent(String.self, forKey: .contentDigest) ?? "",
+            lastSyncSkipped: try container.decodeIfPresent(Int.self, forKey: .lastSyncSkipped) ?? 0
         )
     }
 }
@@ -74,7 +80,7 @@ extension LocalStore {
     nonisolated static func fileBacked(root: URL) -> LocalStore {
         let store = FileStore(root: root)
         return LocalStore(
-            save: { draws, source, asOf in try await store.save(draws, source, asOf: asOf) },
+            save: { draws, source, asOf, skipped in try await store.save(draws, source, asOf: asOf, skipped: skipped) },
             listSourceMetaFor: { await store.listSourceMetaFor($0) },
             listDrawsFor: { await store.listDrawsFor($0) }
         )
@@ -84,7 +90,7 @@ extension LocalStore {
     nonisolated static func inMemory() -> LocalStore {
         let store = MemoryStore()
         return LocalStore(
-            save: { draws, source, asOf in await store.save(draws, source, asOf: asOf) },
+            save: { draws, source, asOf, skipped in await store.save(draws, source, asOf: asOf, skipped: skipped) },
             listSourceMetaFor: { await store.listSourceMetaFor($0) },
             listDrawsFor: { await store.listDrawsFor($0) }
         )
@@ -92,14 +98,15 @@ extension LocalStore {
 
     /// Derives the persisted analytics from the *merged* set, so the card reflects everything stored for the
     /// source rather than just the rows this fetch happened to return (FR-005/SC-002).
-    fileprivate nonisolated static func meta(name: String, draws: [DrawDTO], asOf: Date) -> SourceMeta {
+    fileprivate nonisolated static func meta(name: String, draws: [DrawDTO], asOf: Date, skipped: Int) -> SourceMeta {
         SourceMeta(
             name: name,
             lastSync: asOf,
             recordsCount: draws.count,
             latestRecord: draws.map(\.date).max(),
             firstRecord: draws.map(\.date).min(),
-            contentDigest: digest(of: draws)
+            contentDigest: digest(of: draws),
+            lastSyncSkipped: skipped
         )
     }
 }
@@ -115,7 +122,7 @@ private actor FileStore {
         self.root = root
     }
 
-    func save(_ draws: [DrawDTO], _ source: RemoteSource, asOf: Date) throws {
+    func save(_ draws: [DrawDTO], _ source: RemoteSource, asOf: Date, skipped: Int) throws {
         let dir = Self.sourceDir(root: root, name: source.name)
         try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
 
@@ -123,7 +130,7 @@ private actor FileStore {
         // Draws first, then meta: a crash between the two leaves meta *behind* the stored draws, which the
         // next sync corrects. The reverse order would leave meta claiming records that were never written.
         try JSONEncoder().encode(merged).write(to: Self.drawsURL(dir), options: .atomic)
-        let meta = LocalStore.meta(name: source.name, draws: merged, asOf: asOf)
+        let meta = LocalStore.meta(name: source.name, draws: merged, asOf: asOf, skipped: skipped)
         try JSONEncoder().encode(meta).write(to: Self.metaURL(dir), options: .atomic)
     }
 
@@ -162,10 +169,10 @@ private actor MemoryStore {
     private var draws: [String: [DrawDTO]] = [:]
     private var meta: [String: SourceMeta] = [:]
 
-    func save(_ incoming: [DrawDTO], _ source: RemoteSource, asOf: Date) {
+    func save(_ incoming: [DrawDTO], _ source: RemoteSource, asOf: Date, skipped: Int) {
         let merged = LocalStore.merged(existing: draws[source.name] ?? [], incoming: incoming)
         draws[source.name] = merged
-        meta[source.name] = LocalStore.meta(name: source.name, draws: merged, asOf: asOf)
+        meta[source.name] = LocalStore.meta(name: source.name, draws: merged, asOf: asOf, skipped: skipped)
     }
 
     func listSourceMetaFor(_ names: [String]) -> [String: SourceMeta] {

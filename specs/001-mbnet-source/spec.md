@@ -101,6 +101,7 @@ Each synced MBNet draw is stored with its draw date and the set of drawn numbers
 - **FR-006**: When the MBNet server is unreachable, returns an error status, or returns a response that cannot be parsed at all, the system MUST report the sync as a failure and leave previously stored MBNet data and metadata unchanged.
 - **FR-021**: On a failed refresh, the system MUST present an alert dialog informing the user that the sync failed; the user dismisses it, after which the card returns to its idle state with its prior analytics intact.
 - **FR-007**: When individual draws within an otherwise valid response are malformed (missing date or numbers), the system MUST skip those draws, continue processing the rest, and surface that some records were skipped.
+  *(Surfacing delivered by spec 005 — `specs/005-skipped-rows-note/`: a note on the source card with the last successful sync's skipped count.)*
 - **FR-008**: Re-syncing MBNet MUST reconcile fetched draws with stored draws as an **additive union** keyed on the ordinal index: new draws are added, existing draws (same index) are updated, and previously stored draws are never deleted — even if a later fetch no longer includes them. No duplicate records are created.
 - **FR-009**: The system MUST display MBNet's metadata to the user consistent with how other sources are shown (never-synced state vs. populated state).
 - **FR-010**: The MBNet integration MUST NOT change the behavior or listing of any other source.

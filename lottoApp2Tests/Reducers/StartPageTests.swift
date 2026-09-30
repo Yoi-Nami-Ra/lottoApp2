@@ -600,6 +600,89 @@ struct StartPage_Tests {
     }
 }
 
+// MARK: - Skipped-records note (spec 005 US2)
+
+extension StartPage_Tests {
+    /// `mbnet` as the last sync left it: three records skipped.
+    private func entryShowingThreeSkipped() -> SourceEntry.State {
+        var entry = seededEntry()
+        entry.skippedInLastSync = 3
+        return entry
+    }
+
+    private func blSources(syncing result: Result<Source, SyncFailure>) -> SourcesBLogic {
+        var logic = SourcesBLogic.mock
+        logic.fetchFrom = { _ in result }
+        return logic
+    }
+
+    @MainActor
+    @Test
+    func task_showsTheStoredSkippedCount() async throws {
+        // US2-AS1: after a relaunch the card shows the count the last successful sync stored.
+        let skipped = Source(name: "mbnet", displayName: "MBNet Server", lastSync: .fixedNow, recordsCount: 10, lastSyncSkipped: 2)
+        var logic = SourcesBLogic.mock
+        logic.knownSources = { [skipped, .lottoMock] }
+        let store = TestStore(initialState: StartPage.State()) {
+            StartPage()
+                .dependency(\.blSources, logic)
+                .dependency(\.date, .constant(.fixedNow))
+        }
+
+        await store.send(.task)
+        await store.receive(\.sourcesResponse) {
+            $0.sources = [skipped.sourceEntryState(now: .fixedNow), Source.lottoMock.sourceEntryState(now: .fixedNow)]
+            $0.hasLoaded = true
+        }
+        #expect(store.state.sources[id: "mbnet"]?.skippedInLastSync == 2)
+    }
+
+    @MainActor
+    @Test
+    func refresh_success_replacesTheSkippedCount() async throws {
+        // US2-AS2: the next successful sync's count replaces the one shown.
+        let synced = Source(name: "mbnet", displayName: "MBNet Server", lastSync: .fixedNow, recordsCount: 10, lastSyncSkipped: 1)
+        let store = TestStore(initialState: StartPage.State(sources: [entryShowingThreeSkipped()])) {
+            StartPage()
+                .dependency(\.blSources, blSources(syncing: .success(synced)))
+                .dependency(\.date, .constant(.fixedNow))
+        }
+
+        await store.send(.sources(.element(id: "mbnet", action: .refreshButtonTapped)))
+        await store.receive(\.sources[id: "mbnet"].delegate.refreshRequested) {
+            $0.sources[id: "mbnet"]?.isRefreshing = true
+        }
+        await store.receive(\.refreshResponse) {
+            $0.sources[id: "mbnet"]?.isRefreshing = false
+            $0.sources[id: "mbnet"]?.apply(synced, now: .fixedNow)
+        }
+        #expect(store.state.sources[id: "mbnet"]?.skippedInLastSync == 1)
+    }
+
+    @MainActor
+    @Test(arguments: [SyncFailure.serverUnreachable, .cancelled])
+    func refresh_thatDoesNotSucceed_keepsTheSkippedCount(_ failure: SyncFailure) async throws {
+        // US2-AS4 / FR-006: a failed or cancelled sync leaves the note as it was.
+        let store = TestStore(initialState: StartPage.State(sources: [entryShowingThreeSkipped()])) {
+            StartPage()
+                .dependency(\.blSources, blSources(syncing: .failure(failure)))
+                .dependency(\.date, .constant(.fixedNow))
+        }
+
+        await store.send(.sources(.element(id: "mbnet", action: .refreshButtonTapped)))
+        await store.receive(\.sources[id: "mbnet"].delegate.refreshRequested) {
+            $0.sources[id: "mbnet"]?.isRefreshing = true
+        }
+        await store.receive(\.refreshResponse) {
+            $0.sources[id: "mbnet"]?.isRefreshing = false
+            if failure != .cancelled {
+                $0.sources[id: "mbnet"]?.alert = .syncFailed(failure, sourceName: "MBNet Server")
+            }
+        }
+        #expect(store.state.sources[id: "mbnet"]?.skippedInLastSync == 3)
+    }
+}
+
 extension SourceEntry.State {
     /// The same entry with its selection mirror set, so expectations read as one expression.
     fileprivate var chosen: Self {

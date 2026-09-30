@@ -17,8 +17,9 @@ protocol SourceModule: Sendable {
     nonisolated var displayName: String { get }
     /// The shape of the source's draws, which every stored draw is read into (spec 003 FR-002).
     nonisolated var gameType: GameType { get }
-    /// Fetches the source's published history. Throws on transport/status/decode failure, and when the body
-    /// arrives but yields no usable rows (schema drift — `RemoteSourceError.unparseableBody`).
+    /// Fetches and parses the source's published history. Throws on transport/status/decode failure. A body
+    /// whose rows yield no usable draw is rejected by the shared fetch step (`FetchedDraws.validated(against:)`),
+    /// which also drops draws that break `gameType`'s rules — so a module only parses.
     nonisolated func fetchDraws() async throws -> FetchedDraws
 }
 
@@ -39,14 +40,8 @@ nonisolated struct MBNetSource: SourceModule {
             throw RemoteSourceError.undecodableBody
         }
 
-        let parsed = MBNetParser.parse(text)
-        // FR-006 / spec Edge Cases → Schema drift: rows were present but none were usable, so the format
-        // changed — fail rather than stamp a successful sync that stored nothing. A genuinely empty body
-        // (no rows at all) still succeeds as the "empty history" case.
-        guard !(parsed.draws.isEmpty && parsed.skipped > 0) else {
-            throw RemoteSourceError.unparseableBody(skipped: parsed.skipped)
-        }
-        return parsed
+        // Schema drift (rows present, none usable) is caught after validation, in the shared fetch step.
+        return MBNetParser.parse(text)
     }
 }
 

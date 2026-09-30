@@ -31,6 +31,8 @@ struct SourceEntry {
         var firstRecordDate: Date?
         var lastRecordDate: Date?
         var recordsCount: Int?
+        /// The count shown in the skipped-records note. `nil` means no note; it is never `0` (spec 005 §3).
+        var skippedInLastSync: Int?
         var isRefreshing: Bool = false
         /// Mirrors the parent's `selectedSourceID` so the card can draw itself. The parent is the only
         /// writer — see `StartPage.State.applySelectionRules()`; nothing in this reducer touches it.
@@ -110,8 +112,15 @@ extension Source {
             lastSyncSeverity: lastSync.map { .init(lastSync: $0, now: now) } ?? .notSynced,
             firstRecordDate: firstRecord,
             lastRecordDate: latestRecord,
-            recordsCount: recordsCount
+            recordsCount: recordsCount,
+            skippedInLastSync: skippedNoteCount
         )
+    }
+
+    /// A note only for a sync that actually skipped something: never synced and 0 both mean no note (FR-009).
+    fileprivate var skippedNoteCount: Int? {
+        guard let lastSyncSkipped, lastSyncSkipped > 0 else { return nil }
+        return lastSyncSkipped
     }
 }
 
@@ -126,6 +135,7 @@ extension SourceEntry.State {
         firstRecordDate = source.firstRecord
         lastRecordDate = source.latestRecord
         recordsCount = source.recordsCount
+        skippedInLastSync = source.skippedNoteCount
         alert = nil
     }
 }

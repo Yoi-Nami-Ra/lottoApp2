@@ -17,6 +17,9 @@ struct SourceEntryView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: .headerDataSpacing) {
             headerRow
+            if let count = store.skippedInLastSync {
+                skippedNote(count)
+            }
             details
         }
         .modifier(SourceCardStyle.sourceCardStyle(isSelected: store.isSelected))
@@ -126,6 +129,28 @@ struct SourceEntryView: View {
         .padding(.vertical, .syncStatusVPadding)
         .background(lastSyncBackground)
         .cornerRadius(.syncStatusCorners)
+    }
+
+    /// Full width between the header and the details (spec 005 clarification), so it needs no reflow rule of
+    /// its own: at accessibility text sizes it simply wraps, at word boundaries.
+    private func skippedNote(_ count: Int) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: .skippedNoteIconSpacing) {
+            // The icon carries the warning without relying on colour (FR-011); the text already says it all,
+            // so VoiceOver skips the icon and reads the note as its own element inside the card (FR-010).
+            Image(.skippedWarning)
+                .foregroundStyle(Color.skippedNoteIcon)
+                .accessibilityHidden(true)
+            // No `lineLimit` or scale floor: a sentence may wrap, whereas shrinking it would make it unreadable
+            // at the very sizes it has to survive.
+            Text(.skippedInLastSync(count))
+                .font(.skippedNote)
+                .foregroundStyle(Color.skippedNoteText)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, .skippedNoteHPadding)
+        .padding(.vertical, .skippedNoteVPadding)
+        .background(Color.skippedNoteIcon.opacity(colorScheme == .light ? .lightOpacity : .darkOpacity))
+        .cornerRadius(.skippedNoteCorners)
     }
 
     private var lastSyncForeground: Color {
@@ -308,6 +333,9 @@ extension Color {
     fileprivate static let refreshActiveBackground: Self = .undefinedGrey.opacity(0.15)
     fileprivate static let refreshIdleBorder: Self = .primaryBlue.opacity(0.3)
     fileprivate static let refreshActiveBorder: Self = .undefinedGrey
+
+    fileprivate static let skippedNoteIcon: Self = .warningYellow
+    fileprivate static let skippedNoteText: Self = .textPrimary
 }
 
 extension Font {
@@ -315,6 +343,7 @@ extension Font {
     fileprivate static let firstlastRecordTitle: Self = .caption
     fileprivate static let firstlastRecordDate: Self = .subheadline
     fileprivate static let refreshLabel: Self = .caption
+    fileprivate static let skippedNote: Self = .caption
 }
 
 extension Font.Weight {
@@ -333,6 +362,7 @@ extension ImageType {
     fileprivate static let lastRecord: Self = .system("clock")
     fileprivate static let lastSync: Self = .system("arrow.trianglehead.2.clockwise.rotate.90")
     fileprivate static let refresh: Self = .system("arrow.trianglehead.2.clockwise.rotate.90")
+    fileprivate static let skippedWarning: Self = .system("exclamationmark.triangle.fill")
 }
 
 extension CGFloat {
@@ -368,6 +398,11 @@ extension CGFloat {
     fileprivate static let refreshCorners: Self = 8
     fileprivate static let refreshBorderWidth: Self = 1
     fileprivate static let refreshLabelScale: Self = 0.7
+
+    fileprivate static let skippedNoteHPadding: Self = 8
+    fileprivate static let skippedNoteVPadding: Self = 4
+    fileprivate static let skippedNoteCorners: Self = 8
+    fileprivate static let skippedNoteIconSpacing: Self = 4
 }
 
 extension DynamicTypeSize {
@@ -400,6 +435,12 @@ extension LocalizedStringKey {
     fileprivate static let notAvailable: Self = "N/A"
     fileprivate static let refresh: Self = "Refresh"
     fileprivate static let refreshing: Self = "Refreshing…"
+    /// Grouped per locale ("1,204"), singular for exactly one (spec 005 FR-008, R5).
+    fileprivate static func skippedInLastSync(_ count: Int) -> Self {
+        count == 1
+            ? "\(count.formatted()) record skipped in last sync"
+            : "\(count.formatted()) records skipped in last sync"
+    }
 }
 
 #Preview("Dark Mode - none") {
@@ -521,6 +562,27 @@ extension LocalizedStringKey {
         .preferredColorScheme(.light)
 }
 
+#Preview("Light Mode - skipped note") {
+    SourceEntryView(store: Store(initialState: .mock1skipped) { SourceEntry() })
+        .padding()
+        .background(.backgroundSecondary)
+        .preferredColorScheme(.light)
+}
+
+#Preview("Dark Mode - skipped note") {
+    SourceEntryView(store: Store(initialState: .mock1skipped) { SourceEntry() })
+        .padding()
+        .background(.backgroundSecondary)
+        .preferredColorScheme(.dark)
+}
+
+#Preview("Light Mode - one skipped record") {
+    SourceEntryView(store: Store(initialState: .mock1skippedOne) { SourceEntry() })
+        .padding()
+        .background(.backgroundSecondary)
+        .preferredColorScheme(.light)
+}
+
 // The largest accessibility text size — `accessibility-extra-extra-extra-large` — is where the header
 // and details rows used to squeeze their columns until the labels broke mid-word. These previews are the
 // canvas check that both reflow instead.
@@ -545,6 +607,22 @@ extension LocalizedStringKey {
         .padding()
         .background(.backgroundSecondary)
         .preferredColorScheme(.light)
+        .dynamicTypeSize(.largestAccessibility)
+}
+
+#Preview("Light Mode - AX5 skipped note") {
+    SourceEntryView(store: Store(initialState: .mock1skipped) { SourceEntry() })
+        .padding()
+        .background(.backgroundSecondary)
+        .preferredColorScheme(.light)
+        .dynamicTypeSize(.largestAccessibility)
+}
+
+#Preview("Dark Mode - AX5 skipped note") {
+    SourceEntryView(store: Store(initialState: .mock1skippedSelected) { SourceEntry() })
+        .padding()
+        .background(.backgroundSecondary)
+        .preferredColorScheme(.dark)
         .dynamicTypeSize(.largestAccessibility)
 }
 
@@ -632,6 +710,26 @@ extension SourceEntry.State {
             recordsCount: 7380
         )
         state.alert = .syncFailed(.serverUnreachable, sourceName: "MBNet Server")
+        return state
+    }()
+
+    /// The last sync kept most draws but skipped three (spec 005 US1).
+    static let mock1skipped: Self = {
+        var state = mock1n
+        state.skippedInLastSync = 3
+        return state
+    }()
+
+    /// Singular wording (spec 005 US1-AS5).
+    static let mock1skippedOne: Self = {
+        var state = mock1n
+        state.skippedInLastSync = 1
+        return state
+    }()
+
+    static let mock1skippedSelected: Self = {
+        var state = mock1skipped
+        state.isSelected = true
         return state
     }()
 

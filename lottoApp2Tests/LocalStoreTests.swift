@@ -28,9 +28,9 @@ struct LocalStore_Tests {
         let store = LocalStore.fileBacked(root: tempRoot())
         let fixed = Date(timeIntervalSince1970: 1_000_000)
 
-        try await store.save([draw(1, 1), draw(2, 2), draw(3, 3)], mbnet, fixed)
+        try await store.save([draw(1, 1), draw(2, 2), draw(3, 3)], mbnet, fixed, 0)
         // second save overlaps index 3 and adds 4 — index 1 & 2 must survive (additive union).
-        try await store.save([draw(3, 3), draw(4, 4)], mbnet, fixed)
+        try await store.save([draw(3, 3), draw(4, 4)], mbnet, fixed, 0)
 
         let stored = await store.listDrawsFor("mbnet")
         #expect(stored.map(\.index) == [1, 2, 3, 4])
@@ -41,7 +41,7 @@ struct LocalStore_Tests {
         let store = LocalStore.fileBacked(root: tempRoot())
         let fixed = Date(timeIntervalSince1970: 1_000_000)
 
-        try await store.save([draw(1, 5), draw(2, 1), draw(3, 9)], mbnet, fixed)
+        try await store.save([draw(1, 5), draw(2, 1), draw(3, 9)], mbnet, fixed, 0)
 
         let meta = try #require(await store.listSourceMetaFor(["mbnet"])["mbnet"])
         #expect(meta.recordsCount == 3)
@@ -56,7 +56,7 @@ struct LocalStore_Tests {
         let store = LocalStore.fileBacked(root: tempRoot())
         let fixed = Date(timeIntervalSince1970: 2_000_000)
 
-        try await store.save([], mbnet, fixed)
+        try await store.save([], mbnet, fixed, 0)
 
         let meta = try #require(await store.listSourceMetaFor(["mbnet"])["mbnet"])
         #expect(meta.recordsCount == 0)
@@ -71,7 +71,7 @@ struct LocalStore_Tests {
         let store = LocalStore.fileBacked(root: tempRoot())
         let numbers = [7, 9, 20, 31, 38, 43]
 
-        try await store.save([draw(1, 1, numbers)], mbnet, Date(timeIntervalSince1970: 1))
+        try await store.save([draw(1, 1, numbers)], mbnet, Date(timeIntervalSince1970: 1), 0)
 
         let stored = await store.listDrawsFor("mbnet")
         #expect(stored.first?.numbers == numbers)
@@ -87,7 +87,7 @@ struct LocalStore_Tests {
 
         try await withThrowingTaskGroup(of: Void.self) { group in
             for batch in batches {
-                group.addTask { try await store.save(batch, mbnet, fixed) }
+                group.addTask { try await store.save(batch, mbnet, fixed, 0) }
             }
             try await group.waitForAll()
         }
@@ -105,11 +105,51 @@ struct LocalStore_Tests {
 
         let start = ContinuousClock.now
         let draws = MBNetParser.parse(body).draws
-        try await store.save(draws, mbnet, Date(timeIntervalSince1970: 1))
+        try await store.save(draws, mbnet, Date(timeIntervalSince1970: 1), 0)
         let elapsed = ContinuousClock.now - start
 
         #expect(await store.listDrawsFor("mbnet").count == 7380)
         #expect(elapsed < .seconds(1))
+    }
+
+    // MARK: - Last sync's skipped count (spec 005)
+
+    @Test(arguments: [false, true])
+    func savePersistsTheSkippedCount_andTheNextSaveReplacesIt(inMemory: Bool) async throws {
+        // FR-004/FR-005: the count is stored with the meta, and a later successful sync — even one with 0 —
+        // replaces it rather than adding to it.
+        let store = inMemory ? LocalStore.inMemory() : LocalStore.fileBacked(root: tempRoot())
+        let fixed = Date(timeIntervalSince1970: 1_000_000)
+
+        try await store.save([draw(1, 1)], mbnet, fixed, 3)
+        #expect(await store.listSourceMetaFor(["mbnet"])["mbnet"]?.lastSyncSkipped == 3)
+
+        try await store.save([draw(2, 2)], mbnet, fixed, 0)
+        #expect(await store.listSourceMetaFor(["mbnet"])["mbnet"]?.lastSyncSkipped == 0)
+    }
+
+    @Test
+    func theSkippedCountSurvivesANewStoreOnTheSameRoot() async throws {
+        // FR-004 / US2-AS1: a relaunch builds a fresh store over the same directory.
+        let root = tempRoot()
+        try await LocalStore.fileBacked(root: root).save([draw(1, 1)], mbnet, Date(timeIntervalSince1970: 1), 3)
+
+        let reopened = LocalStore.fileBacked(root: root)
+        #expect(await reopened.listSourceMetaFor(["mbnet"])["mbnet"]?.lastSyncSkipped == 3)
+    }
+
+    @Test
+    func metaWrittenBeforeTheSkippedCountExisted_readsAsZero() async throws {
+        // FR-013: a `meta.json` from an earlier build has no `lastSyncSkipped` key and must still load.
+        let root = tempRoot()
+        let dir = root.appendingPathComponent("sources/mbnet", isDirectory: true)
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        try Data(#"{"name":"mbnet","lastSync":0,"recordsCount":1,"contentDigest":""}"#.utf8)
+            .write(to: dir.appendingPathComponent("meta.json"))
+
+        let meta = try #require(await LocalStore.fileBacked(root: root).listSourceMetaFor(["mbnet"])["mbnet"])
+        #expect(meta.recordsCount == 1)
+        #expect(meta.lastSyncSkipped == 0)
     }
 
     @Test
@@ -118,8 +158,8 @@ struct LocalStore_Tests {
         let store = LocalStore.inMemory()
         let fixed = Date(timeIntervalSince1970: 1_000_000)
 
-        try await store.save([draw(1, 1), draw(2, 2)], mbnet, fixed)
-        try await store.save([draw(2, 2), draw(3, 3)], mbnet, fixed)
+        try await store.save([draw(1, 1), draw(2, 2)], mbnet, fixed, 0)
+        try await store.save([draw(2, 2), draw(3, 3)], mbnet, fixed, 0)
 
         #expect(await store.listDrawsFor("mbnet").map(\.index) == [1, 2, 3])
         let meta = try #require(await store.listSourceMetaFor(["mbnet"])["mbnet"])

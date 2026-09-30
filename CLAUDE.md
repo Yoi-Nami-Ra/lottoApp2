@@ -57,6 +57,11 @@ open — raise it rather than guessing.
   result against *its own* source's current state.
 - **Persistence** — `ChainsRepo` (contract) → `ChainsRepoImpl` (Data) keeps chains, saved results
   and one draft per chain as JSON under `Application Support/lottoApp2/chains/<id>/`.
+- **Sync validation** (spec 005) — `RemoteSourcesManagerImp.sourceFor` runs every fetch through
+  `FetchedDraws.validated(against: module.gameType)`, so draws that break the game's `Combination` rules
+  are never stored; rows present but none usable fail as `.unreadableData`. The last successful sync's
+  skipped total (unreadable rows + rule-breaking draws) is persisted as `SourceMeta.lastSyncSkipped`,
+  lifted to `Source.lastSyncSkipped`, and shown as a warning note on the source card.
 
 ## Build & Test
 
