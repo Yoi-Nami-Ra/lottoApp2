@@ -15,6 +15,8 @@ import Foundation
 protocol SourceModule: Sendable {
     nonisolated var name: String { get }
     nonisolated var displayName: String { get }
+    /// The shape of the source's draws, which every stored draw is read into (spec 003 FR-002).
+    nonisolated var gameType: GameType { get }
     /// Fetches the source's published history. Throws on transport/status/decode failure, and when the body
     /// arrives but yields no usable rows (schema drift — `RemoteSourceError.unparseableBody`).
     nonisolated func fetchDraws() async throws -> FetchedDraws
@@ -26,6 +28,8 @@ nonisolated struct MBNetSource: SourceModule {
 
     let name = "mbnet"
     let displayName = "MBNet Server"
+    // A literal, known-valid shape: 6 of 49.
+    let gameType = GameType(id: "lotto-6-49", name: "Lotto", combinationType: try! CombinationType(pick: 6, pool: 49))
 
     func fetchDraws() async throws -> FetchedDraws {
         @Dependency(\.networkClient) var networkClient

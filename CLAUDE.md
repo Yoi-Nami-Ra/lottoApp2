@@ -18,52 +18,45 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Correct existing typos in new code; do not propagate them. `firstRecrd` has been fixed to `firstRecord` everywhere; `SorcesRepoImp.swift` / `SorcesRepoImpTests.swift` are still misspelled *filenames* (the types inside are `SourcesRepoImpl`) — match those only where already referenced, don't invent new ones.
 
-## Domain model & block pipeline (target design)
+## Domain model & block pipeline
 
-This section is the target conceptual model the Domain layer is growing toward. It is
-documentation, not yet fully implemented; items marked **TBD** are open design questions
-that are *not* to be resolved by guessing — raise them before committing to a shape.
+Implemented by spec 003 (`specs/003-block-pipeline/`); the spec, `data-model.md` and
+`contracts/domain-contracts.md` are the detailed reference. Anything not listed there is still
+open — raise it rather than guessing.
 
-### Entities
+### Entities (`Domain/Ents/Draws.swift`)
 
-- **Element** — a single drawable value. Modeled as `UInt` for now (may become a richer
-  type later).
-- **CombinationType** — an "**x of y**" rule: a combination of `x` non-repeating elements
-  drawn from a pool of `y` elements, with `x <= y`. (`x` = pick count, `y` = pool size.)
-- **Combination** — a concrete draw: a **CombinationType** plus a list of exactly `x`
-  non-repeating **Element**s.
-- **SubCombination** — a combination of `z` elements where `z < x`, *derived from* a
-  Combination. **TBD:** whether a SubCombination references the **GameEntry**, the
-  **CombinationType** it was produced from, or **both** — leave undecided until specified.
-- **GameEntry** — one row of a game's history: an **index**, a **date**, and a
-  **Combination**.
-- **Game** — what a **Source** produces: a list of **GameEntry**s, described by a
-  **GameType**.
-- **GameType** — describes a Game; **mainly** carries the **CombinationType**. Many Games
-  can share the same GameType.
+- **Element** — `UInt`, `1…y` of its type.
+- **CombinationType** — "x of y": `pick` (x) non-repeating elements from a `pool` (y), `1 ≤ x ≤ y`.
+- **Combination** — a CombinationType plus exactly x distinct elements, stored ascending, so
+  equality ignores order and `Comparable` compares element by element.
+- **SubCombination** — z elements of a combination, `2 ≤ z < x`, keeping only its parent's
+  CombinationType (LTA-7): equal sub-combinations from different draws are equal and count together.
+- **GameEntry** (index, date, combination), **GameType** (declared by each `SourceModule`),
+  **Game** (a GameType plus entries of that one shape).
+- Every constructor, and every `Codable` decode, goes through a `throws(DomainError)` init that
+  enforces these invariants.
 
-Ownership arrows: `Source → Game`, `Game → GameType`, `Game → [GameEntry]`,
-`GameType → CombinationType`, `GameEntry → Combination`, `Combination → CombinationType + [Element]`.
+### Pipeline (`Domain/Ents`, `Domain/BLogic`)
 
-### Blocks (typed pipeline)
-
-The app is composed of **blocks**. Each block takes an **input of a given type** and
-produces an **output of the same or another type**; blocks compose into a pipeline.
-
-- **Source** — a *special* block with **no input** that produces a **Game**. (The existing
-  `Source`/`SourcesRepo`/`SourceModule` machinery is the current head of this pipeline.)
-- **Filter blocks** — `dropLast(x)`, `dropFirst(x)`, `prefix(x)`, `suffix(x)`.
-  (User wrote "sufix"; correct spelling is **suffix** per the typo rule above.)
-- **Sorting blocks** — sort by **date**, sort by **index**, sort by **count**.
-- **Count blocks**:
-  - **count all elements** — total element count across the processed list.
-  - **count unique elements** — produces a list of **UniqueCount**, each holding a unique
-    element and its number of occurrences in the processed list.
-
-**TBD / to specify before implementing:** the concrete I/O *types* that flow between blocks
-(e.g. what "sort by count" sorts, what a filter operates over — `[GameEntry]` vs `[Element]`
-vs `[UniqueCount]`), and how block chains are represented/executed. Do not invent these; they
-need a spec.
+- **Values** — three kinds flow between blocks (`BlockValue`): `.draws(Game)`,
+  `.counts(CountResult)` (unique item → count ≥ 1; unordered results are stored item-ascending), and
+  `.number(Int)`.
+- **Blocks** — a `Block` enum with parameters: filters (`dropFirst`/`dropLast`/`prefix`/`suffix`,
+  on draws or counts), sorts (by date/index on draws, by count on counts, each with a direction),
+  and counts (unique elements, combinations and sub-combinations of size z, and count all, which
+  ends a branch). `accepts` and `output(given:)` are the FR-010 attach table.
+- **Chains** — a `Chain` is a saved tree of `ChainNode` parent pointers rooted at an implicit
+  input, not tied to any source. `revision` grows on every structural or parameter edit (not on a
+  rename). The pure rules live in `ChainRules.swift`.
+- **Running** — `ChainRunner` evaluates each node once, parents first, off the main actor (inside a
+  per-run actor), and streams one `RunEvent` per node. A failed node fails only its subtree.
+  `BlockEvaluator` holds the algorithms and the 5,000,000 sub-combination budget.
+- **Freshness** — every result carries a `RunStamp`: source id, display name, `SourceDataState`
+  (including `LocalStore`'s content digest), and chain revision. `Freshness.swift` always judges a
+  result against *its own* source's current state.
+- **Persistence** — `ChainsRepo` (contract) → `ChainsRepoImpl` (Data) keeps chains, saved results
+  and one draft per chain as JSON under `Application Support/lottoApp2/chains/<id>/`.
 
 ## Build & Test
 
@@ -84,6 +77,8 @@ xcodebuild test -scheme lottoApp2 -destination 'platform=iOS Simulator,name=iPho
 
 **Tests use swift-testing (`import Testing`, `@Test`, `#expect`), not XCTest** — despite the constitution's "XCTest" wording, follow the code. Reducer tests are `@MainActor @Test` functions that build a `TestStore` with dependencies overridden via `.dependency(\.blSources, .mock)`. Because `swift-dependencies` guards against unimplemented deps, a reducer test that reaches a dependency must override it or it fails.
 
+Never block a thread in a test (spin-waits, `Thread.sleep`, semaphores): suites run in parallel in one process, and a live `TestStore` switches on TCA's main-serial executor, which moves *all* background task work onto the main thread. A blocking wait then hangs the whole run. Wait with `await Task.yield()` loops, or make the code under test cancel or finish itself.
+
 ## Architecture layout
 
 ```
@@ -91,15 +86,23 @@ lottoApp2/
   App/            @main entry — composes the root Store (StartPage)
   Presentation/   UI layer: <Feature>.swift (the @Reducer) + <Feature>View.swift (thin SwiftUI)
     StartPage/    StartPage reducer + StartPageView; Widgets/ holds child reducers (SourceEntry)
+    BlocksPage/   the chain list (saved chains, new, rename, delete)
+    ChainEditor/  ChainEditor (outline, run, results, save, leave warning, draft), AddBlock (catalogue sheet),
+                  BlockParameters (parameter step / edit sheet), BlockTokens (shared block copy)
+    Results/      ResultPage — one block's full output (elements, ranking, grouped combinations, draws, number)
     Previews/     PreviewFixtures.swift — sample data for #Previews (kept out of Domain)
   Domain/         Inner layer — no Data imports
-    Ents/         Entities (Source)
-    Repos/        Repository *contracts* (SourcesRepo) as struct-of-closures + DependencyKey
-    BLogic/       Business logic (SourcesBLogic) — depends on repo contracts, not impls
+    Ents/         Entities (Source, Draws, PipelineValues, Block, ProcessingBlockKind, Chain, RunResults)
+    Repos/        Repository *contracts* (SourcesRepo, ChainsRepo) as struct-of-closures + DependencyKey
+    BLogic/       Business logic (SourcesBLogic, ChainRules, BlockEvaluator, ChainRunner, Freshness,
+                  ResultSummary) — depends on repo contracts, not impls
   Data/           Outer layer — implements Domain contracts
-    Repos/        SorcesRepoImp (SourcesRepo.live), source modules (SourceModule/SourceRegistry)
+    Repos/        SorcesRepoImp (SourcesRepo.live), ChainsRepoImpl, source modules (SourceModule/SourceRegistry)
     Sources/      RemoteSources / LocalStore / NetworkClient / MBNetParser — I/O-facing collaborators
-lottoApp2Tests/Reducers/   TestStore tests + mocks (SourceBLogicMocks.swift)
+lottoApp2Tests/
+  Domain/         pure-rule tests over the hand-computed ReferenceDraws fixture
+  Data/           file-backed repo tests in temp directories
+  Reducers/       TestStore tests + mocks (SourceBLogicMocks.swift, PipelineMocks.swift)
 ```
 
 ### How the layers wire together (dependency chain)

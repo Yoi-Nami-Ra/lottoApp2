@@ -59,8 +59,48 @@ nonisolated struct SourcesRepoImpl: Sendable {
                 Logger.sources.error("\(sourceId, privacy: .public): sync failed — \(error)")
                 return .failure(.failedToFetchData)
             }
+        },
+        gameFor: { sourceId in
+            @Dependency(\.localStore) var store
+            guard let module = SourceRegistry.module(for: sourceId) else { return .failure(.unknownSource) }
+
+            let draws = await store.listDrawsFor(module.name).sorted { $0.index < $1.index }
+            let meta = await store.listSourceMetaFor([module.name])[module.name]
+            do {
+                let entries = try draws.map { draw in
+                    GameEntry(
+                        index: draw.index,
+                        date: draw.date,
+                        combination: try Combination(
+                            type: module.gameType.combinationType,
+                            // A negative number can't be an element; dropping it fails the count check below.
+                            elements: draw.numbers.compactMap(Element.init(exactly:))
+                        )
+                    )
+                }
+                let game = try Game(type: module.gameType, entries: entries)
+                return .success(SourceSnapshot(game: game, dataState: .of(meta)))
+            } catch {
+                Logger.sources.error("\(sourceId, privacy: .public): a stored draw breaks the game shape — \(error)")
+                return .failure(.invalidStoredDraw)
+            }
+        },
+        dataStateFor: { sourceId in
+            @Dependency(\.localStore) var store
+            guard let module = SourceRegistry.module(for: sourceId) else { return nil }
+            return .of(await store.listSourceMetaFor([module.name])[module.name])
         }
     )
+}
+
+nonisolated extension SourceDataState {
+    /// The data state recorded in `meta`; a never-synced source (no meta) has an empty history.
+    fileprivate static func of(_ meta: SourceMeta?) -> SourceDataState {
+        guard let meta else {
+            return SourceDataState(recordsCount: 0, latestRecord: nil, contentDigest: LocalStore.digest(of: []))
+        }
+        return SourceDataState(recordsCount: meta.recordsCount, latestRecord: meta.latestRecord, contentDigest: meta.contentDigest)
+    }
 }
 
 nonisolated extension SourceMeta {

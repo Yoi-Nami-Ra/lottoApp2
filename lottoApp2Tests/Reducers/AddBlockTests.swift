@@ -1,0 +1,204 @@
+//
+//  AddBlockTests.swift
+//  lottoApp2Tests
+//
+
+import ComposableArchitecture
+import Foundation
+import Testing
+
+@testable import lottoApp2
+
+struct AddBlock_Tests {
+
+    private func addBlock(parentOutput: ValueKind = .draws) -> AddBlock.State {
+        AddBlock.State(parentID: nil, parent: .input(sourceName: "MBNet Server"), parentOutput: parentOutput)
+    }
+
+    @MainActor
+    @Test
+    func theCatalogue_listsEveryKind() {
+        #expect(addBlock().catalogue == ProcessingBlockKind.allCases)
+    }
+
+    @MainActor
+    @Test
+    func choosingAKind_opensItsParameterStep_withItsDefaultBlock() async {
+        // LTA-22: every block goes through step 2, even one without parameters.
+        let store = TestStore(initialState: addBlock()) { AddBlock() }
+
+        await store.send(.kindTapped(.countUniqueElements)) {
+            $0.parameters = BlockParameters.State(kind: .countUniqueElements, mode: .add)
+        }
+    }
+
+    @MainActor
+    @Test
+    func confirmingTheParameterStep_addsTheBlock() async {
+        var state = addBlock()
+        state.parameters = BlockParameters.State(kind: .countUniqueElements, mode: .add)
+        let store = TestStore(initialState: state) { AddBlock() }
+
+        await store.send(\.parameters.confirmTapped)
+        await store.receive(\.parameters.delegate.confirmed, .countUniqueElements)
+        await store.receive(\.delegate.added, .countUniqueElements)
+    }
+
+    @MainActor
+    @Test
+    func cancelling_dismissesWithoutAdding() async {
+        let dismissed = LockIsolated(false)
+        let store = TestStore(initialState: addBlock()) { AddBlock() } withDependencies: {
+            $0.dismiss = DismissEffect { dismissed.setValue(true) }
+        }
+
+        await store.send(.cancelTapped)
+        #expect(dismissed.value)
+    }
+
+    @MainActor
+    @Test
+    func aBlockWithoutParameters_isAlwaysValid() {
+        let state = BlockParameters.State(kind: .countUniqueElements, mode: .add)
+        #expect(state.block == .countUniqueElements)
+        #expect(state.isValid)
+    }
+
+    // MARK: - Parameters (US2, FR-006, FR-009)
+
+    @MainActor
+    @Test
+    func aFilter_startsAtItsDefaultX() {
+        let state = BlockParameters.State(kind: .suffix, mode: .add)
+        #expect(state.countText == "10")
+        #expect(state.block == .suffix(10))
+        #expect(state.isValid)
+    }
+
+    @MainActor
+    @Test
+    func x_mustBeAWholeNumberOfZeroOrMore() async {
+        let store = TestStore(initialState: BlockParameters.State(kind: .suffix, mode: .add)) { BlockParameters() }
+
+        await store.send(.countTextChanged("-1")) { $0.countText = "-1" }
+        #expect(store.state.isValid == false)
+        await store.send(.confirmTapped)  // refused: nothing is sent
+
+        await store.send(.countTextChanged("2.5")) { $0.countText = "2.5" }
+        #expect(store.state.isValid == false)
+
+        await store.send(.countTextChanged("")) { $0.countText = "" }
+        #expect(store.state.isValid == false)
+
+        await store.send(.countTextChanged("100")) { $0.countText = "100" }
+        await store.send(.confirmTapped)
+        await store.receive(\.delegate.confirmed, .suffix(100))
+    }
+
+    @MainActor
+    @Test
+    func theStepper_movesXByOne_andStopsAtZero() async {
+        var state = BlockParameters.State(kind: .prefix, mode: .add)
+        state.countText = "1"
+        let store = TestStore(initialState: state) { BlockParameters() }
+
+        await store.send(.incrementTapped) { $0.countText = "2" }
+        await store.send(.decrementTapped) { $0.countText = "1" }
+        await store.send(.decrementTapped) { $0.countText = "0" }
+        #expect(store.state.canDecrement == false)
+        await store.send(.decrementTapped)
+    }
+
+    @MainActor
+    @Test
+    func aSort_takesADirection() async {
+        // LTA-22 defaults: date and index ascending.
+        let store = TestStore(initialState: BlockParameters.State(kind: .sortByDate, mode: .add)) { BlockParameters() }
+        #expect(store.state.block == .sortByDate(.ascending))
+
+        await store.send(.directionChanged(.descending)) { $0.direction = .descending }
+        await store.send(.confirmTapped)
+        await store.receive(\.delegate.confirmed, .sortByDate(.descending))
+    }
+
+    @MainActor
+    @Test
+    func choosingAFilter_opensItsParameterStep() async {
+        let store = TestStore(initialState: addBlock()) { AddBlock() }
+
+        await store.send(.kindTapped(.suffix)) {
+            $0.parameters = BlockParameters.State(kind: .suffix, mode: .add)
+        }
+    }
+
+    // MARK: - Availability (US5, FR-015)
+
+    @MainActor
+    @Test
+    func underDraws_sortByCountIsUnavailable_needingCounts() {
+        let state = addBlock(parentOutput: .draws)
+        #expect(state.availability(.sortByCount) == .needs([.counts]))
+        #expect(state.availability(.sortByDate) == .available)
+        #expect(state.availability(.suffix) == .available)
+    }
+
+    @MainActor
+    @Test
+    func underCounts_drawBlocksAreUnavailable_needingDraws() {
+        let state = addBlock(parentOutput: .counts)
+        #expect(state.availability(.sortByDate) == .needs([.draws]))
+        #expect(state.availability(.countUniqueElements) == .needs([.draws]))
+        #expect(state.availability(.sortByCount) == .available)
+        #expect(state.availability(.prefix) == .available)
+    }
+
+    @MainActor
+    @Test
+    func choosingAnUnavailableKind_doesNothing() async {
+        let store = TestStore(initialState: addBlock(parentOutput: .draws)) { AddBlock() }
+        await store.send(.kindTapped(.sortByCount))
+    }
+
+    // MARK: - Edit mode (US6)
+
+    @MainActor
+    @Test
+    func editMode_startsFromTheBlocksCurrentParameters_andConfirmsTheEdit() async {
+        let id = UUID(7)
+        let store = TestStore(
+            initialState: BlockParameters.State(kind: .suffix, mode: .edit(nodeID: id, original: .suffix(100)))
+        ) { BlockParameters() }
+        #expect(store.state.countText == "100")
+
+        await store.send(.countTextChanged("50")) { $0.countText = "50" }
+        await store.send(.confirmTapped)
+        await store.receive(\.delegate.confirmed, .suffix(50))
+    }
+
+    @MainActor
+    @Test
+    func editMode_keepsTheSortDirection() {
+        let state = BlockParameters.State(kind: .sortByCount, mode: .edit(nodeID: UUID(7), original: .sortByCount(.ascending)))
+        #expect(state.block == .sortByCount(.ascending))
+    }
+
+    // MARK: - Sub-combination size (US7)
+
+    @MainActor
+    @Test
+    func z_startsAtTwo_andMustBeTwoOrMore() async {
+        let store = TestStore(initialState: BlockParameters.State(kind: .countUniqueSubCombinations, mode: .add)) {
+            BlockParameters()
+        }
+        #expect(store.state.parameter == .size)
+        #expect(store.state.block == .countUniqueSubCombinations(z: 2))
+
+        await store.send(.countTextChanged("1")) { $0.countText = "1" }
+        #expect(store.state.isValid == false)
+        #expect(store.state.canDecrement == false)
+
+        await store.send(.countTextChanged("3")) { $0.countText = "3" }
+        await store.send(.confirmTapped)
+        await store.receive(\.delegate.confirmed, .countUniqueSubCombinations(z: 3))
+    }
+}

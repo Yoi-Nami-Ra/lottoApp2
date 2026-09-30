@@ -5,6 +5,7 @@
 //  Created by Jarosław Wojtasik on 22/09/2025.
 //
 
+import CryptoKit
 import Dependencies
 import Foundation
 
@@ -27,6 +28,27 @@ nonisolated struct SourceMeta: Codable, Equatable, Sendable {
     let recordsCount: Int
     let latestRecord: Date?
     let firstRecord: Date?
+    /// SHA-256 over the stored draws, so results can tell a sync that changed a draw in place (spec 003 R8).
+    /// Empty for a `meta.json` written before the digest existed; the next sync writes it.
+    let contentDigest: String
+}
+
+nonisolated extension SourceMeta {
+    private enum CodingKeys: String, CodingKey {
+        case name, lastSync, recordsCount, latestRecord, firstRecord, contentDigest
+    }
+
+    init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.init(
+            name: try container.decode(String.self, forKey: .name),
+            lastSync: try container.decode(Date.self, forKey: .lastSync),
+            recordsCount: try container.decode(Int.self, forKey: .recordsCount),
+            latestRecord: try container.decodeIfPresent(Date.self, forKey: .latestRecord),
+            firstRecord: try container.decodeIfPresent(Date.self, forKey: .firstRecord),
+            contentDigest: try container.decodeIfPresent(String.self, forKey: .contentDigest) ?? ""
+        )
+    }
 }
 
 extension LocalStore {
@@ -36,6 +58,16 @@ extension LocalStore {
         var byIndex = Dictionary(existing.map { ($0.index, $0) }, uniquingKeysWith: { _, latest in latest })
         for draw in incoming { byIndex[draw.index] = draw }
         return byIndex.values.sorted { $0.index < $1.index }
+    }
+
+    /// A digest of the draws' content: one canonical line per draw, index-sorted, numbers ascending, so the
+    /// order draws or their numbers arrive in doesn't change it but any changed draw does.
+    nonisolated static func digest(of draws: [DrawDTO]) -> String {
+        let canonical = draws
+            .sorted { $0.index < $1.index }
+            .map { "\($0.index)|\($0.date.timeIntervalSince1970)|\($0.numbers.sorted().map(String.init).joined(separator: ","))" }
+            .joined(separator: "\n")
+        return SHA256.hash(data: Data(canonical.utf8)).map { String(format: "%02x", $0) }.joined()
     }
 
     /// File-backed store rooted at `root`. `liveValue` uses Application Support; tests pass a temp directory.
@@ -66,7 +98,8 @@ extension LocalStore {
             lastSync: asOf,
             recordsCount: draws.count,
             latestRecord: draws.map(\.date).max(),
-            firstRecord: draws.map(\.date).min()
+            firstRecord: draws.map(\.date).min(),
+            contentDigest: digest(of: draws)
         )
     }
 }

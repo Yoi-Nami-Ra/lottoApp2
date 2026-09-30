@@ -48,7 +48,8 @@ struct SorcesRepoImp_Tests {
             lastSync: syncDate,
             recordsCount: 7380,
             latestRecord: Date(timeIntervalSince1970: 1_700_000_000),
-            firstRecord: Date(timeIntervalSince1970: 18_223_210)
+            firstRecord: Date(timeIntervalSince1970: 18_223_210),
+            contentDigest: ""
         )
 
         let sources = await withDependencies {
@@ -83,7 +84,7 @@ struct SorcesRepoImp_Tests {
         // Regression: stored metadata used to carry the display name, so renaming a source in code was
         // shadowed forever once it had synced once.
         let meta = SourceMeta(
-            name: "mbnet", lastSync: syncDate, recordsCount: 1, latestRecord: nil, firstRecord: nil
+            name: "mbnet", lastSync: syncDate, recordsCount: 1, latestRecord: nil, firstRecord: nil, contentDigest: ""
         )
 
         let sources = await withDependencies {
@@ -253,6 +254,83 @@ struct SorcesRepoImp_Tests {
             return
         }
         #expect(source.recordsCount == 2)
+    }
+
+    // MARK: - gameFor / dataStateFor (LTA-6, LTA-30)
+
+    private let mbnet = RemoteSource(name: "mbnet", displayName: "MBNet Server") { .init(draws: [], skipped: 0) }
+
+    private func seededStore(_ draws: [DrawDTO]) async throws -> LocalStore {
+        let store = LocalStore.inMemory()
+        try await store.save(draws, mbnet, syncDate)
+        return store
+    }
+
+    @Test
+    func gameFor_mapsTheStoredDrawsIntoAGameOfTheSourcesType() async throws {
+        let draws = [
+            DrawDTO(index: 2, date: Date(timeIntervalSince1970: 200), numbers: [45, 1, 2, 3, 4, 5]),
+            DrawDTO(index: 1, date: Date(timeIntervalSince1970: 100), numbers: [8, 12, 31, 39, 43, 44]),
+        ]
+        let store = try await seededStore(draws)
+
+        let result = await withDependencies {
+            $0.localStore = store
+        } operation: {
+            await SourcesRepoImpl.live.gameFor("mbnet")
+        }
+
+        let snapshot = try result.get()
+        #expect(snapshot.game.type == MBNetSource().gameType)
+        #expect(snapshot.game.type.combinationType == (try CombinationType(pick: 6, pool: 49)))
+        #expect(snapshot.game.entries.map(\.index) == [1, 2])  // index ascending (FR-013)
+        #expect(snapshot.game.entries[1].date == Date(timeIntervalSince1970: 200))
+        #expect(snapshot.game.entries[1].combination.elements == [1, 2, 3, 4, 5, 45])
+
+        let meta = try #require(await store.listSourceMetaFor(["mbnet"])["mbnet"])
+        #expect(snapshot.dataState == SourceDataState(
+            recordsCount: 2, latestRecord: Date(timeIntervalSince1970: 200), contentDigest: meta.contentDigest
+        ))
+    }
+
+    @Test
+    func gameFor_aNeverSyncedSource_isAnEmptyGame() async throws {
+        let (result, state) = await withDependencies {
+            $0.localStore = .inMemory()
+        } operation: {
+            (await SourcesRepoImpl.live.gameFor("mbnet"), await SourcesRepoImpl.live.dataStateFor("mbnet"))
+        }
+
+        let empty = SourceDataState(recordsCount: 0, latestRecord: nil, contentDigest: LocalStore.digest(of: []))
+        let snapshot = try result.get()
+        #expect(snapshot.game.entries.isEmpty)
+        #expect(snapshot.dataState == empty)
+        #expect(state == empty)
+    }
+
+    @Test
+    func gameFor_anUnknownSource_fails_andHasNoDataState() async throws {
+        let (result, state) = await withDependencies {
+            $0.localStore = .inMemory()
+        } operation: {
+            (await SourcesRepoImpl.live.gameFor("nope"), await SourcesRepoImpl.live.dataStateFor("nope"))
+        }
+
+        #expect(result == .failure(.unknownSource))
+        #expect(state == nil)
+    }
+
+    @Test
+    func gameFor_aStoredDrawThatBreaksTheShape_fails() async throws {
+        let store = try await seededStore([DrawDTO(index: 1, date: Date(timeIntervalSince1970: 100), numbers: [1, 1, 2, 3, 4, 5])])
+
+        let result = await withDependencies {
+            $0.localStore = store
+        } operation: {
+            await SourcesRepoImpl.live.gameFor("mbnet")
+        }
+
+        #expect(result == .failure(.invalidStoredDraw))
     }
 
     @Test

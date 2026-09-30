@@ -15,6 +15,10 @@ nonisolated struct SourcesBLogic: Sendable {
 
     var knownSources: @Sendable () async -> [Source]
     var fetchFrom: @Sendable (String) async -> Result<Source, Error>
+    /// The source's draws for a run, with the data state they were read at (spec 003 contracts §3).
+    var gameFor: @Sendable (String) async -> Result<SourceSnapshot, Error>
+    /// The source's current data state; `nil` means the source is unavailable.
+    var dataStateFor: @Sendable (String) async -> SourceDataState?
 }
 
 extension SourcesBLogic: nonisolated DependencyKey {
@@ -26,6 +30,14 @@ extension SourcesBLogic: nonisolated DependencyKey {
         fetchFrom: { source in
             @Dependency(\.sourcesRepo) var repo
             return await repo.fetchAndSaveDataFrom(source).mapError { _ in .somethingWentWrong } //TODO: re-implement
+        },
+        gameFor: { source in
+            @Dependency(\.sourcesRepo) var repo
+            return await repo.gameFor(source).mapError { _ in .somethingWentWrong }
+        },
+        dataStateFor: { source in
+            @Dependency(\.sourcesRepo) var repo
+            return await repo.dataStateFor(source)
         }
     )
 }

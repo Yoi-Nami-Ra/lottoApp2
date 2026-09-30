@@ -12,12 +12,16 @@ import Foundation
 nonisolated extension SourcesBLogic {
     static let mock = SourcesBLogic(
         knownSources: { [.mbnetMock, .lottoMock] },
-        fetchFrom: { _ in .success(.refreshedMbnetMock) }
+        fetchFrom: { _ in .success(.refreshedMbnetMock) },
+        gameFor: { _ in .success(SourceSnapshot(game: ReferenceDraws.threeOfFive, dataState: .mbnetMock)) },
+        dataStateFor: { _ in .mbnetMock }
     )
 
     static let failureMock = SourcesBLogic(
         knownSources: { [] },
-        fetchFrom: { _ in .failure(.somethingWentWrong) }
+        fetchFrom: { _ in .failure(.somethingWentWrong) },
+        gameFor: { _ in .failure(.somethingWentWrong) },
+        dataStateFor: { _ in nil }
     )
 }
 

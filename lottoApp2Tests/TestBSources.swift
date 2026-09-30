@@ -53,6 +53,45 @@ struct SourceBLogicTests {
     }
 }
 
+extension SourceBLogicTests {
+    @Test
+    @MainActor
+    func gameForPassesTheSnapshotThrough() async throws {
+        let snapshot = SourceSnapshot(game: ReferenceDraws.threeOfFive, dataState: .mbnetMock)
+        let result = await withDependencies {
+            $0.sourcesRepo.gameFor = { _ in .success(snapshot) }
+        } operation: {
+            await SourcesBLogic.liveValue.gameFor("mbnet")
+        }
+
+        #expect(result == .success(snapshot))
+    }
+
+    @Test
+    @MainActor
+    func gameForMapsRepoFailure() async throws {
+        let result = await withDependencies {
+            $0.sourcesRepo.gameFor = { _ in .failure(.unknownSource) }
+        } operation: {
+            await SourcesBLogic.liveValue.gameFor("nope")
+        }
+
+        #expect(result == .failure(.somethingWentWrong))
+    }
+
+    @Test
+    @MainActor
+    func dataStateForPassesThrough() async throws {
+        let state = await withDependencies {
+            $0.sourcesRepo.dataStateFor = { _ in .mbnetMock }
+        } operation: {
+            await SourcesBLogic.liveValue.dataStateFor("mbnet")
+        }
+
+        #expect(state == .mbnetMock)
+    }
+}
+
 nonisolated extension Source {
     static let partialLottoMock: Self = .init(
         name: "lotto",
