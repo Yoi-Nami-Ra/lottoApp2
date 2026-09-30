@@ -12,7 +12,7 @@ description: |
   through `SourcesBLogic`, and let `SourceEntry` show a matching alert
   message. Ship with TestStore and repo tests for each case.
 platform: ios
-status: ready
+status: in-review
 phase: MVP
 priority: medium
 parent: null
