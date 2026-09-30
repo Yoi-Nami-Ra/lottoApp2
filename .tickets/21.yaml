@@ -2,34 +2,49 @@ id: 21
 title: "Design: chain builder outline"
 type: task
 description: |
-  Why it's needed: the chain editor (LTA-20) has no approved design.
-  When it shows: after opening a chain from the chain list (LTA-32).
-  Built from: the current BlocksPage and the start page's cards and
-  bottom action bar.
+  Why it's needed: the chain editor (LTA-20, spec 003 US2–US8) has no
+  approved design; LTA-23 was built against the rev. 1 proposal, which
+  predates spec 003's clarifications.
+  When it shows: after opening or creating a chain from the chain list
+  (LTA-32).
+  Built from: the rev. 1 proposal and the chain editor as built in LTA-23
+  (ChainEditorView).
 
   Decided:
-  - "+" on every row opens the add-block sheet (LTA-22) for that row.
-  - Swipe to remove; a block with children goes with its subtree after a
-    confirmation naming how many.
+  - "+" on every row except Count All Elements opens the add-block sheet
+    (LTA-22) for that row.
+  - Swipe to remove; a block with children goes with its subtree after an
+    alert naming how many.
   - Run lives in the bottom action bar.
+  - Title area: the chain's name is the navigation title, "Source" and
+    the source's name sit under it, and the back button reads "Chains".
+  - Tapping a row: a block with a value opens its output, a block without
+    one opens edit; Edit is always in the long-press menu (as built,
+    decided 2026-09-30).
+  - Saving: a leading swipe or long press offers "Save Result" on a block
+    with an unsaved value; saved blocks show a bookmark.
+  - Saved results are a section under the outline, newest first, with
+    "Out of date", "Source unavailable" and "Chain changed since" badges
+    (as built, decided 2026-09-30).
+  - Leave warning (FR-032) and restore prompt (FR-031) are system alerts
+    with the build's copy.
 
-  Proposal: design/proposal/21-chain-builder.html (+ .png) covers
-  results, stale, running, empty, swipe to remove, confirm removal, dark
-  mode and a collapsed branch, plus the suggestions listed in its notes.
-  It predates spec 003's clarifications and needs frames for:
-  - saving the output of any block (a per-row action) and the chain's
-    list of saved results, including out-of-date, "chain changed since"
-    and "source unavailable" states;
-  - the Save / Discard / Cancel warning when leaving with unsaved results
-    (FR-032) and the "Restore unsaved results?" prompt (FR-031);
-  - the title area showing the chain's name and the source it runs
-    against.
-  Open questions: where saved results are listed (section under the
-  outline vs a separate tab); approve the earlier suggestions.
+  Proposal: design/proposal/21-chain-builder.html (+ .png), rev. 2 —
+  fourteen frames: results, out of date, running, empty, failed block,
+  save a result, long-press menu, saved results, swipe to remove, confirm
+  removal, leave with unsaved results, restore prompt, dark mode,
+  collapsed branch. Frames new since rev. 1 are marked NEW.
+
+  Where the build differs from the design (fixed in LTA-33): the "+"
+  accessibility label ("Add block under <block>"), row accessibility
+  reading, and the accessibility-size layout (summary under the title,
+  12 pt indent).
+
+  Open questions: none — approve the rev. 2 proposal or mark changes.
   Done when: an approved file exists in design/final/ and this ticket's
   `designs` points at it.
 platform: ios
-status: refine
+status: ready
 phase: MVP
 priority: medium
 parent: 20

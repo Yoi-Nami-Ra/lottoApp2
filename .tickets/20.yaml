@@ -4,7 +4,7 @@ type: feature
 description: |
   Let the user build, run, save and reuse processing chains
   (specs/003-block-pipeline, US2–US8). Parent of LTA-21, LTA-22, LTA-32
-  (designs) and LTA-23 (implementation).
+  (designs), LTA-23 (implementation) and LTA-33 (design gaps).
 
   Decisions (spec clarifications 2026-09-29):
   - The Blocks page becomes the list of saved chains for the chosen

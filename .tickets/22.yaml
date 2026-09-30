@@ -4,10 +4,9 @@ type: task
 description: |
   Why it's needed: LTA-20 turns the block catalogue into a sheet for
   adding a block under the selected node, offering only blocks that fit
-  that node's output, and it has no design.
+  that node's output, and it has no approved design.
   When it shows: when the user taps "+" on a row of the chain outline
-  (LTA-21), and — for the parameter step alone — when a block row is
-  tapped to edit it.
+  (LTA-21), and — for the parameter step alone — when a block is edited.
   Built from: the current BlocksPage block list and the LTA-21 proposal.
 
   Decided:
@@ -19,21 +18,27 @@ description: |
   - A filter's x is entered with a number field plus a stepper: default
     10, whole numbers >= 0, the parent's size shown when known
     ("Of 7,012 draws").
+  - The proposal's suggestions are accepted, as built in LTA-23: the
+    two-step sheet with the "Under <parent>" line and Draws / Counts
+    chip, sort direction as a segmented control (count descending, date
+    and index ascending), a parameter step for every block, and edit mode
+    ("Edit <block>", "Save").
+  - Kept in the design although the build lacks them (decided
+    2026-09-30, fixed in LTA-33): the parent-size hint, the edit hint
+    ("Was 100. Saving marks this block's results out of date."), the
+    direction preview line ("Most frequent first."), and z bounded to
+    2 … x − 1 in the sheet when the source's draw size is known (a
+    too-large z still fails at run time otherwise).
+  - Accessibility as in the notes: disabled rows read "<block>,
+    unavailable, <reason>", the stepper is adjustable, and the field and
+    stepper stack at accessibility sizes (fixed in LTA-33).
 
   Proposal: design/proposal/22-add-block-sheet.html (+ .png) — eight
   frames: catalogue under draws, catalogue under counts, filter
   parameter, invalid x, sort direction, a block without parameters, edit
-  mode, dark mode. It also suggests:
-  - a two-step sheet (catalogue → parameter step) with an "Under
-    <parent>" line and a Draws / Counts chip explaining availability;
-  - sort direction as a segmented control, defaulting to descending for
-    count and ascending for date and index;
-  - a parameter step even for blocks without parameters, so every add is
-    confirmed the same way;
-  - edit mode: the parameter step alone, "Edit <block>", "Save", and the
-    old value in the hint; saving marks results stale;
-  - z for LTA-27 using the same field + stepper, bounded 2 … x − 1.
-  Open questions: approve or change the suggestions above.
+  mode, dark mode; the z bound and its copy are in the notes.
+
+  Open questions: none — approve the proposal or mark changes.
   Done when: an approved file exists in design/final/ and this ticket's
   `designs` points at it.
 platform: ios

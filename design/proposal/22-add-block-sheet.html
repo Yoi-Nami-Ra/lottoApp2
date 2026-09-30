@@ -322,7 +322,7 @@ parameters and adds it. The same parameter step edits an existing block. Lo-fi: 
     <li><b>Sections.</b> Filter, Sort, Count — fixed order; blocks within a section in the order shown. New blocks (LTA-24, LTA-25, LTA-26, LTA-18, LTA-27) join their section.</li>
     <li><b>x.</b> Numeric keypad field plus a stepper; default 10; whole numbers ≥ 0; the stepper's "−" disables at 0. Invalid or empty input shows an inline error and disables Add/Save. The hint shows the parent's size when a previous run knows it.</li>
     <li><b>Direction.</b> Segmented Ascending / Descending with a one-line preview of what it means. Defaults: count descending, date and index ascending.</li>
-    <li><b>z (LTA-27).</b> Same field + stepper, bounded 2 … x − 1 of the collection's type; not drawn here.</li>
+    <li><b>z (LTA-27).</b> Same field + stepper, bounded 2 … x − 1 where x is the draw size of the source the chain runs against: the "+" disables at x − 1 and a larger typed value shows "Enter a whole number from 2 to &lt;x − 1&gt;." and disables Add/Save. When the draw size isn't known yet (never synced), only z ≥ 2 is checked here and a too-large z fails at run time ("z must be below this source's draw size"). Not drawn here.</li>
     <li><b>Edit.</b> Opens the parameter step alone, titled "Edit &lt;block&gt;", button "Save", with "Was &lt;old value&gt;" in the hint. Saving marks results stale (LTA-19).</li>
     <li><b>Accessibility.</b> Disabled rows read "&lt;block&gt;, unavailable, &lt;reason&gt;". The stepper exposes adjustable actions. At accessibility sizes the field and stepper stack vertically.</li>
   </ul>

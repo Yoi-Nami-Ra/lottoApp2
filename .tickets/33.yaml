@@ -1,0 +1,53 @@
+id: 33
+title: "Close chain-builder UI gaps against its designs"
+type: feature
+description: |
+  LTA-23 built the chain list, chain editor and add-block sheet before
+  their designs were approved. Refining LTA-21, LTA-22 and LTA-32
+  (2026-09-30) kept these items in the designs although the build lacks
+  them. Build them once the finals land, so LTA-23 can merge as is.
+
+  Already in place: everything else in the three proposals (see each
+  design ticket's "Decided").
+
+  Scope:
+  1. Add-block sheet and parameter step (LTA-22):
+     - the parent-size hint under x ("Of 7,012 draws. A larger x keeps
+       them all.") when a previous run knows the parent's size;
+     - the edit hint ("Was 100. Saving marks this block's results out
+       of date.");
+     - the direction preview line under the segmented control ("Most
+       frequent first.");
+     - z bounded to 2 … x − 1 when the source's draw size is known, with
+       "Enter a whole number from 2 to <x − 1>." and the "+" disabled at
+       x − 1;
+     - disabled rows read "<block>, unavailable, <reason>"; the stepper
+       is adjustable; field and stepper stack at accessibility sizes.
+  2. Chain editor (LTA-21):
+     - "+" labelled "Add block under <block>";
+     - rows read "<block>, <parameter>, level <n>, <summary or state>";
+     - at accessibility sizes the summary wraps under the title and the
+       indent shrinks to 12 pt.
+  3. Chain list (LTA-32):
+     - the "No chains yet" empty state;
+     - a leading swipe "Rename" next to the long-press item;
+     - Delete in the long-press menu;
+     - Rename and Delete as accessibility actions on each row.
+
+  Out of scope: anything the finals change beyond this list goes to a new
+  ticket under LTA-20.
+
+  Done when:
+  - every item above matches design/final/ for its screen;
+  - TestStore tests cover the reducer changes: the hints' inputs (parent
+    size, original value), the z upper bound (valid, invalid, unknown
+    draw size), and rename from the swipe;
+  - #Previews cover the empty chain list and the new hints, light and
+    dark.
+platform: ios
+status: ready
+phase: MVP
+priority: medium
+parent: 20
+blocked_by: [21, 22, 32]
+designs: []

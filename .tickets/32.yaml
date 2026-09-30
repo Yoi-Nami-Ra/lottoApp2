@@ -3,25 +3,43 @@ title: "Design: chain list"
 type: task
 description: |
   Why it's needed: spec 003 turns the Blocks page into the list of saved
-  chains (FR-017); there is no design for it.
+  chains (FR-017); there is no approved design for it.
   When it shows: after choosing a source and tapping Next on the start
   page.
-  Built from: the current BlocksPage (source header over a list) and
-  the start page's cards.
-  Proposal: none yet.
-  Open questions:
-  - What each row shows: name, block count, last run or number of saved
-    results, an out-of-date hint?
-  - How "New chain", rename and delete are reached (row actions, swipe,
-    edit mode), and the delete warning naming how many saved results go.
-  - Empty state for a source with no chains yet.
-  - Whether the source header stays as today (source name only).
+  Built from: the current BlocksPage (source header over a list), the
+  start page's cards, and the chain list as built in LTA-23
+  (BlocksPageView).
+
+  Decided (2026-09-30):
+  - Rows show the chain's name and "N blocks" only, sorted by name; no
+    last-run, saved-result or out-of-date details (those live in the
+    editor, LTA-21).
+  - "New chain" is always the last row; it creates "New chain" and opens
+    it in the editor.
+  - The source header stays as today (source name only).
+  - Empty state: "No chains yet" with one line of explanation above the
+    New chain row.
+  - Rename is a leading swipe as well as a long-press item; both open
+    the rename alert with the current name.
+  - Delete is a trailing swipe and always asks first, naming the saved
+    results and the draft that go with the chain (as built).
+  - Picked by default (change them if you disagree): Delete also sits in
+    the long-press menu, and a row exposes Rename and Delete as
+    accessibility actions.
+
+  Proposal: design/proposal/32-chain-list.html (+ .png) — eight frames:
+  chains, empty, swipe to rename, swipe to delete, confirm delete, long
+  press, rename alert, dark mode. What the build lacks is marked NEW and
+  fixed in LTA-33.
+
+  Open questions: none — approve the proposal or mark changes.
   Done when: an approved file exists in design/final/ and this ticket's
   `designs` points at it.
 platform: ios
-status: refine
+status: ready
 phase: MVP
 priority: medium
 parent: 20
 blocked_by: []
-designs: []
+designs:
+  - design/proposal/32-chain-list.html
