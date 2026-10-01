@@ -12,6 +12,8 @@ import SwiftUI
 /// It owns no state: enablement is decided by the reducer (`StartPage.State.isNextEnabled`) and the tap is
 /// forwarded straight back, so there is nothing here for a `@Reducer` to hold.
 struct BottomActionBar: View {
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+
     let isNextEnabled: Bool
     let nextTapped: () -> Void
 
@@ -21,7 +23,8 @@ struct BottomActionBar: View {
                 .font(.nextLabel)
                 .fontWeight(.nextLabel)
                 .foregroundStyle(Color.nextForeground(isEnabled: isNextEnabled))
-                .frame(maxWidth: .infinity)
+                .frame(maxWidth: isRegularWidth ? nil : .infinity)
+                .frame(width: isRegularWidth ? .nextRegularWidth : nil)
                 .padding(.vertical, .nextVPadding)
                 .background(Color.nextBackground(isEnabled: isNextEnabled))
                 .cornerRadius(.nextCorners)
@@ -32,10 +35,15 @@ struct BottomActionBar: View {
         .disabled(isNextEnabled == false)
         .padding(.horizontal, .barHPadding)
         .padding(.vertical, .barVPadding)
-        .frame(maxWidth: .infinity)
+        // Wide screens keep Next one grid column wide at the trailing edge instead of stretching it across the
+        // whole window (spec 007 FR-015).
+        .frame(maxWidth: .infinity, alignment: isRegularWidth ? .trailing : .center)
         .background(Color.barBackground)
         .overlay(alignment: .top) { Divider() }
     }
+
+    /// Anything but compact, matching `StartPageView`'s grid branch.
+    private var isRegularWidth: Bool { horizontalSizeClass != .compact }
 }
 
 // MARK: - Resources
@@ -69,6 +77,10 @@ extension CGFloat {
     fileprivate static let nextCorners: Self = 12
     fileprivate static let barHPadding: Self = 16
     fileprivate static let barVPadding: Self = 12
+    /// One regular-width grid column (`StartPageView`'s minimum column width).
+    fileprivate static let nextRegularWidth: Self = 320
+    fileprivate static let previewWideWidth: Self = 1180
+    fileprivate static let previewWideHeight: Self = 120
 }
 
 extension Double {
@@ -96,5 +108,17 @@ extension LocalizedStringKey {
 
 #Preview("Bottom bar - disabled - dark") {
     BottomActionBar(isNextEnabled: false, nextTapped: {})
+        .preferredColorScheme(.dark)
+}
+
+#Preview("Bottom bar - regular width - light", traits: .fixedLayout(width: .previewWideWidth, height: .previewWideHeight)) {
+    BottomActionBar(isNextEnabled: true, nextTapped: {})
+        .environment(\.horizontalSizeClass, .regular)
+        .preferredColorScheme(.light)
+}
+
+#Preview("Bottom bar - regular width - dark", traits: .fixedLayout(width: .previewWideWidth, height: .previewWideHeight)) {
+    BottomActionBar(isNextEnabled: true, nextTapped: {})
+        .environment(\.horizontalSizeClass, .regular)
         .preferredColorScheme(.dark)
 }

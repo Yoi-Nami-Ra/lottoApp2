@@ -140,11 +140,11 @@ description: "Task list for 007 — compact and wide source cards (LTA-28 + LTA-
 
 ### Implementation
 
-- [ ] T022 [US3] In `lottoApp2/Presentation/StartPage/Widgets/SourceCardParts.swift`, add `.frame(maxHeight: .infinity, alignment: .top)` to `SourceCardStyle`, after the content's padding and before its background, so a grid cell fills its row (research R6). Comment why it is a no-op in the `List`.
-- [ ] T023 [US3] In `lottoApp2/Presentation/StartPage/StartPageView.swift`, replace the non-compact branch with `ScrollView { LazyVGrid(columns: [GridItem(.adaptive(minimum: .gridMinColumn), spacing: .gridSpacing)], spacing: .gridSpacing) { ForEach(…) { SourceEntryView(store:) } }.padding(.gridPadding) }`, with tokens `gridMinColumn = 320`, `gridSpacing = 16` and `gridPadding = 16`.
-- [ ] T024 [P] [US3] In `lottoApp2/Presentation/StartPage/Widgets/BottomActionBar.swift`, read `@Environment(\.horizontalSizeClass)`. At `.regular`, the button label gets `.frame(width: .nextRegularWidth)` (320) instead of `maxWidth: .infinity`, and the bar's content aligns `.trailing`. Compact is unchanged. Add regular-width light and dark previews.
-- [ ] T025 [US3] Add regular-width `#Preview`s to `StartPageView.swift` (`.environment(\.horizontalSizeClass, .regular)`, iPad landscape frame 1180×820) in light and dark. Check SC-005 (three columns) and equal row heights on the canvas.
-- [ ] T026 [US3] Build and run the full unit suite. It is green.
+- [X] T022 [US3] In `lottoApp2/Presentation/StartPage/Widgets/SourceCardParts.swift`, add `.frame(maxHeight: .infinity, alignment: .top)` to `SourceCardStyle`, after the content's padding and before its background, so a grid cell fills its row (research R6). Comment why it is a no-op in the `List`.
+- [X] T023 [US3] In `lottoApp2/Presentation/StartPage/StartPageView.swift`, replace the non-compact branch with `ScrollView { LazyVGrid(columns: [GridItem(.adaptive(minimum: .gridMinColumn), spacing: .gridSpacing)], spacing: .gridSpacing) { ForEach(…) { SourceEntryView(store:) } }.padding(.gridPadding) }`, with tokens `gridMinColumn = 320`, `gridSpacing = 16` and `gridPadding = 16`.
+- [X] T024 [P] [US3] In `lottoApp2/Presentation/StartPage/Widgets/BottomActionBar.swift`, read `@Environment(\.horizontalSizeClass)`. At `.regular`, the button label gets `.frame(width: .nextRegularWidth)` (320) instead of `maxWidth: .infinity`, and the bar's content aligns `.trailing`. Compact is unchanged. Add regular-width light and dark previews.
+- [X] T025 [US3] Add regular-width `#Preview`s to `StartPageView.swift` (`.environment(\.horizontalSizeClass, .regular)`, iPad landscape frame 1180×820) in light and dark. Check SC-005 (three columns) and equal row heights on the canvas.
+- [X] T026 [US3] Build and run the full unit suite. It is green.
 
 **Checkpoint**: The wide layout is done. Commit: `feat(007): full source cards in an adaptive grid on wide screens`.
 

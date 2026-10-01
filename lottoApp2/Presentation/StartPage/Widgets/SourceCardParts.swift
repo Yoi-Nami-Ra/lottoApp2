@@ -17,6 +17,9 @@ struct SourceCardStyle: ViewModifier {
         content
             .padding(.vertical, .cardVPadding)
             .padding(.horizontal, .cardHPadding)
+            // Fills a regular-width grid cell, so the cards in one row share its height (FR-014). A `List` row
+            // sizes to its content's ideal height, which this frame leaves alone, so it changes nothing there.
+            .frame(maxHeight: .infinity, alignment: .top)
             .background(.backgroundPrimary)
             .cornerRadius(.cardCorners)
             .overlay(
