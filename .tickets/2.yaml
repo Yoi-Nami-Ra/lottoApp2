@@ -32,7 +32,7 @@ description: |
   previous count; reducer/view state mapping. Previews (light/dark) for a
   card with and without the note, including large Dynamic Type.
 platform: ios
-status: in-review
+status: done
 phase: MVP
 priority: medium
 parent: null
