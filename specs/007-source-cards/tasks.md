@@ -29,14 +29,14 @@ description: "Task list for 007 — compact and wide source cards (LTA-28 + LTA-
 
 **Purpose**: Make the LTA-28 proposal the approved design that the rest of the work is built and checked against.
 
-- [ ] T001 Copy `design/proposal/28-source-cards.html` to `design/final/source-cards.html`, then edit the copy:
+- [X] T001 Copy `design/proposal/28-source-cards.html` to `design/final/source-cards.html`, then edit the copy:
   - retitle it "LTA-28 · Compact and wide source cards" and drop the "proposal" / "Lo-fi" wording from the heading and lede;
   - in the "Expanded and selected" frame, add the skipped-records note row ("⚠ 3 records skipped in last sync", warningYellow tint) as a full-width row between the Records / Last sync row and the First / Latest record row;
   - make the badges read "Last synced: 27 Sep 2026 at 09:12" (the app's real format) instead of "1 day ago";
   - add to the "Expanded and selected" caption that tapping inside the details also selects the card;
   - in the implementer notes, replace "Open questions" wording with the decisions from spec.md §Clarifications and research R4–R9 (the VoiceOver label is name + "Last synced: …"/"Not synced").
-- [ ] T002 Render `design/final/source-cards.png` from `design/final/source-cards.html` with the headless Chrome command in `design/README.md` (`--window-size=1640,1900`, adjusted so every frame fits); then delete `design/proposal/28-source-cards.html` and `design/proposal/28-source-cards.png`.
-- [ ] T003 [P] Update `.tickets/28.yaml` (`designs: [design/final/source-cards.html]`, `status: done`) and `.tickets/29.yaml` (`designs: [design/final/source-cards.html]`, `blocked_by: []`, `status: in-progress`).
+- [X] T002 Render `design/final/source-cards.png` from `design/final/source-cards.html` with the headless Chrome command in `design/README.md` (`--window-size=1640,1900`, adjusted so every frame fits); then delete `design/proposal/28-source-cards.html` and `design/proposal/28-source-cards.png`.
+- [X] T003 [P] Update `.tickets/28.yaml` (`designs: [design/final/source-cards.html]`, `status: done`) and `.tickets/29.yaml` (`designs: [design/final/source-cards.html]`, `blocked_by: []`, `status: in-progress`).
 
 **Checkpoint**: `design/final/source-cards.{html,png}` exist, the proposal is gone, and the tickets point at the approved file.
 
