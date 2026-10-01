@@ -430,6 +430,14 @@ extension LocalizedStringKey {
         .dynamicTypeSize(.largestAccessibility)
 }
 
+#Preview("Light Mode - AX5 never synced - fetching") {
+    SourceEntryView(store: Store(initialState: .mock1eFetching) { SourceEntry() })
+        .padding()
+        .background(.backgroundSecondary)
+        .preferredColorScheme(.light)
+        .dynamicTypeSize(.largestAccessibility)
+}
+
 extension SourceEntry.State {
     static let mock1n: Self = .init(
         id: "mbtn",

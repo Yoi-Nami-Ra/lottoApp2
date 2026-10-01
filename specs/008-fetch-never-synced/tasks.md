@@ -102,7 +102,7 @@ No setup is needed: there are no new dependencies, targets or files beyond the s
 
 **Goal**: legible in light and dark at every text size, with no regression of spec 007's reflow.
 
-- [ ] T012 [US3] In `lottoApp2/Presentation/StartPage/Widgets/SourceEntryView.swift`, add the preview "never synced - accessibility XXXL" (`.environment(\.dynamicTypeSize, .accessibility5)`) for `mock1e`, idle and fetching. Check that "Fetch" / "Fetching…" stay on one line, untruncated (US3-AS2).
+- [X] T012 [US3] In `lottoApp2/Presentation/StartPage/Widgets/SourceEntryView.swift`, add the preview "never synced - accessibility XXXL" (`.environment(\.dynamicTypeSize, .accessibility5)`) for `mock1e`, idle and fetching. Check that "Fetch" / "Fetching…" stay on one line, untruncated (US3-AS2).
 
 ---
 
