@@ -62,6 +62,12 @@ open — raise it rather than guessing.
   are never stored; rows present but none usable fail as `.unreadableData`. The last successful sync's
   skipped total (unreadable rows + rule-breaking draws) is persisted as `SourceMeta.lastSyncSkipped`,
   lifted to `Source.lastSyncSkipped`, and shown as a warning note on the source card.
+- **Missing records** (spec 009) — `DrawCadence` (Domain/BLogic) counts the draws in the two full UTC
+  Monday-first weeks before the latest draw's week (`nil` without enough history). `LocalStore` stores it at
+  every save as `SourceMeta.drawsInWindow`, lifted to `Source.cadence`, so listing never reads the draws.
+  `SourceEntry` turns it into `missingEstimate` (⌊count × elapsed / 14 days⌋, from the injected clock). With
+  an estimate, severity is 0 → green, 1 → yellow, 2+ → red; without one, the day-based rule still applies.
+  Both cards show "~N missing" under Latest Record.
 
 ## Build & Test
 

@@ -118,7 +118,7 @@ description: "Task list for 009 — missing records estimate (LTA-4)"
 
 ## Phase 4: User Story 3 — read the estimate in every appearance (P3)
 
-- [ ] T018 [US3] Add AX5 `#Preview`s with the missing line, in light and dark, to `SourceEntryView.swift` and `CompactSourceEntryView.swift` (expanded). Check that the line wraps at word boundaries, the cards' reflow is unchanged, and VoiceOver hears "about N missing" (SC-005, FR-008).
+- [X] T018 [US3] Add AX5 `#Preview`s with the missing line, in light and dark, to `SourceEntryView.swift` and `CompactSourceEntryView.swift` (expanded). Check that the line wraps at word boundaries, the cards' reflow is unchanged, and VoiceOver hears "about N missing" (SC-005, FR-008).
 
 **Checkpoint**: Commit: `feat(009): largest-text previews of the missing-records line (LTA-4)`.
 
@@ -126,10 +126,10 @@ description: "Task list for 009 — missing records estimate (LTA-4)"
 
 ## Phase 5: Polish & cross-cutting
 
-- [ ] T019 Run the full suite plus a render check of both cards with the line (throwaway `ImageRenderer` test, not committed). Fix any regression.
-- [ ] T020 [P] Update `CLAUDE.md` §Domain model: add a "Missing records" bullet (DrawCadence, persisted as `SourceMeta.drawsInWindow`, severity from the estimate with the day-based fallback).
-- [ ] T021 [P] Move `.tickets/4.yaml` to `status: in-review`.
-- [ ] T022 Mark every task done and commit: `chore(009): polish and move LTA-4 to in-review`.
+- [X] T019 Run the full suite plus a render check of both cards with the line (throwaway `ImageRenderer` test, not committed). Fix any regression.
+- [X] T020 [P] Update `CLAUDE.md` §Domain model: add a "Missing records" bullet (DrawCadence, persisted as `SourceMeta.drawsInWindow`, severity from the estimate with the day-based fallback).
+- [X] T021 [P] Move `.tickets/4.yaml` to `status: in-review`.
+- [X] T022 Mark every task done and commit: `chore(009): polish and move LTA-4 to in-review`.
 
 ---
 
