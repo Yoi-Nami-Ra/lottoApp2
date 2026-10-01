@@ -110,6 +110,40 @@ struct SorcesRepoImp_Tests {
     }
 
     @Test
+    func listsTheStoredCadence_withoutReadingTheDraws() async throws {
+        // Spec 009 SC-004 / clarification 1: listing lifts the cadence from the metadata alone, so opening the
+        // start page never reads a source's ~7,400 stored draws.
+        var meta = SourceMeta(
+            name: "mbnet", lastSync: syncDate, recordsCount: 1, latestRecord: nil, firstRecord: nil,
+            contentDigest: ""
+        )
+        meta.drawsInWindow = 6
+        let known: [String: SourceMeta] = ["mbnet": meta]
+        let drawReads = LockIsolated(0)
+
+        let sources = await withDependencies {
+            $0.remoteSourcesManager = RemoteSourcesManager(
+                listAllSources: { ["mbnet", "other"] },
+                listDisplayNamesFor: { _ in ["mbnet": "MBNet Server", "other": "Other"] },
+                sourceFor: { name in RemoteSource(name: name, displayName: name) { .init(draws: [], skipped: 0) } }
+            )
+            $0.localStore = LocalStore(
+                save: { _, _, _, _ in },
+                listSourceMetaFor: { names in known.filter { names.contains($0.key) } },
+                listDrawsFor: { _ in
+                    drawReads.withValue { $0 += 1 }
+                    return []
+                }
+            )
+        } operation: {
+            await SourcesRepoImpl.live.listKnownSources()
+        }
+
+        #expect(sources.map(\.cadence) == [DrawCadence(drawsInWindow: 6), nil])
+        #expect(drawReads.value == 0)
+    }
+
+    @Test
     func displayNameComesFromTheRegistryNotFromDisk() async throws {
         // Regression: stored metadata used to carry the display name, so renaming a source in code was
         // shadowed forever once it had synced once.

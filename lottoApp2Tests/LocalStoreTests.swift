@@ -175,6 +175,61 @@ struct LocalStore_Tests {
         #expect(meta.lastSyncSkipped == 0)
     }
 
+    // MARK: - Draw cadence (spec 009 contracts §2)
+
+    /// Tuesday / Thursday / Saturday draws from 3 to 30 Sep 2026, plus the latest on Wednesday 30 Sep: the
+    /// window [Mon 14 Sep, Mon 28 Sep) holds 6 of them.
+    private var threeAWeek: [DrawDTO] {
+        ["03", "05", "08", "10", "12", "15", "17", "19", "22", "24", "26", "29", "30"].enumerated().map { i, day in
+            DrawDTO(index: i + 1, date: MBNetParser.parseDate("\(day).09.2026")!, numbers: [1, 2, 3, 4, 5, 6])
+        }
+    }
+
+    @Test(arguments: [false, true])
+    func saveStoresTheCadenceOfTheMergedSet(inMemory: Bool) async throws {
+        // FR-003: measured over everything stored, not just this fetch — here split across two saves.
+        let store = inMemory ? LocalStore.inMemory() : LocalStore.fileBacked(root: tempRoot())
+        let draws = threeAWeek
+
+        try await store.save(Array(draws.prefix(7)), mbnet, Date(timeIntervalSince1970: 1), 0)
+        try await store.save(Array(draws.dropFirst(7)), mbnet, Date(timeIntervalSince1970: 2), 0)
+
+        #expect(await store.listSourceMetaFor(["mbnet"])["mbnet"]?.drawsInWindow == 6)
+    }
+
+    @Test
+    func theCadenceSurvivesANewStoreOnTheSameRoot() async throws {
+        // Clarification 1: persisted with the metadata, so a relaunch lists it without re-reading the draws.
+        let root = tempRoot()
+        try await LocalStore.fileBacked(root: root).save(threeAWeek, mbnet, Date(timeIntervalSince1970: 1), 0)
+
+        #expect(await LocalStore.fileBacked(root: root).listSourceMetaFor(["mbnet"])["mbnet"]?.drawsInWindow == 6)
+    }
+
+    @Test
+    func aHistoryTooShortForTheWindow_storesNoCadence() async throws {
+        // FR-002: only the last week and a half — the history doesn't reach back to Monday 14 Sep.
+        let store = LocalStore.fileBacked(root: tempRoot())
+        try await store.save(Array(threeAWeek.suffix(5)), mbnet, Date(timeIntervalSince1970: 1), 0)
+
+        let meta = try #require(await store.listSourceMetaFor(["mbnet"])["mbnet"])
+        #expect(meta.drawsInWindow == nil)
+    }
+
+    @Test
+    func metaWrittenBeforeTheCadenceExisted_readsAsNone() async throws {
+        // FR-003: a `meta.json` from an earlier build has no `drawsInWindow` and must still load.
+        let root = tempRoot()
+        let dir = root.appendingPathComponent("sources/mbnet", isDirectory: true)
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        try Data(#"{"name":"mbnet","lastSync":0,"recordsCount":1,"contentDigest":"","lastSyncSkipped":2}"#.utf8)
+            .write(to: dir.appendingPathComponent("meta.json"))
+
+        let meta = try #require(await LocalStore.fileBacked(root: root).listSourceMetaFor(["mbnet"])["mbnet"])
+        #expect(meta.lastSyncSkipped == 2)
+        #expect(meta.drawsInWindow == nil)
+    }
+
     @Test
     func inMemoryStoreMirrorsFileBackedSemantics() async throws {
         // The preview value must behave like the real thing, or previews lie about the UI's states.

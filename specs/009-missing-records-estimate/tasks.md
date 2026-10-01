@@ -27,7 +27,7 @@ description: "Task list for 009 — missing records estimate (LTA-4)"
 
 ## Phase 1: Setup
 
-- [ ] T001 Confirm the baseline: the full unit suite is green on `main`'s tip, using the test command above.
+- [X] T001 Confirm the baseline: the full unit suite is green on `main`'s tip, using the test command above.
 
 ---
 
@@ -37,7 +37,7 @@ description: "Task list for 009 — missing records estimate (LTA-4)"
 
 ### Tests (write first, see them fail)
 
-- [ ] T002 [P] Create `lottoApp2Tests/Domain/DrawCadenceTests.swift` with failing tests for `DrawCadence.measure(drawDates:calendar:)` using `.drawWeeks` and fixed UTC dates (contracts §1). Cover:
+- [X] T002 [P] Create `lottoApp2Tests/Domain/DrawCadenceTests.swift` with failing tests for `DrawCadence.measure(drawDates:calendar:)` using `.drawWeeks` and fixed UTC dates (contracts §1). Cover:
   - an empty input gives `nil`;
   - 6 draws in `[W0 − 14d, W0)` give `drawsInWindow == 6`;
   - a draw exactly at `W0 − 14d` is counted, and history is long enough;
@@ -46,22 +46,22 @@ description: "Task list for 009 — missing records estimate (LTA-4)"
   - a draw exactly at `W0` is excluded;
   - a latest draw on a Sunday and on a Monday each pick the right `W0`;
   - `drawsPerDay == 6.0 / 14`.
-- [ ] T003 [P] Add failing tests for `missing(since:now:)` in the same file:
+- [X] T003 [P] Add failing tests for `missing(since:now:)` in the same file:
   - 6 in window over 7 days gives 3 (exact, research R2);
   - 6 in window over 1 day gives 0;
   - a gap of 14/6 days (the first moment N = 1) gives 1, and one second less gives 0;
   - a large gap gives the full count;
   - `now` before `since` gives 0.
-- [ ] T004 [P] Add failing tests to `lottoApp2Tests/LocalStoreTests.swift`:
+- [X] T004 [P] Add failing tests to `lottoApp2Tests/LocalStoreTests.swift`:
   - `save` writes `SourceMeta.drawsInWindow` from the merged set;
   - the value survives a new `LocalStore.fileBacked` on the same root;
   - a `meta.json` without `drawsInWindow` decodes with `nil`;
   - a history too short for the window stores `nil`.
-- [ ] T005 [P] Add a failing-guard test to `lottoApp2Tests/SorcesRepoImpTests.swift`. Override `localStore.listDrawsFor` to record calls, then call `listKnownSources`. Assert that the listed `Source.cadence` comes from the stored metadata and that `listDrawsFor` is never called (SC-004, clarification 1).
+- [X] T005 [P] Add a failing-guard test to `lottoApp2Tests/SorcesRepoImpTests.swift`. Override `localStore.listDrawsFor` to record calls, then call `listKnownSources`. Assert that the listed `Source.cadence` comes from the stored metadata and that `listDrawsFor` is never called (SC-004, clarification 1).
 
 ### Implementation
 
-- [ ] T006 Create `lottoApp2/Domain/BLogic/DrawCadence.swift`:
+- [X] T006 Create `lottoApp2/Domain/BLogic/DrawCadence.swift`:
   - `nonisolated struct DrawCadence: Equatable, Sendable` with `let drawsInWindow: Int` (≥ 1);
   - computed `drawsPerDay`;
   - `static func measure(drawDates:calendar:) -> DrawCadence?` with window `[W0 − 14 days, W0)`, where `W0` is the start of the `.weekOfYear` interval holding the latest date, returning `nil` when the earliest date is after the window start or the window holds 0 draws;
@@ -69,14 +69,14 @@ description: "Task list for 009 — missing records estimate (LTA-4)"
   - `extension Calendar { nonisolated static let drawWeeks }`, a Gregorian calendar in UTC with `firstWeekday = 2`.
 
   Named constants go under `// MARK: - Resources` (`windowDays = 14`, `fortnight` in seconds). T002 and T003 now pass.
-- [ ] T007 Add `let cadence: DrawCadence?` (default `nil` in `init`) to `Source` in `lottoApp2/Domain/Ents/Source.swift`, with a doc comment.
-- [ ] T008 In `lottoApp2/Data/Sources/LocalStore.swift`:
+- [X] T007 Add `let cadence: DrawCadence?` (default `nil` in `init`) to `Source` in `lottoApp2/Domain/Ents/Source.swift`, with a doc comment.
+- [X] T008 In `lottoApp2/Data/Sources/LocalStore.swift`:
   - add `var drawsInWindow: Int? = nil` to `SourceMeta`, adding it to `CodingKeys` and reading it with `decodeIfPresent`;
   - make `LocalStore.meta(name:draws:asOf:skipped:)` set it to `DrawCadence.measure(drawDates: draws.map(\.date), calendar: .drawWeeks)?.drawsInWindow`.
 
   T004 now passes.
-- [ ] T009 In `lottoApp2/Data/Repos/SorcesRepoImp.swift`, make `SourceMeta.source(displayName:)` map `drawsInWindow` to `Source.cadence` (`DrawCadence(drawsInWindow:)` when the value is ≥ 1).
-- [ ] T010 Build and run the full suite. It is green, including T005.
+- [X] T009 In `lottoApp2/Data/Repos/SorcesRepoImp.swift`, make `SourceMeta.source(displayName:)` map `drawsInWindow` to `Source.cadence` (`DrawCadence(drawsInWindow:)` when the value is ≥ 1).
+- [X] T010 Build and run the full suite. It is green, including T005.
 
 **Checkpoint**: The cadence is stored and listed. Commit: `feat(009): measure a source's draw cadence at sync (LTA-4)`.
 
