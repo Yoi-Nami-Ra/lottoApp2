@@ -40,7 +40,7 @@ description: |
   shown and hidden. Previews (light/dark) for each severity with and
   without an estimate.
 platform: ios
-status: in-review
+status: done
 phase: Backlog
 priority: low
 parent: null
