@@ -79,11 +79,11 @@ description: "Task list for 007 — compact and wide source cards (LTA-28 + LTA-
 
 ### Tests (regression guard — passes once T006 lands; it pins that expanding never touches selection)
 
-- [ ] T010 [P] [US1] Add a test `selection_fromExpandedEntry_unchanged` in `lottoApp2Tests/Reducers/StartPageTests.swift`. With two seeded entries, expand one (`.sources(.element(id:, action: .disclosureButtonTapped))`), assert `selectedSourceID` stays `nil`, then send `.cardTapped` on it. The existing selection outcome holds (`selectedSourceID` is set, `isSelected` is mirrored), and `isExpanded` stays `true`.
+- [X] T010 [P] [US1] Add a test `selection_fromExpandedEntry_unchanged` in `lottoApp2Tests/Reducers/StartPageTests.swift`. With two seeded entries, expand one (`.sources(.element(id:, action: .disclosureButtonTapped))`), assert `selectedSourceID` stays `nil`, then send `.cardTapped` on it. The existing selection outcome holds (`selectedSourceID` is set, `isSelected` is mirrored), and `isExpanded` stays `true`.
 
 ### Implementation
 
-- [ ] T011 [US1] Create `lottoApp2/Presentation/StartPage/Widgets/CompactSourceEntryView.swift` (research R5, contracts §4) with `store: StoreOf<SourceEntry>`. The row is an `HStack`:
+- [X] T011 [US1] Create `lottoApp2/Presentation/StartPage/Widgets/CompactSourceEntryView.swift` (research R5, contracts §4) with `store: StoreOf<SourceEntry>`. The row is an `HStack`:
   - a 12 pt severity dot in the severity colour;
   - `Text(store.name)` with a `.compactName` font token (`.headline`), wrapping;
   - a checkmark when `isSelected`;
@@ -92,10 +92,10 @@ description: "Task list for 007 — compact and wide source cards (LTA-28 + LTA-
   - a chevron `Button` (`chevron.down` / `chevron.up`) sending `.disclosureButtonTapped`, `.fixedSize()`.
 
   The row has `minHeight: .compactRowMinHeight` (52). The card uses `SourceCardStyle(isSelected:)`, `.contentShape(Rectangle())` and `.onTapGesture { store.send(.cardTapped) }`, plus `.alert($store.scope(state: \.alert, action: \.alert))`. All values are `fileprivate static` tokens under `// MARK: - Resources`.
-- [ ] T012 [US1] In `lottoApp2/Presentation/StartPage/StartPageView.swift`, read `@Environment(\.horizontalSizeClass)`. When `.compact`, render the existing `List` with `CompactSourceEntryView` rows (same row background, separator and insets as today). Otherwise keep the existing `SourceEntryView` list for now (it becomes the grid in US3).
-- [ ] T013 [P] [US1] Add light and dark `#Preview`s to `CompactSourceEntryView.swift`: collapsed, selected, refreshing, and never synced. Use preview mocks (reuse the `SourceEntry.State.mock1*` fixtures).
-- [ ] T014 [US1] Add compact-width `#Preview`s to `StartPageView.swift`. They show four sources (add a fourth preview-only `Source` fixture in `lottoApp2/Presentation/Previews/PreviewFixtures.swift` if needed) in light and dark with `.environment(\.horizontalSizeClass, .compact)`, and check SC-001 on the canvas.
-- [ ] T015 [US1] Build and run the full unit suite. It is green.
+- [X] T012 [US1] In `lottoApp2/Presentation/StartPage/StartPageView.swift`, read `@Environment(\.horizontalSizeClass)`. When `.compact`, render the existing `List` with `CompactSourceEntryView` rows (same row background, separator and insets as today). Otherwise keep the existing `SourceEntryView` list for now (it becomes the grid in US3).
+- [X] T013 [P] [US1] Add light and dark `#Preview`s to `CompactSourceEntryView.swift`: collapsed, selected, refreshing, and never synced. Use preview mocks (reuse the `SourceEntry.State.mock1*` fixtures).
+- [X] T014 [US1] Add compact-width `#Preview`s to `StartPageView.swift`. They show four sources (add a fourth preview-only `Source` fixture in `lottoApp2/Presentation/Previews/PreviewFixtures.swift` if needed) in light and dark with `.environment(\.horizontalSizeClass, .compact)`, and check SC-001 on the canvas.
+- [X] T015 [US1] Build and run the full unit suite. It is green.
 
 **Checkpoint**: The compact list works on iPhone. Commit: `feat(007): compact source card row on narrow screens`.
 

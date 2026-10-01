@@ -10,6 +10,8 @@ import Dependencies
 import SwiftUI
 
 struct StartPageView: View {
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+
     @Bindable var store: StoreOf<StartPage>
 
     var body: some View {
@@ -78,7 +80,7 @@ struct StartPageView: View {
     private var sourcesList: some View {
         List {
             ForEach(store.scope(state: \.sources, action: \.sources)) { sourceStore in
-                SourceEntryView(store: sourceStore)
+                sourceCard(sourceStore)
                     // `SourceCardStyle` already draws the card; without these the row adds a second
                     // background, its own shadow, and a separator on top of it.
                     .listRowBackground(Color.clear)
@@ -88,6 +90,18 @@ struct StartPageView: View {
         }
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
+    }
+
+    /// The variant follows the width class, never the platform (spec 007 FR-001), so iPad split view and Mac
+    /// window resizing switch it by themselves. Both variants drive the same store, so a switch keeps the
+    /// selection, a sync in flight and every card's expanded state.
+    @ViewBuilder
+    private func sourceCard(_ sourceStore: StoreOf<SourceEntry>) -> some View {
+        if horizontalSizeClass == .compact {
+            CompactSourceEntryView(store: sourceStore)
+        } else {
+            SourceEntryView(store: sourceStore)
+        }
     }
 }
 
@@ -135,6 +149,18 @@ extension LocalizedStringKey {
         .preferredColorScheme(.light)
 }
 
+#Preview("Start page - compact, four sources - light") {
+    StartPageView(store: .previewFour)
+        .environment(\.horizontalSizeClass, .compact)
+        .preferredColorScheme(.light)
+}
+
+#Preview("Start page - compact, four sources - dark") {
+    StartPageView(store: .previewFour)
+        .environment(\.horizontalSizeClass, .compact)
+        .preferredColorScheme(.dark)
+}
+
 #Preview("Start page - no sources - light") {
     StartPageView(store: .previewEmpty)
         .preferredColorScheme(.light)
@@ -168,6 +194,10 @@ extension LocalizedStringKey {
 extension StoreOf<StartPage> {
     fileprivate static var previewMocked: StoreOf<StartPage> {
         preview(sources: Source.mocks)
+    }
+
+    fileprivate static var previewFour: StoreOf<StartPage> {
+        preview(sources: Source.previewFour)
     }
 
     fileprivate static var previewEmpty: StoreOf<StartPage> {

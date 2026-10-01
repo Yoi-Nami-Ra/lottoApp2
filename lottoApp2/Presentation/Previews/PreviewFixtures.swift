@@ -15,16 +15,16 @@ extension SourcesBLogic {
     static let previewMock = SourcesBLogic(
         knownSources: { Source.mocks },
         fetchFrom: { name in
-            guard let source = Source.mocks.first(where: { $0.name == name })
+            guard let source = Source.previewFour.first(where: { $0.name == name })
             else { return .failure(.sourceUnavailable) }
             return .success(source)
         },
         gameFor: { name in
-            guard Source.mocks.contains(where: { $0.name == name }) else { return .failure(.sourceUnavailable) }
+            guard Source.previewFour.contains(where: { $0.name == name }) else { return .failure(.sourceUnavailable) }
             return .success(SourceSnapshot(game: .previewMock, dataState: .previewMock))
         },
         dataStateFor: { name in
-            Source.mocks.contains(where: { $0.name == name }) ? .previewMock : nil
+            Source.previewFour.contains(where: { $0.name == name }) ? .previewMock : nil
         }
     )
 }
@@ -79,7 +79,19 @@ nonisolated extension Source {
         displayName: "EuroJackpot Server"
     )
 
+    /// Overdue past the high-severity threshold (spec 007 previews: one source per severity).
+    static let staleMock: Source = .init(
+        name: "minilotto",
+        displayName: "Mini Lotto Mirror",
+        lastSync: .now.addingTimeInterval(-800_000),
+        recordsCount: 5340,
+        latestRecord: .now.addingTimeInterval(-900_000),
+        firstRecord: Date(timeIntervalSince1970: 18_223_210)
+    )
+
     static let mocks: [Source] = [.mbnetMock, .lottoMock, .neverSyncedMock]
+    /// Four sources, one per severity: what the start page's layouts are checked against (spec 007 SC-001).
+    static let previewFour: [Source] = [.mbnetMock, .lottoMock, .staleMock, .neverSyncedMock]
 }
 
 nonisolated extension Chain {

@@ -391,6 +391,26 @@ struct StartPage_Tests {
 
     @MainActor
     @Test
+    func selection_fromExpandedEntry_unchanged() async throws {
+        // Spec 007 US1/US2-AS4: the compact card's chevron never chooses, and choosing an expanded card
+        // keeps it expanded — the two are independent, whichever variant sends them.
+        let store = store(severalSources)
+
+        await store.send(.sources(.element(id: Source.lottoMock.name, action: .disclosureButtonTapped))) {
+            $0.sources[id: Source.lottoMock.name]?.isExpanded = true
+        }
+        #expect(store.state.selectedSourceID == nil)
+
+        await store.send(.sources(.element(id: Source.lottoMock.name, action: .cardTapped)))
+        await store.receive(\.sources[id: Source.lottoMock.name].delegate.selectionRequested) {
+            $0.selectedSourceID = Source.lottoMock.name
+            $0.sources[id: Source.lottoMock.name]?.isSelected = true
+        }
+        #expect(store.state.sources[id: Source.lottoMock.name]?.isExpanded == true)
+    }
+
+    @MainActor
+    @Test
     func refreshing_doesNotMoveTheChoice() async throws {
         // FR-017 / I8: refreshing any source — successfully or not — leaves the choice where it was.
         var initial = severalSources
