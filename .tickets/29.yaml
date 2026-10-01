@@ -22,7 +22,7 @@ description: |
   Build from the approved file in design/final/ once LTA-28 is
   promoted; add it to `designs` then.
 platform: ios
-status: in-progress
+status: in-review
 phase: Backlog
 priority: low
 parent: 5

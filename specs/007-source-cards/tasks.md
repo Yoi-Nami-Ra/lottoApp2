@@ -174,10 +174,10 @@ description: "Task list for 007 — compact and wide source cards (LTA-28 + LTA-
 
 ## Phase 7: Polish & cross-cutting
 
-- [ ] T030 Run the full unit suite, the quickstart §2 canvas checks (every new and refactored preview in light and dark), and the quickstart §3 run. That includes an iPad entering and leaving a narrow split view, which must keep the selection, any sync in flight, and every expanded compact card (US3-AS5, Edge Cases). Fix any regression.
-- [ ] T031 [P] Update `CLAUDE.md` §Architecture layout: `StartPage/Widgets` now holds the compact card and the shared `SourceCardParts`. Note that the start page switches by horizontal size class.
-- [ ] T032 [P] Move `.tickets/29.yaml` to `status: in-review`.
-- [ ] T033 Mark every task in `specs/007-source-cards/tasks.md` done and commit: `chore(007): polish and move LTA-29 to in-review`.
+- [X] T030 Run the full unit suite, the quickstart §2 canvas checks (every new and refactored preview in light and dark), and the quickstart §3 run. That includes an iPad entering and leaving a narrow split view, which must keep the selection, any sync in flight, and every expanded compact card (US3-AS5, Edge Cases). Fix any regression.
+- [X] T031 [P] Update `CLAUDE.md` §Architecture layout: `StartPage/Widgets` now holds the compact card and the shared `SourceCardParts`. Note that the start page switches by horizontal size class.
+- [X] T032 [P] Move `.tickets/29.yaml` to `status: in-review`.
+- [X] T033 Mark every task in `specs/007-source-cards/tasks.md` done and commit: `chore(007): polish and move LTA-29 to in-review`.
 
 ---
 
