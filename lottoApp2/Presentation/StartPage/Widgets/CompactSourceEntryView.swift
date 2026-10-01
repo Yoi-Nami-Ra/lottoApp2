@@ -132,7 +132,7 @@ struct CompactSourceEntryView: View {
                     SkippedRecordsNote(count: count)
                 }
                 RecordDateDetail(kind: .first, date: store.firstRecordDate)
-                RecordDateDetail(kind: .latest, date: store.lastRecordDate)
+                RecordDateDetail(kind: .latest, date: store.lastRecordDate, missing: store.missingEstimate)
             }
         } else {
             Grid(alignment: .topLeading, horizontalSpacing: .detailsColumnSpacing, verticalSpacing: .detailsSpacing) {
@@ -148,7 +148,7 @@ struct CompactSourceEntryView: View {
                 }
                 GridRow {
                     RecordDateDetail(kind: .first, date: store.firstRecordDate)
-                    RecordDateDetail(kind: .latest, date: store.lastRecordDate)
+                    RecordDateDetail(kind: .latest, date: store.lastRecordDate, missing: store.missingEstimate)
                 }
             }
         }
@@ -434,7 +434,39 @@ extension CGFloat {
         .dynamicTypeSize(.largestAccessibility)
 }
 
+#Preview("Compact - expanded, several missing - light") {
+    CompactSourceEntryView(store: Store(initialState: .mock1expandedMissing) { SourceEntry() })
+        .padding()
+        .background(.backgroundSecondary)
+        .preferredColorScheme(.light)
+}
+
+#Preview("Compact - expanded, one missing - dark") {
+    CompactSourceEntryView(store: Store(initialState: .mock1expandedOneMissing) { SourceEntry() })
+        .padding()
+        .background(.backgroundSecondary)
+        .preferredColorScheme(.dark)
+}
+
+#Preview("Compact - AX5 expanded, several missing - light") {
+    CompactSourceEntryView(store: Store(initialState: .mock1expandedMissing) { SourceEntry() })
+        .padding()
+        .background(.backgroundSecondary)
+        .preferredColorScheme(.light)
+        .dynamicTypeSize(.largestAccessibility)
+}
+
+#Preview("Compact - AX5 expanded, several missing - dark") {
+    CompactSourceEntryView(store: Store(initialState: .mock1expandedMissing) { SourceEntry() })
+        .padding()
+        .background(.backgroundSecondary)
+        .preferredColorScheme(.dark)
+        .dynamicTypeSize(.largestAccessibility)
+}
+
 extension SourceEntry.State {
+    fileprivate static let mock1expandedMissing: Self = expanded(.mock1estimateMany)
+    fileprivate static let mock1expandedOneMissing: Self = expanded(.mock1estimateOne)
     fileprivate static let mock1longNameSelected: Self = {
         var state = mock1selected
         state.name = "EuroJackpot International Archive"

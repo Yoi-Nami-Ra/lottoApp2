@@ -113,7 +113,7 @@ nonisolated struct DrawCadence_Tests {
     @Test
     func theFirstMissingDraw_appearsAt14Over6Days() {
         // US1-AS3: N becomes 1 exactly when 6 × elapsed reaches 14 days, and not a second before.
-        let threshold = 14.0 / 6 * .day
+        let threshold = 14 * .day / 6   // 201,600 s exactly
         #expect(sixInWindow.missing(since: Self.latest, now: Self.latest.addingTimeInterval(threshold)) == 1)
         #expect(sixInWindow.missing(since: Self.latest, now: Self.latest.addingTimeInterval(threshold - 1)) == 0)
     }

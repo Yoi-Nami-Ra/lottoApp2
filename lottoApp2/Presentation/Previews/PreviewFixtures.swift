@@ -62,7 +62,9 @@ nonisolated extension Source {
         lastSync: .now.addingTimeInterval(-100_000),
         recordsCount: 120,
         latestRecord: .now.addingTimeInterval(-180_000),
-        firstRecord: Date(timeIntervalSince1970: 18_223_210)
+        firstRecord: Date(timeIntervalSince1970: 18_223_210),
+        // ~2 days since a 3-a-week draw: nothing missing yet, green (spec 009).
+        cadence: DrawCadence(drawsInWindow: 6)
     )
 
     static let lottoMock: Source = .init(
@@ -71,7 +73,9 @@ nonisolated extension Source {
         lastSync: .now.addingTimeInterval(-432_000),
         recordsCount: 110,
         latestRecord: .now.addingTimeInterval(-600_000),
-        firstRecord: Date(timeIntervalSince1970: 18_223_210)
+        firstRecord: Date(timeIntervalSince1970: 18_223_210),
+        // ~7 days at 3 a fortnight: "~1 missing", yellow.
+        cadence: DrawCadence(drawsInWindow: 3)
     )
 
     static let neverSyncedMock: Source = .init(
@@ -86,7 +90,9 @@ nonisolated extension Source {
         lastSync: .now.addingTimeInterval(-800_000),
         recordsCount: 5340,
         latestRecord: .now.addingTimeInterval(-900_000),
-        firstRecord: Date(timeIntervalSince1970: 18_223_210)
+        firstRecord: Date(timeIntervalSince1970: 18_223_210),
+        // ~10 days at 3 a week: "~4 missing", red.
+        cadence: DrawCadence(drawsInWindow: 6)
     )
 
     static let mocks: [Source] = [.mbnetMock, .lottoMock, .neverSyncedMock]

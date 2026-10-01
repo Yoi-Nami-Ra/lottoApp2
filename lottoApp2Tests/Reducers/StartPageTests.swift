@@ -335,6 +335,35 @@ struct StartPage_Tests {
 
     @MainActor
     @Test
+    func refresh_success_recomputesTheEstimate() async throws {
+        // Spec 009 FR-009: the estimate and its colour follow the fetched source and the injected clock.
+        let fetched = Source(
+            name: "mbnet", displayName: "MBNet Server", lastSync: .fixedNow, recordsCount: 7380,
+            latestRecord: Date.fixedNow.addingTimeInterval(-7 * 86_400), cadence: DrawCadence(drawsInWindow: 6)
+        )
+        var blSources = SourcesBLogic.mock
+        blSources.fetchFrom = { _ in .success(fetched) }
+        let store = TestStore(initialState: StartPage.State(sources: [seededEntry()])) {
+            StartPage()
+                .dependency(\.blSources, blSources)
+                .dependency(\.date, .constant(.fixedNow))
+        }
+
+        await store.send(.sources(.element(id: "mbnet", action: .refreshButtonTapped)))
+        await store.receive(\.sources[id: "mbnet"].delegate.refreshRequested) {
+            $0.sources[id: "mbnet"]?.isRefreshing = true
+        }
+        await store.receive(\.refreshResponse) {
+            $0.sources[id: "mbnet"]?.isRefreshing = false
+            $0.sources[id: "mbnet"]?.apply(fetched, now: .fixedNow)
+        }
+        // A sync seconds ago, yet three draws behind: red, not the day rule's green.
+        #expect(store.state.sources[id: "mbnet"]?.missingEstimate == 3)
+        #expect(store.state.sources[id: "mbnet"]?.lastSyncSeverity == .high)
+    }
+
+    @MainActor
+    @Test
     func refreshResponse_forRemovedEntry_isIgnored() async throws {
         // Regression: writing through `IdentifiedArray`'s id-subscript would append a ghost row for an entry
         // the list no longer holds (and traps outright if the fetched id differed).

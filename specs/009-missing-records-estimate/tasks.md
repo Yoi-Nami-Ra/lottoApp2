@@ -90,27 +90,27 @@ description: "Task list for 009 — missing records estimate (LTA-4)"
 
 ### Tests (write first, see them fail)
 
-- [ ] T011 [P] [US2] Add failing tests to `lottoApp2Tests/Reducers/SourceEntryTests.swift` for the contracts §3 table, via `Source.sourceEntryState(now:)`:
+- [X] T011 [P] [US2] Add failing tests to `lottoApp2Tests/Reducers/SourceEntryTests.swift` for the contracts §3 table, via `Source.sourceEntryState(now:)`:
   - never synced gives `.notSynced` and `missingEstimate == nil`;
   - no cadence gives the day-based severity at the 0 s, 2 d and 4 d thresholds, with `missingEstimate == nil`;
   - a cadence without `latestRecord` gives the day-based severity;
   - a cadence with an estimate of 0, 1, 2 or 5 gives `.low`, `.medium`, `.high` or `.high`, with a matching `missingEstimate`, even when `lastSync` is recent or old;
   - `apply(_:now:)` recomputes both from the new source.
-- [ ] T012 [P] [US1] Add a failing test `refresh_success_recomputesTheEstimate` to `lottoApp2Tests/Reducers/StartPageTests.swift`. A seeded entry is refreshed with a source carrying a cadence and an old latest record. After the response, `missingEstimate` and `lastSyncSeverity` match the injected `\.date`.
+- [X] T012 [P] [US1] Add a failing test `refresh_success_recomputesTheEstimate` to `lottoApp2Tests/Reducers/StartPageTests.swift`. A seeded entry is refreshed with a source carrying a cadence and an old latest record. After the response, `missingEstimate` and `lastSyncSeverity` match the injected `\.date`.
 
 ### Implementation
 
-- [ ] T013 [US2] In `lottoApp2/Presentation/StartPage/Widgets/SourceEntry.swift`:
+- [X] T013 [US2] In `lottoApp2/Presentation/StartPage/Widgets/SourceEntry.swift`:
   - add `var missingEstimate: Int?` to `SourceEntry.State`, with a doc comment;
   - add `SyncSeverity.init(source: Source, now: Date)` following contracts §3, keeping `init(lastSync:now:)` as the fallback;
   - route `sourceEntryState(now:)` and `apply(_:now:)` through one fileprivate helper that sets `missingEstimate` and `lastSyncSeverity`;
   - add tokens for the estimate thresholds (`yellowFrom = 1`, `redFrom = 2`).
 
   T011 and T012 now pass.
-- [ ] T014 [US1] In `lottoApp2/Presentation/StartPage/Widgets/SourceCardParts.swift`, give `RecordDateDetail` an optional `missing: Int? = nil`. When it is greater than 0, render `HStack { Image(.missingRecords) (accessibilityHidden); Text(.missingRecords(n)) }` in `.caption` and `textSecondary` under the date, with no `lineLimit`. Add an accessibility label `.missingRecordsSpoken(n)` ("about N missing"). Copy, icon, colour, font and spacing are tokens (research R6), and N uses `formatted()`, so 1204 reads "~1,204 missing" in en_US (FR-008). Extend the parts preview with a 3 and a 1,204 line.
-- [ ] T015 [US1] Pass `missing: store.missingEstimate` to the `.latest` `RecordDateDetail` in `lottoApp2/Presentation/StartPage/Widgets/SourceEntryView.swift` and in both detail layouts of `lottoApp2/Presentation/StartPage/Widgets/CompactSourceEntryView.swift`.
-- [ ] T016 [P] [US1] Add preview mocks and light/dark `#Preview`s to `SourceEntryView.swift` for: an estimate of 0 (green, no line), 1 (yellow, "~1 missing"), many (red, "~3 missing"), and no estimate. Add the expanded compact equivalents to `CompactSourceEntryView.swift`. Give `Source.mbnetMock` in `lottoApp2/Presentation/Previews/PreviewFixtures.swift` a cadence, so the start page previews show the rule.
-- [ ] T017 [US1] Build and run the full suite. It is green.
+- [X] T014 [US1] In `lottoApp2/Presentation/StartPage/Widgets/SourceCardParts.swift`, give `RecordDateDetail` an optional `missing: Int? = nil`. When it is greater than 0, render `HStack { Image(.missingRecords) (accessibilityHidden); Text(.missingRecords(n)) }` in `.caption` and `textSecondary` under the date, with no `lineLimit`. Add an accessibility label `.missingRecordsSpoken(n)` ("about N missing"). Copy, icon, colour, font and spacing are tokens (research R6), and N uses `formatted()`, so 1204 reads "~1,204 missing" in en_US (FR-008). Extend the parts preview with a 3 and a 1,204 line.
+- [X] T015 [US1] Pass `missing: store.missingEstimate` to the `.latest` `RecordDateDetail` in `lottoApp2/Presentation/StartPage/Widgets/SourceEntryView.swift` and in both detail layouts of `lottoApp2/Presentation/StartPage/Widgets/CompactSourceEntryView.swift`.
+- [X] T016 [P] [US1] Add preview mocks and light/dark `#Preview`s to `SourceEntryView.swift` for: an estimate of 0 (green, no line), 1 (yellow, "~1 missing"), many (red, "~3 missing"), and no estimate. Add the expanded compact equivalents to `CompactSourceEntryView.swift`. Give `Source.mbnetMock` in `lottoApp2/Presentation/Previews/PreviewFixtures.swift` a cadence, so the start page previews show the rule.
+- [X] T017 [US1] Build and run the full suite. It is green.
 
 **Checkpoint**: The estimate drives the colour and is shown. Commit: `feat(009): colour sources by their missing-records estimate (LTA-4)`.
 
