@@ -87,7 +87,7 @@ that matches what has shipped.
 
 ## Phase 5: Polish
 
-- [ ] T011 Re-run the quickstart end to end (§2–§5) on the final tree. Then tick the US1/US2 acceptance scenarios against the result, and record anything that deviated in the Notes below.
+- [X] T011 Re-run the quickstart end to end (§2–§5) on the final tree. Then tick the US1/US2 acceptance scenarios against the result, and record anything that deviated in the Notes below.
 
 ---
 
@@ -118,3 +118,10 @@ Task: T007 DocC summary line
 - Deviation (T005): research R2 missed three Swift hits, because the first grep's output was cut short by `head`. They were the header comments of both renamed files (`//  SorcesRepo.swift`, `//  SorcesRepoImpTests.swift`) and the test suite type `SorcesRepoImp_Tests`. Under FR-006 all three were fixed, and the suite became `SourcesRepoImpl_Tests`, matching the `<Type>_Tests` convention. Renaming the suite changes test identifiers but no behaviour. The test count is unchanged.
 - T006: after the rename, 348 tests ran and 348 passed (408 with parameterized runs), 0 failed, on the same destination. That equals the baseline (SC-002).
 - T010: `docc convert` gives 1 warning, both before and after: "No symbol matched 'lottoApp2'". A standalone convert has no symbol graph, so the warning is not new. US2-AS4 asks for "no new warnings", and that holds. `START_MENU_TOKEN` count: 0. Every `++` line names a spec (001–009) or a ticket (LTA-23), and the open line points to `.tickets/` without copying any ticket.
+- T011: the quickstart re-ran on the final tree, and every check passed:
+  - §2: no `Sorces` hit.
+  - §3: both files' history reaches their first commits (`9edd8bd`, `ce815b9`).
+  - §4: 348/348 tests pass.
+  - §5: as T010.
+  - `specs/001…009` are unchanged (FR-010).
+  US1 AS1–AS4 and US2 AS1–AS4 are all met.
