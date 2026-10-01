@@ -9,7 +9,7 @@ description: |
   from the source's sync state, add the copy token, and cover the
   never-synced state in previews (light/dark) and tests.
 platform: ios
-status: ready
+status: in-review
 phase: Backlog
 priority: low
 parent: null

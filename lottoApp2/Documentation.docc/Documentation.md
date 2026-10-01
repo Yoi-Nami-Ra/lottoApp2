@@ -53,4 +53,4 @@ An app to do some operations on random games data
         -- (mobile) source name and severity indicator with ability to refresh
         -- (desktop) full card
 -- 003 - hardcoded sources with basic data, this should be represented in visual layer as well by signaling that given source is not available to compute but can be fetched
-    -- "Fetch" button when source never fetched before
+    ++ "Fetch" button when source never fetched before

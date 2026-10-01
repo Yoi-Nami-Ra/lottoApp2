@@ -109,7 +109,8 @@ struct StartPage {
             case let .refreshResponse(id: id, response):
                 // The entry can be gone if the list reloaded mid-flight. Bail out rather than writing through
                 // the id-subscript, which would append a ghost row and silently swallow the alert.
-                guard let name = state.sources[id: id]?.name else { return .none }
+                guard let entry = state.sources[id: id] else { return .none }
+                let name = entry.name
                 state.sources[id: id]?.isRefreshing = false
                 switch response {
                 case .failure(.cancelled):
@@ -117,7 +118,8 @@ struct StartPage {
                     break
                 case .failure(let failure):
                     // FR-021: surface a failure alert worded for its kind (spec 004); leave prior analytics unchanged.
-                    state.sources[id: id]?.alert = .syncFailed(failure, sourceName: name)
+                    // Spec 008: a failure doesn't touch `lastSync`, so the entry's action is the kind of sync that was tapped.
+                    state.sources[id: id]?.alert = .syncFailed(failure, sourceName: name, action: entry.syncAction)
                 case .success(let result):
                     state.sources[id: id]?.apply(result, now: date.now)
                 }

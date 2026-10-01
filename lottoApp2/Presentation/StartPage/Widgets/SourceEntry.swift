@@ -20,6 +20,13 @@ struct SourceEntry {
         case notSynced
     }
 
+    /// The kind of sync a card's button offers (spec 008): `fetch` ⇔ the source has never synced successfully
+    /// (`lastSync == nil`), `refresh` once it has. Both kinds start the same sync.
+    enum SyncAction: Equatable {
+        case fetch
+        case refresh
+    }
+
     @ObservableState
     struct State: Equatable, Identifiable {
         let id: String
@@ -41,6 +48,10 @@ struct SourceEntry {
         /// it is never persisted, and the parent carries it over a reload so a card doesn't fold away.
         var isExpanded: Bool = false
         @Presents var alert: AlertState<Action.Alert>?
+
+        /// Derived rather than stored, so it can never drift from `lastSync`: the first successful sync
+        /// recorded by `apply(_:now:)` turns Fetch into Refresh with no extra write (spec 008 FR-002).
+        var syncAction: SyncAction { lastSync == nil ? .fetch : .refresh }
     }
 
     enum Action {
@@ -87,12 +98,14 @@ struct SourceEntry {
 }
 
 extension AlertState where Action == SourceEntry.Action.Alert {
-    /// The failed-sync alert, worded for why it failed (spec 004 FR-003, contracts §4).
-    static func syncFailed(_ failure: SyncFailure, sourceName: String) -> AlertState {
+    /// The failed-sync alert, worded for why it failed (spec 004 FR-003, contracts §4). `action` is the kind of
+    /// sync that failed; only the general-purpose fallback names it (spec 008 FR-007). Required, so a call site
+    /// can't silently fall back to the refresh wording.
+    static func syncFailed(_ failure: SyncFailure, sourceName: String, action: SourceEntry.SyncAction) -> AlertState {
         AlertState {
             TextState(.syncFailedTitle)
         } message: {
-            TextState(LocalizedStringResource.syncFailedMessage(failure, sourceName: sourceName))
+            TextState(LocalizedStringResource.syncFailedMessage(failure, sourceName: sourceName, action: action))
         }
     }
 }
@@ -159,7 +172,9 @@ extension TimeInterval {
 extension LocalizedStringResource {
     fileprivate static let syncFailedTitle: Self = "Sync failed"
 
-    fileprivate static func syncFailedMessage(_ failure: SyncFailure, sourceName name: String) -> Self {
+    fileprivate static func syncFailedMessage(
+        _ failure: SyncFailure, sourceName name: String, action: SourceEntry.SyncAction
+    ) -> Self {
         switch failure {
         case .offline:
             "Your device appears to be offline. Check your connection and try again."
@@ -177,9 +192,15 @@ extension LocalizedStringResource {
             "The downloaded draws couldn't be saved on this device. Free up some space and try again."
         // `cancelled` never reaches an alert (StartPage drops it); the general wording is only a fallback.
         case .unknown, .cancelled:
-            "Couldn't refresh \(name). Try again."
+            switch action {
+            case .fetch: syncFailedFallbackFetch(name)
+            case .refresh: syncFailedFallbackRefresh(name)
+            }
         }
     }
+
+    fileprivate static func syncFailedFallbackFetch(_ name: String) -> Self { "Couldn't fetch \(name). Try again." }
+    fileprivate static func syncFailedFallbackRefresh(_ name: String) -> Self { "Couldn't refresh \(name). Try again." }
 }
 
 extension Int {
