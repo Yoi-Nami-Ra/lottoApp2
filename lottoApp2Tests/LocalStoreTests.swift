@@ -103,13 +103,36 @@ struct LocalStore_Tests {
         let store = LocalStore.fileBacked(root: tempRoot())
         let body = (1...7380).map { "\($0). 01.01.2000 1,2,3,4,5,6" }.joined(separator: "\n")
 
-        let start = ContinuousClock.now
-        let draws = MBNetParser.parse(body).draws
-        try await store.save(draws, mbnet, Date(timeIntervalSince1970: 1), 0)
-        let elapsed = ContinuousClock.now - start
+        let elapsed = try await withTaskExecutorPreference(DedicatedQueueExecutor()) {
+            try await Self.timeParseAndSave(body, into: store, source: mbnet)
+        }
 
         #expect(await store.listDrawsFor("mbnet").count == 7380)
-        #expect(elapsed < .seconds(1))
+        #expect(elapsed < .seconds(1), "parse + persist took \(elapsed)")
+    }
+
+    /// Times parse + persist on the preferred task executor only. In a parallel run, a live `TestStore` reroutes
+    /// every global-executor job onto the main thread, so timing on main — or on the global pool — would count
+    /// seconds of queueing behind other suites, not the work under test. Under a task-executor preference the
+    /// parse and `FileStore`'s actor job both run on a dedicated queue, and the clock reads bracket only them.
+    @concurrent
+    private nonisolated static func timeParseAndSave(
+        _ body: String, into store: LocalStore, source: RemoteSource
+    ) async throws -> Duration {
+        let start = ContinuousClock.now
+        let draws = MBNetParser.parse(body).draws
+        try await store.save(draws, source, Date(timeIntervalSince1970: 1), 0)
+        return ContinuousClock.now - start
+    }
+
+    /// A task executor that runs its jobs on its own serial queue, out of reach of TCA's main-serial executor.
+    private nonisolated final class DedicatedQueueExecutor: TaskExecutor {
+        private let queue = DispatchQueue(label: "LocalStore_Tests.budget", qos: .userInitiated)
+
+        func enqueue(_ job: consuming ExecutorJob) {
+            let job = UnownedJob(job)
+            queue.async { job.runSynchronously(on: self.asUnownedTaskExecutor()) }
+        }
     }
 
     // MARK: - Last sync's skipped count (spec 005)
