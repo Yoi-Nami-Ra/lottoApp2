@@ -11,6 +11,7 @@ import SwiftUI
 
 struct CompactSourceEntryView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     @Bindable var store: StoreOf<SourceEntry>
 
@@ -27,20 +28,34 @@ struct CompactSourceEntryView: View {
         // source (FR-004, clarification 1).
         .contentShape(Rectangle())
         .onTapGesture { store.send(.cardTapped) }
+        // The full card's pattern: `.contain` keeps both buttons as their own elements, while the card carries
+        // the name, the sync status as words (so severity never depends on the dot), the selected trait, and a
+        // way to choose it without sight of the highlight (FR-012).
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel(Text(store.name))
+        .accessibilityValue(Text(syncStatus))
+        .accessibilityAddTraits(store.isSelected ? [.isButton, .isSelected] : [.isButton])
+        .accessibilityAction(named: Text(.sourceCardChooseAction)) { store.send(.cardTapped) }
         .alert($store.scope(state: \.alert, action: \.alert))
     }
 
     private var row: some View {
         HStack(spacing: .rowSpacing) {
+            // Decorative: the card's accessibility value says the same in words.
             Circle()
                 .fill(Color.sourceCardSeverity(store.lastSyncSeverity))
                 .frame(width: .dotSize, height: .dotSize)
+                .accessibilityHidden(true)
 
             nameLabel
                 .frame(maxWidth: .infinity, alignment: .leading)
 
+            // Intrinsic size at every text size: at accessibility sizes the name wraps onto more lines
+            // rather than squeezing the buttons (FR-013).
             refreshButton
+                .fixedSize()
             disclosureButton
+                .fixedSize()
         }
         .frame(minHeight: .rowMinHeight)
     }
@@ -52,6 +67,8 @@ struct CompactSourceEntryView: View {
             Text(store.name)
                 .font(.compactName)
                 .foregroundStyle(Color.compactName)
+                .fixedSize(horizontal: false, vertical: true)
+                .layoutPriority(.nameOverNotSynced)
 
             if store.isSelected {
                 Image(.sourceCardCheckmark)
@@ -79,6 +96,11 @@ struct CompactSourceEntryView: View {
         }
         .buttonStyle(PlainButtonStyle())
         .disabled(store.isRefreshing)
+        .accessibilityLabel(Text(store.isRefreshing ? .refreshingLabel : .refreshLabel))
+    }
+
+    private var syncStatus: LocalizedStringKey {
+        store.lastSync.map(LocalizedStringKey.sourceCardLastSynced) ?? .sourceCardNotSynced
     }
 
     /// The record count, last sync, the last sync's skipped note and the record dates — what the full card shows,
@@ -86,6 +108,27 @@ struct CompactSourceEntryView: View {
     private var details: some View {
         VStack(alignment: .leading, spacing: .detailsSpacing) {
             Divider()
+            detailsBody
+                // Lines the details up under the name rather than under the dot.
+                .padding(.leading, .detailsLeadingInset)
+        }
+    }
+
+    /// Two columns normally; one at accessibility text sizes, where each half of the card would be narrower
+    /// than a single word and the labels would break mid-word (FR-013).
+    @ViewBuilder
+    private var detailsBody: some View {
+        if dynamicTypeSize.isAccessibilitySize {
+            VStack(alignment: .leading, spacing: .detailsSpacing) {
+                recordsDetail
+                lastSyncDetail
+                if let count = store.skippedInLastSync {
+                    SkippedRecordsNote(count: count)
+                }
+                RecordDateDetail(kind: .first, date: store.firstRecordDate)
+                RecordDateDetail(kind: .latest, date: store.lastRecordDate)
+            }
+        } else {
             Grid(alignment: .topLeading, horizontalSpacing: .detailsColumnSpacing, verticalSpacing: .detailsSpacing) {
                 GridRow {
                     recordsDetail
@@ -102,8 +145,6 @@ struct CompactSourceEntryView: View {
                     RecordDateDetail(kind: .latest, date: store.lastRecordDate)
                 }
             }
-            // Lines the details up under the name rather than under the dot.
-            .padding(.leading, .detailsLeadingInset)
         }
     }
 
@@ -149,6 +190,7 @@ struct CompactSourceEntryView: View {
                 .contentShape(Rectangle())
         }
         .buttonStyle(PlainButtonStyle())
+        .accessibilityLabel(Text(store.isExpanded ? .hideDetails : .showDetails))
     }
 }
 
@@ -184,9 +226,22 @@ extension Int {
     fileprivate static let detailsColumns: Self = 2
 }
 
+extension Double {
+    fileprivate static let nameOverNotSynced: Self = 1
+}
+
+extension DynamicTypeSize {
+    /// `accessibility-extra-extra-extra-large`, the largest size the system offers.
+    fileprivate static let largestAccessibility: Self = .accessibility5
+}
+
 extension LocalizedStringKey {
     fileprivate static let recordsTitle: Self = "Records"
     fileprivate static let lastSyncTitle: Self = "Last sync"
+    fileprivate static let refreshLabel: Self = "Refresh"
+    fileprivate static let refreshingLabel: Self = "Refreshing"
+    fileprivate static let showDetails: Self = "Show details"
+    fileprivate static let hideDetails: Self = "Hide details"
 }
 
 extension ImageType {
@@ -323,7 +378,44 @@ extension CGFloat {
         .preferredColorScheme(.dark)
 }
 
+#Preview("Compact - AX5 collapsed - light") {
+    CompactSourceEntryView(store: Store(initialState: .mock1n) { SourceEntry() })
+        .padding()
+        .background(.backgroundSecondary)
+        .preferredColorScheme(.light)
+        .dynamicTypeSize(.largestAccessibility)
+}
+
+#Preview("Compact - AX5 collapsed, long name - dark") {
+    CompactSourceEntryView(store: Store(initialState: .mock1longNameSelected) { SourceEntry() })
+        .padding()
+        .background(.backgroundSecondary)
+        .preferredColorScheme(.dark)
+        .dynamicTypeSize(.largestAccessibility)
+}
+
+#Preview("Compact - AX5 expanded - light") {
+    CompactSourceEntryView(store: Store(initialState: .mock1expanded) { SourceEntry() })
+        .padding()
+        .background(.backgroundSecondary)
+        .preferredColorScheme(.light)
+        .dynamicTypeSize(.largestAccessibility)
+}
+
+#Preview("Compact - AX5 expanded, skipped note - dark") {
+    CompactSourceEntryView(store: Store(initialState: .mock1expandedSkipped) { SourceEntry() })
+        .padding()
+        .background(.backgroundSecondary)
+        .preferredColorScheme(.dark)
+        .dynamicTypeSize(.largestAccessibility)
+}
+
 extension SourceEntry.State {
+    fileprivate static let mock1longNameSelected: Self = {
+        var state = mock1selected
+        state.name = "EuroJackpot International Archive"
+        return state
+    }()
     fileprivate static let mock1expanded: Self = expanded(.mock1n)
     fileprivate static let mock1expandedSelected: Self = expanded(.mock1selected)
     fileprivate static let mock1expandedSkipped: Self = expanded(.mock1skipped)

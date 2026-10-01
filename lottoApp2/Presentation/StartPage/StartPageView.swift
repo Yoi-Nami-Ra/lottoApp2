@@ -175,6 +175,13 @@ extension LocalizedStringKey {
         .preferredColorScheme(.dark)
 }
 
+#Preview("Start page - compact, AX5 - light") {
+    StartPageView(store: .previewFour)
+        .environment(\.horizontalSizeClass, .compact)
+        .preferredColorScheme(.light)
+        .dynamicTypeSize(.largestAccessibility)
+}
+
 #Preview("Start page - regular, grid - light", traits: .fixedLayout(width: .previewTabletWidth, height: .previewTabletHeight)) {
     StartPageView(store: .previewFour)
         .environment(\.horizontalSizeClass, .regular)
@@ -259,6 +266,10 @@ extension StoreOf<StartPage> {
 
 extension Double {
     fileprivate static let previewNeverFinishes: Self = 3600
+}
+
+extension DynamicTypeSize {
+    fileprivate static let largestAccessibility: Self = .accessibility5
 }
 
 extension CGFloat {

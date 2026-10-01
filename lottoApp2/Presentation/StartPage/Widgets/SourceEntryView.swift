@@ -33,7 +33,7 @@ struct SourceEntryView: View {
         .accessibilityElement(children: .contain)
         .accessibilityLabel(Text(store.name))
         .accessibilityAddTraits(store.isSelected ? [.isButton, .isSelected] : [.isButton])
-        .accessibilityAction(named: Text(.chooseSourceAction)) { store.send(.cardTapped) }
+        .accessibilityAction(named: Text(.sourceCardChooseAction)) { store.send(.cardTapped) }
         .alert($store.scope(state: \.alert, action: \.alert))
     }
 
@@ -210,7 +210,6 @@ extension Double {
 }
 
 extension LocalizedStringKey {
-    fileprivate static let chooseSourceAction: Self = "Choose this source"
     fileprivate static let records: Self = "records"
     fileprivate static let refresh: Self = "Refresh"
     fileprivate static let refreshing: Self = "Refreshing…"

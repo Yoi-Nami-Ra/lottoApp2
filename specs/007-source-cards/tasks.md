@@ -158,15 +158,15 @@ description: "Task list for 007 — compact and wide source cards (LTA-28 + LTA-
 
 ### Implementation
 
-- [ ] T027 [US4] In `CompactSourceEntryView.swift`, set the accessibility:
+- [X] T027 [US4] In `CompactSourceEntryView.swift`, set the accessibility:
   - the dot is `.accessibilityHidden(true)`;
   - the card is `.accessibilityElement(children: .contain)`, labelled with `Text(name)` plus the status ("Last synced: …" / "Not synced"), with traits `.isButton` (+ `.isSelected`) and the "Choose this source" action;
   - refresh is labelled "Refresh" / "Refreshing";
   - the chevron is labelled "Show details" / "Hide details".
 
   All copy uses `LocalizedStringKey` tokens (research R8, contracts §4).
-- [ ] T028 [US4] In `CompactSourceEntryView.swift`, make the details use an `AnyLayout` that is a `VStackLayout` when `dynamicTypeSize.isAccessibilitySize`, and the two-column grid otherwise. In the row, the name gets `fixedSize(horizontal: false, vertical: true)` and the buttons `.fixedSize()`, so the name wraps before the buttons shrink (FR-013).
-- [ ] T029 [P] [US4] Add AX5 `#Preview`s to `CompactSourceEntryView.swift`: collapsed light, collapsed dark with a long name, expanded light, and expanded dark with the skipped note. Add an AX5 compact-width preview to `StartPageView.swift`.
+- [X] T028 [US4] In `CompactSourceEntryView.swift`, make the details use an `AnyLayout` that is a `VStackLayout` when `dynamicTypeSize.isAccessibilitySize`, and the two-column grid otherwise. In the row, the name gets `fixedSize(horizontal: false, vertical: true)` and the buttons `.fixedSize()`, so the name wraps before the buttons shrink (FR-013).
+- [X] T029 [P] [US4] Add AX5 `#Preview`s to `CompactSourceEntryView.swift`: collapsed light, collapsed dark with a long name, expanded light, and expanded dark with the skipped note. Add an AX5 compact-width preview to `StartPageView.swift`.
 
 **Checkpoint**: Accessibility meets US4. Commit: `feat(007): accessibility for the compact source card`.
 

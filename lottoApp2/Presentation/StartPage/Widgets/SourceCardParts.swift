@@ -80,11 +80,14 @@ struct SyncStatusBadge: View {
     var body: some View {
         HStack {
             Image(.lastSync)
+            // Wraps rather than truncating where the badge only gets half a card — the compact card's details.
             if let lastSync {
                 Text(.sourceCardLastSynced(lastSync))
                     .font(.caption)
+                    .fixedSize(horizontal: false, vertical: true)
             } else {
                 Text(.sourceCardNotSynced)
+                    .fixedSize(horizontal: false, vertical: true)
             }
         }
         .foregroundStyle(foreground)
@@ -186,6 +189,7 @@ extension LocalizedStringKey {
     }
     static let sourceCardNotSynced: Self = "Not synced"
     static let sourceCardNotAvailable: Self = "N/A"
+    static let sourceCardChooseAction: Self = "Choose this source"
 }
 
 extension Color {
