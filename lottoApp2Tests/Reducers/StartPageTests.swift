@@ -155,6 +155,93 @@ struct StartPage_Tests {
         }
     }
 
+    // MARK: - Compact card details (spec 007)
+
+    private func expandedEntry(_ source: Source) -> SourceEntry.State {
+        var entry = source.sourceEntryState(now: .fixedNow)
+        entry.isExpanded = true
+        return entry
+    }
+
+    @MainActor
+    @Test
+    func sourcesResponse_keepsExpandedForSurvivors() async throws {
+        // US2-AS8 / contracts §2: returning from the blocks page reloads the list, which must not fold the
+        // open cards away. A source the reload drops takes its flag with it; a new one starts collapsed.
+        let initial = StartPage.State(
+            sources: [expandedEntry(.mbnetMock), expandedEntry(.neverSyncedMock)],
+            hasLoaded: true
+        )
+        let store = store(initial)
+
+        await store.send(.sourcesResponse([.mbnetMock, .lottoMock])) {
+            $0.sources = [expandedEntry(.mbnetMock), Source.lottoMock.sourceEntryState(now: .fixedNow)]
+        }
+    }
+
+    @MainActor
+    @Test
+    func expand_twoEntries_bothStayExpanded() async throws {
+        // US2-AS3: each card's details are its own; opening one never closes another.
+        let store = store(severalSources)
+
+        await store.send(.sources(.element(id: Source.mbnetMock.name, action: .disclosureButtonTapped))) {
+            $0.sources[id: Source.mbnetMock.name]?.isExpanded = true
+        }
+        await store.send(.sources(.element(id: Source.lottoMock.name, action: .disclosureButtonTapped))) {
+            $0.sources[id: Source.lottoMock.name]?.isExpanded = true
+        }
+        await store.send(.sources(.element(id: Source.mbnetMock.name, action: .disclosureButtonTapped))) {
+            $0.sources[id: Source.mbnetMock.name]?.isExpanded = false
+        }
+    }
+
+    @MainActor
+    @Test
+    func refresh_success_keepsExpanded() async throws {
+        // US2-AS8: a finished sync updates the open card's details in place.
+        var entry = seededEntry()
+        entry.isExpanded = true
+        let store = TestStore(initialState: StartPage.State(sources: [entry])) {
+            StartPage()
+                .dependency(\.blSources, .mock)
+                .dependency(\.date, .constant(.fixedNow))
+        }
+
+        await store.send(.sources(.element(id: "mbnet", action: .refreshButtonTapped)))
+        await store.receive(\.sources[id: "mbnet"].delegate.refreshRequested) {
+            $0.sources[id: "mbnet"]?.isRefreshing = true
+        }
+        await store.receive(\.refreshResponse) {
+            $0.sources[id: "mbnet"]?.isRefreshing = false
+            $0.sources[id: "mbnet"]?.apply(.refreshedMbnetMock, now: .fixedNow)
+        }
+        #expect(store.state.sources[id: "mbnet"]?.isExpanded == true)
+    }
+
+    @MainActor
+    @Test
+    func refresh_failure_keepsExpanded() async throws {
+        // US2-AS8 / US1-AS5: a failed sync raises its alert and leaves the open card open.
+        var entry = seededEntry()
+        entry.isExpanded = true
+        let store = TestStore(initialState: StartPage.State(sources: [entry])) {
+            StartPage()
+                .dependency(\.blSources, .failureMock)
+                .dependency(\.date, .constant(.fixedNow))
+        }
+
+        await store.send(.sources(.element(id: "mbnet", action: .refreshButtonTapped)))
+        await store.receive(\.sources[id: "mbnet"].delegate.refreshRequested) {
+            $0.sources[id: "mbnet"]?.isRefreshing = true
+        }
+        await store.receive(\.refreshResponse) {
+            $0.sources[id: "mbnet"]?.isRefreshing = false
+            $0.sources[id: "mbnet"]?.alert = .syncFailed(.unknown, sourceName: "MBNet Server")
+        }
+        #expect(store.state.sources[id: "mbnet"]?.isExpanded == true)
+    }
+
     @MainActor
     @Test
     func refreshResponse_forRemovedEntry_isIgnored() async throws {

@@ -10,16 +10,24 @@ import ComposableArchitecture
 import SwiftUI
 
 struct CompactSourceEntryView: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
     @Bindable var store: StoreOf<SourceEntry>
 
     var body: some View {
-        row
-            .modifier(SourceCardStyle.sourceCardStyle(isSelected: store.isSelected))
-            // As on the full card: a tap gesture rather than a `Button`, so the two buttons inside keep their
-            // own taps, and `contentShape` makes the whole card — gaps included — choose the source (FR-004).
-            .contentShape(Rectangle())
-            .onTapGesture { store.send(.cardTapped) }
-            .alert($store.scope(state: \.alert, action: \.alert))
+        VStack(alignment: .leading, spacing: .rowDetailsSpacing) {
+            row
+            if store.isExpanded {
+                details
+            }
+        }
+        .modifier(SourceCardStyle.sourceCardStyle(isSelected: store.isSelected))
+        // As on the full card: a tap gesture rather than a `Button`, so the two buttons inside keep their
+        // own taps, and `contentShape` makes the whole card — details and gaps included — choose the
+        // source (FR-004, clarification 1).
+        .contentShape(Rectangle())
+        .onTapGesture { store.send(.cardTapped) }
+        .alert($store.scope(state: \.alert, action: \.alert))
     }
 
     private var row: some View {
@@ -73,9 +81,65 @@ struct CompactSourceEntryView: View {
         .disabled(store.isRefreshing)
     }
 
+    /// The record count, last sync, the last sync's skipped note and the record dates — what the full card shows,
+    /// in the same formats (FR-008, FR-009). The note spans both columns between the two rows (clarification 2).
+    private var details: some View {
+        VStack(alignment: .leading, spacing: .detailsSpacing) {
+            Divider()
+            Grid(alignment: .topLeading, horizontalSpacing: .detailsColumnSpacing, verticalSpacing: .detailsSpacing) {
+                GridRow {
+                    recordsDetail
+                    lastSyncDetail
+                }
+                if let count = store.skippedInLastSync {
+                    GridRow {
+                        SkippedRecordsNote(count: count)
+                            .gridCellColumns(.detailsColumns)
+                    }
+                }
+                GridRow {
+                    RecordDateDetail(kind: .first, date: store.firstRecordDate)
+                    RecordDateDetail(kind: .latest, date: store.lastRecordDate)
+                }
+            }
+            // Lines the details up under the name rather than under the dot.
+            .padding(.leading, .detailsLeadingInset)
+        }
+    }
+
+    private var recordsDetail: some View {
+        VStack(alignment: .leading, spacing: .detailLabelSpacing) {
+            Text(.recordsTitle)
+                .font(.detailLabel)
+                .foregroundStyle(Color.detailLabel)
+            recordsCount
+                .font(.recordsCount)
+                .fontWeight(.recordsCount)
+                .foregroundStyle(Color.recordsCount)
+        }
+    }
+
+    private var recordsCount: Text {
+        if let count = store.recordsCount {
+            Text(count.toString)
+        } else {
+            Text(.sourceCardNotAvailable)
+        }
+    }
+
+    private var lastSyncDetail: some View {
+        VStack(alignment: .leading, spacing: .detailLabelSpacing) {
+            Text(.lastSyncTitle)
+                .font(.detailLabel)
+                .foregroundStyle(Color.detailLabel)
+            SyncStatusBadge(lastSync: store.lastSync, severity: store.lastSyncSeverity)
+        }
+    }
+
     private var disclosureButton: some View {
         Button {
-            store.send(.disclosureButtonTapped)
+            // Animated through the store's transaction, so the reducer stays pure; none with Reduce Motion (R9).
+            store.send(.disclosureButtonTapped, animation: reduceMotion ? nil : .disclosure)
         } label: {
             Image(store.isExpanded ? .collapseDetails : .expandDetails)
                 .font(.disclosure)
@@ -93,6 +157,8 @@ extension Color {
     fileprivate static let compactName: Self = .textPrimary
     fileprivate static let notSyncedInline: Self = .textSecondary
     fileprivate static let disclosure: Self = .textTertiary
+    fileprivate static let detailLabel: Self = .textSecondary
+    fileprivate static let recordsCount: Self = .textPrimary
 }
 
 extension Font {
@@ -101,10 +167,26 @@ extension Font {
     fileprivate static let notSyncedInline: Self = .caption
     fileprivate static let compactRefreshIcon: Self = .callout
     fileprivate static let disclosure: Self = .footnote
+    fileprivate static let detailLabel: Self = .caption
+    fileprivate static let recordsCount: Self = .title3
 }
 
 extension Font.Weight {
     fileprivate static let disclosure: Self = .semibold
+    fileprivate static let recordsCount: Self = .bold
+}
+
+extension Animation {
+    fileprivate static let disclosure: Self = .snappy
+}
+
+extension Int {
+    fileprivate static let detailsColumns: Self = 2
+}
+
+extension LocalizedStringKey {
+    fileprivate static let recordsTitle: Self = "Records"
+    fileprivate static let lastSyncTitle: Self = "Last sync"
 }
 
 extension ImageType {
@@ -121,6 +203,12 @@ extension CGFloat {
     fileprivate static let refreshWidth: Self = 36
     fileprivate static let refreshHeight: Self = 32
     fileprivate static let disclosureWidth: Self = 28
+    fileprivate static let rowDetailsSpacing: Self = 4
+    fileprivate static let detailsSpacing: Self = 8
+    fileprivate static let detailsColumnSpacing: Self = 12
+    fileprivate static let detailLabelSpacing: Self = 2
+    /// The dot's width plus the row's spacing, so the details start where the name does.
+    fileprivate static let detailsLeadingInset: Self = dotSize + rowSpacing
 }
 
 #Preview("Compact - collapsed - light") {
@@ -177,4 +265,73 @@ extension CGFloat {
         .padding()
         .background(.backgroundSecondary)
         .preferredColorScheme(.dark)
+}
+
+#Preview("Compact - expanded - light") {
+    CompactSourceEntryView(store: Store(initialState: .mock1expanded) { SourceEntry() })
+        .padding()
+        .background(.backgroundSecondary)
+        .preferredColorScheme(.light)
+}
+
+#Preview("Compact - expanded - dark") {
+    CompactSourceEntryView(store: Store(initialState: .mock1expanded) { SourceEntry() })
+        .padding()
+        .background(.backgroundSecondary)
+        .preferredColorScheme(.dark)
+}
+
+#Preview("Compact - expanded, selected - light") {
+    CompactSourceEntryView(store: Store(initialState: .mock1expandedSelected) { SourceEntry() })
+        .padding()
+        .background(.backgroundSecondary)
+        .preferredColorScheme(.light)
+}
+
+#Preview("Compact - expanded, selected - dark") {
+    CompactSourceEntryView(store: Store(initialState: .mock1expandedSelected) { SourceEntry() })
+        .padding()
+        .background(.backgroundSecondary)
+        .preferredColorScheme(.dark)
+}
+
+#Preview("Compact - expanded, skipped note - light") {
+    CompactSourceEntryView(store: Store(initialState: .mock1expandedSkipped) { SourceEntry() })
+        .padding()
+        .background(.backgroundSecondary)
+        .preferredColorScheme(.light)
+}
+
+#Preview("Compact - expanded, skipped note - dark") {
+    CompactSourceEntryView(store: Store(initialState: .mock1expandedSkipped) { SourceEntry() })
+        .padding()
+        .background(.backgroundSecondary)
+        .preferredColorScheme(.dark)
+}
+
+#Preview("Compact - expanded, never synced - light") {
+    CompactSourceEntryView(store: Store(initialState: .mock1expandedEmpty) { SourceEntry() })
+        .padding()
+        .background(.backgroundSecondary)
+        .preferredColorScheme(.light)
+}
+
+#Preview("Compact - expanded, never synced - dark") {
+    CompactSourceEntryView(store: Store(initialState: .mock1expandedEmpty) { SourceEntry() })
+        .padding()
+        .background(.backgroundSecondary)
+        .preferredColorScheme(.dark)
+}
+
+extension SourceEntry.State {
+    fileprivate static let mock1expanded: Self = expanded(.mock1n)
+    fileprivate static let mock1expandedSelected: Self = expanded(.mock1selected)
+    fileprivate static let mock1expandedSkipped: Self = expanded(.mock1skipped)
+    fileprivate static let mock1expandedEmpty: Self = expanded(.mock1e)
+
+    private static func expanded(_ state: Self) -> Self {
+        var state = state
+        state.isExpanded = true
+        return state
+    }
 }

@@ -109,24 +109,24 @@ description: "Task list for 007 — compact and wide source cards (LTA-28 + LTA-
 
 ### Tests (write first; T016 fails until T018, T017 guards `apply` and the failure path)
 
-- [ ] T016 [P] [US2] Add a failing test `sourcesResponse_keepsExpandedForSurvivors` in `lottoApp2Tests/Reducers/StartPageTests.swift`. Start with an expanded `mbnet` entry, then send `.sourcesResponse([.mbnetMock, .lottoMock])`. Assert `mbnet` keeps `isExpanded == true` and `lotto` starts `false`. Assert a source removed by a reload drops out with its flag (contracts §2).
-- [ ] T017 [P] [US2] Add tests in `lottoApp2Tests/Reducers/StartPageTests.swift`:
+- [X] T016 [P] [US2] Add a failing test `sourcesResponse_keepsExpandedForSurvivors` in `lottoApp2Tests/Reducers/StartPageTests.swift`. Start with an expanded `mbnet` entry, then send `.sourcesResponse([.mbnetMock, .lottoMock])`. Assert `mbnet` keeps `isExpanded == true` and `lotto` starts `false`. Assert a source removed by a reload drops out with its flag (contracts §2).
+- [X] T017 [P] [US2] Add tests in `lottoApp2Tests/Reducers/StartPageTests.swift`:
   - `expand_twoEntries_bothStayExpanded`;
   - `refresh_success_keepsExpanded`;
   - `refresh_failure_keepsExpanded`, which covers the failure alert path and keeps `isExpanded == true`.
 
 ### Implementation
 
-- [ ] T018 [US2] In `lottoApp2/Presentation/StartPage/StartPage.swift`, `.sourcesResponse` also carries `entry.isExpanded = existing.isExpanded`. Update the comment that lists the carried-over transient UI state. T016 and T017 now pass.
-- [ ] T019 [US2] In `CompactSourceEntryView.swift`, render the details when `store.isExpanded`:
+- [X] T018 [US2] In `lottoApp2/Presentation/StartPage/StartPage.swift`, `.sourcesResponse` also carries `entry.isExpanded = existing.isExpanded`. Update the comment that lists the carried-over transient UI state. T016 and T017 now pass.
+- [X] T019 [US2] In `CompactSourceEntryView.swift`, render the details when `store.isExpanded`:
   - a divider;
   - a two-column `Grid` with Records (`recordsCount` or "N/A") | `SyncStatusBadge`;
   - when `skippedInLastSync` is non-nil, `SkippedRecordsNote` spanning both columns (`gridCellColumns(2)`);
   - First record | Latest record (the full card's date format and "N/A" fallback).
 
   Use tokens for the paddings and spacings. The card's tap gesture covers the details too (clarification 1). The chevron sends `store.send(.disclosureButtonTapped, animation: reduceMotion ? nil : .disclosure)` using `@Environment(\.accessibilityReduceMotion)` (research R9).
-- [ ] T020 [P] [US2] Add light and dark `#Preview`s to `CompactSourceEntryView.swift` for: expanded, expanded and selected, expanded with the skipped note, and expanded never-synced ("N/A").
-- [ ] T021 [US2] Build and run the full unit suite. It is green.
+- [X] T020 [P] [US2] Add light and dark `#Preview`s to `CompactSourceEntryView.swift` for: expanded, expanded and selected, expanded with the skipped note, and expanded never-synced ("N/A").
+- [X] T021 [US2] Build and run the full unit suite. It is green.
 
 **Checkpoint**: The compact card fully replaces the full card's information at narrow widths. Commit: `feat(007): expand compact source cards inline`.
 
