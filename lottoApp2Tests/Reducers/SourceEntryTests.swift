@@ -171,6 +171,40 @@ struct SourceEntry_Tests {
         #expect(state.skippedInLastSync == nil)
     }
 
+    // MARK: - Fetch or Refresh (spec 008 contracts §1)
+
+    @Test
+    func sourceEntryState_neverSynced_offersFetch() {
+        // FR-001: a source with no successful sync offers to fetch its data.
+        #expect(Source.neverSyncedMock.sourceEntryState(now: .fixedNow).syncAction == .fetch)
+    }
+
+    @Test
+    func sourceEntryState_synced_offersRefresh() {
+        #expect(Self.source(skipped: nil).sourceEntryState(now: .fixedNow).syncAction == .refresh)
+    }
+
+    @Test
+    func apply_firstSuccessfulSync_turnsFetchIntoRefresh() {
+        // FR-002: the first successful sync flips the button in place, with no reload or relaunch.
+        var state = Source.neverSyncedMock.sourceEntryState(now: .fixedNow)
+
+        state.apply(.refreshedMbnetMock, now: .fixedNow)
+
+        #expect(state.syncAction == .refresh)
+    }
+
+    @Test
+    func apply_firstSyncWithNoDraws_stillTurnsIntoRefresh() {
+        // Edge case: the kind follows whether a sync succeeded, not how many records it stored.
+        var state = Source.neverSyncedMock.sourceEntryState(now: .fixedNow)
+        let emptySync = Source(name: "eurojackpot", displayName: "EuroJackpot Server", lastSync: .fixedNow, recordsCount: 0)
+
+        state.apply(emptySync, now: .fixedNow)
+
+        #expect(state.syncAction == .refresh)
+    }
+
     // MARK: - Compact card details (spec 007 contracts §1)
 
     @MainActor

@@ -20,6 +20,13 @@ struct SourceEntry {
         case notSynced
     }
 
+    /// The kind of sync a card's button offers (spec 008): `fetch` ⇔ the source has never synced successfully
+    /// (`lastSync == nil`), `refresh` once it has. Both kinds start the same sync.
+    enum SyncAction: Equatable {
+        case fetch
+        case refresh
+    }
+
     @ObservableState
     struct State: Equatable, Identifiable {
         let id: String
@@ -41,6 +48,10 @@ struct SourceEntry {
         /// it is never persisted, and the parent carries it over a reload so a card doesn't fold away.
         var isExpanded: Bool = false
         @Presents var alert: AlertState<Action.Alert>?
+
+        /// Derived rather than stored, so it can never drift from `lastSync`: the first successful sync
+        /// recorded by `apply(_:now:)` turns Fetch into Refresh with no extra write (spec 008 FR-002).
+        var syncAction: SyncAction { lastSync == nil ? .fetch : .refresh }
     }
 
     enum Action {

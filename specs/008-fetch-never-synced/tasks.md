@@ -32,12 +32,12 @@ No setup is needed: there are no new dependencies, targets or files beyond the s
 
 **Purpose**: the `SyncAction` value that every story reads (contracts §1, data-model).
 
-- [ ] T001 Write failing tests in `lottoApp2Tests/Reducers/SourceEntryTests.swift`:
+- [X] T001 Write failing tests in `lottoApp2Tests/Reducers/SourceEntryTests.swift`:
   - `sourceEntryState_neverSynced_offersFetch`: a `Source` with `lastSync: nil` maps to `syncAction == .fetch`.
   - `sourceEntryState_synced_offersRefresh`: a `Source` with a `lastSync` maps to `.refresh`.
   - `apply_firstSuccessfulSync_turnsFetchIntoRefresh`: a `lastSync == nil` state, after `apply` with a synced `Source`, reports `.refresh` (FR-002).
   - `apply_firstSyncWithNoDraws_stillTurnsIntoRefresh`: `apply` with a `Source` that has a `lastSync` and `recordsCount: 0` reports `.refresh`. The kind follows a successful sync, not the record count (spec Edge Cases).
-- [ ] T002 Make T001 pass in `lottoApp2/Presentation/StartPage/Widgets/SourceEntry.swift`:
+- [X] T002 Make T001 pass in `lottoApp2/Presentation/StartPage/Widgets/SourceEntry.swift`:
   - add `enum SyncAction: Equatable { case fetch, refresh }` nested in `SourceEntry`, documented as "`fetch` ⇔ `lastSync == nil`"
   - add the computed `var syncAction: SyncAction { lastSync == nil ? .fetch : .refresh }` on `State`. It is never stored (research R1).
 
