@@ -89,7 +89,7 @@ struct CompactSourceEntryView: View {
         Button {
             store.send(.refreshButtonTapped)
         } label: {
-            RefreshIcon(isRefreshing: store.isRefreshing)
+            SyncIcon(action: .refresh, isSyncing: store.isRefreshing)
                 .font(.compactRefreshIcon)
                 .frame(width: .refreshWidth, height: .refreshHeight)
                 .modifier(RefreshButtonStyle(isRefreshing: store.isRefreshing))

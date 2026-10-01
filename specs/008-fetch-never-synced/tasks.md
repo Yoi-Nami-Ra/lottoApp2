@@ -53,11 +53,11 @@ No setup is needed: there are no new dependencies, targets or files beyond the s
 
 ### Tests for User Story 1 (write first, confirm they fail)
 
-- [ ] T003 [P] [US1] In `lottoApp2Tests/Reducers/SourceEntryTests.swift`, add `syncFailedFallback_isWordedForTheAction`:
+- [X] T003 [P] [US1] In `lottoApp2Tests/Reducers/SourceEntryTests.swift`, add `syncFailedFallback_isWordedForTheAction`:
   - `.syncFailed(.unknown, sourceName: "MBNet Server", action: .fetch)` reads "Couldn't fetch MBNet Server. Try again."
   - with `action: .refresh` it reads "Couldn't refresh MBNet Server. Try again."
   - extend `everyShownFailure_hasItsOwnMessage_underTheSameTitle` so that every non-fallback failure's message is identical for `.fetch` and `.refresh` (FR-007).
-- [ ] T004 [P] [US1] Add to `lottoApp2Tests/Reducers/StartPageTests.swift`:
+- [X] T004 [P] [US1] Add to `lottoApp2Tests/Reducers/StartPageTests.swift`:
   - `firstFetch_success_turnsFetchIntoRefresh`: a never-synced entry; `refreshRequested` then `.refreshResponse(.success(synced))`; assert `isRefreshing` true → false and `syncAction == .refresh` at the end (US1-AS3/AS4).
   - `firstFetch_failure_keepsFetch_andUsesFetchWording`: a never-synced entry; `.refreshResponse(.failure(.unknown))`; assert `lastSync == nil` (so `.fetch`) and `alert == .syncFailed(.unknown, sourceName: "MBNet Server", action: .fetch)` (FR-006, FR-007).
   - `firstFetch_cancelled_keepsFetch`: `.failure(.cancelled)` leaves `.fetch` and no alert.
@@ -65,19 +65,19 @@ No setup is needed: there are no new dependencies, targets or files beyond the s
 
 ### Implementation for User Story 1
 
-- [ ] T005 [US1] In `lottoApp2/Presentation/StartPage/Widgets/SourceEntry.swift`:
+- [X] T005 [US1] In `lottoApp2/Presentation/StartPage/Widgets/SourceEntry.swift`:
   - change `AlertState.syncFailed` to `syncFailed(_:sourceName:action:)`. The `action` parameter is required, with no default (research R3).
   - `syncFailedMessage` takes the action. Only the `.unknown, .cancelled` fallback branches on it, through `LocalizedStringResource` tokens `syncFailedFallbackFetch(name)` and `syncFailedFallbackRefresh(name)`.
-- [ ] T006 [US1] In `lottoApp2/Presentation/StartPage/StartPage.swift` `.refreshResponse(.failure)`, pass the entry's `syncAction` (contracts §3). Update the existing `.syncFailed(...)` call sites in `lottoApp2Tests/Reducers/StartPageTests.swift` (lines ~89, ~110, ~140) to pass `action: .refresh`, since those entries are synced. Run T003/T004 and confirm they pass.
-- [ ] T007 [US1] In `lottoApp2/Presentation/StartPage/Widgets/SourceCardParts.swift`, replace `RefreshIcon(isRefreshing:)` with `SyncIcon(action:isSyncing:)`:
+- [X] T006 [US1] In `lottoApp2/Presentation/StartPage/StartPage.swift` `.refreshResponse(.failure)`, pass the entry's `syncAction` (contracts §3). Update the existing `.syncFailed(...)` call sites in `lottoApp2Tests/Reducers/StartPageTests.swift` (lines ~89, ~110, ~140) to pass `action: .refresh`, since those entries are synced. Run T003/T004 and confirm they pass.
+- [X] T007 [US1] In `lottoApp2/Presentation/StartPage/Widgets/SourceCardParts.swift`, replace `RefreshIcon(isRefreshing:)` with `SyncIcon(action:isSyncing:)`:
   - while idle it shows `Image(.syncIdle[action])`: `.fetch` → new token `fetch = .system("arrow.down.circle")`, `.refresh` → the existing refresh glyph
   - while syncing it shows the existing refresh glyph with the existing spin (Clarification Q2, research R2)
   - keep `RefreshButtonStyle` unchanged, and update the parts preview to show both idle kinds and the syncing state.
-- [ ] T008 [US1] In `lottoApp2/Presentation/StartPage/Widgets/SourceEntryView.swift` `refreshButton`:
+- [X] T008 [US1] In `lottoApp2/Presentation/StartPage/Widgets/SourceEntryView.swift` `refreshButton`:
   - use `SyncIcon(action: store.syncAction, isSyncing: store.isRefreshing)`
   - pick the label from `LocalizedStringKey` dictionaries keyed by `SourceEntry.SyncAction`: idle `[.fetch: "Fetch", .refresh: "Refresh"]`, syncing `[.fetch: "Fetching…", .refresh: "Refreshing…"]`. They replace the `refresh` / `refreshing` tokens.
   - keep `.lineLimit(.refreshLabelLines)` and `.minimumScaleFactor(.refreshLabelScale)` (FR-009).
-- [ ] T009 [US1] In `lottoApp2/Presentation/StartPage/Widgets/SourceEntryView.swift`, add the previews "Light Mode - never synced - fetching" and "Dark Mode - never synced - fetching", using a `mock1e` copy with `isRefreshing = true`. The existing `mock1e` "empty" previews already cover idle Fetch (FR-010).
+- [X] T009 [US1] In `lottoApp2/Presentation/StartPage/Widgets/SourceEntryView.swift`, add the previews "Light Mode - never synced - fetching" and "Dark Mode - never synced - fetching", using a `mock1e` copy with `isRefreshing = true`. The existing `mock1e` "empty" previews already cover idle Fetch (FR-010).
 
 **Checkpoint**: US1 is complete on the full card and in the reducers.
 

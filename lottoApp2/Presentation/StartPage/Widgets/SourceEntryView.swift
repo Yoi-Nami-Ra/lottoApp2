@@ -139,16 +139,22 @@ struct SourceEntryView: View {
             : AnyLayout(HStackLayout())
     }
 
+    /// Fetch / Fetching… for a never-synced source, Refresh / Refreshing… once it has synced (spec 008 FR-003).
+    private var syncLabel: LocalizedStringKey {
+        let labels = store.isRefreshing ? LocalizedStringKey.syncingLabel : LocalizedStringKey.syncIdleLabel
+        return labels[store.syncAction, default: .refresh]
+    }
+
     private var refreshButton: some View {
         Button {
             store.send(.refreshButtonTapped)
         } label: {
             HStack(spacing: .refreshIconSpacing) {
-                RefreshIcon(isRefreshing: store.isRefreshing)
+                SyncIcon(action: store.syncAction, isSyncing: store.isRefreshing)
                 // One word on one line: allowed to wrap it hyphen-breaks into "Re-" / "fres" / "h" at
                 // accessibility text sizes. The scale floor keeps the longer "Refreshing…" readable
-                // rather than truncated when the card is still narrow.
-                Text(store.isRefreshing ? .refreshing : .refresh)
+                // rather than truncated when the card is still narrow. "Fetch" / "Fetching…" are no longer.
+                Text(syncLabel)
                     .fontWeight(.refreshLabel)
                     .lineLimit(.refreshLabelLines)
                     .minimumScaleFactor(.refreshLabelScale)
@@ -211,8 +217,12 @@ extension Double {
 
 extension LocalizedStringKey {
     fileprivate static let records: Self = "records"
+    fileprivate static let fetch: Self = "Fetch"
+    fileprivate static let fetching: Self = "Fetching…"
     fileprivate static let refresh: Self = "Refresh"
     fileprivate static let refreshing: Self = "Refreshing…"
+    fileprivate static let syncIdleLabel: [SourceEntry.SyncAction: Self] = [.fetch: .fetch, .refresh: .refresh]
+    fileprivate static let syncingLabel: [SourceEntry.SyncAction: Self] = [.fetch: .fetching, .refresh: .refreshing]
 }
 
 #Preview("Dark Mode - none") {
@@ -280,6 +290,20 @@ extension LocalizedStringKey {
 
 #Preview("Light Mode - refreshing") {
     SourceEntryView(store: Store(initialState: .mock1r) { SourceEntry() })
+        .padding()
+        .background(.backgroundSecondary)
+        .preferredColorScheme(.light)
+}
+
+#Preview("Dark Mode - never synced - fetching") {
+    SourceEntryView(store: Store(initialState: .mock1eFetching) { SourceEntry() })
+        .padding()
+        .background(.backgroundSecondary)
+        .preferredColorScheme(.dark)
+}
+
+#Preview("Light Mode - never synced - fetching") {
+    SourceEntryView(store: Store(initialState: .mock1eFetching) { SourceEntry() })
         .padding()
         .background(.backgroundSecondary)
         .preferredColorScheme(.light)
@@ -481,7 +505,14 @@ extension SourceEntry.State {
             lastRecordDate: Date(timeIntervalSinceNow: -180_000),
             recordsCount: 7380
         )
-        state.alert = .syncFailed(.serverUnreachable, sourceName: "MBNet Server")
+        state.alert = .syncFailed(.serverUnreachable, sourceName: "MBNet Server", action: state.syncAction)
+        return state
+    }()
+
+    /// A never-synced source whose first fetch is running (spec 008 FR-010).
+    static let mock1eFetching: Self = {
+        var state = mock1e
+        state.isRefreshing = true
         return state
     }()
 
@@ -508,7 +539,7 @@ extension SourceEntry.State {
     /// `mock1a` after a sync whose response was in a format the app doesn't recognise (spec 004 US1-AS5).
     static let mock1aFormatChanged: Self = {
         var state = mock1a
-        state.alert = .syncFailed(.unreadableData, sourceName: "MBNet Server")
+        state.alert = .syncFailed(.unreadableData, sourceName: "MBNet Server", action: state.syncAction)
         return state
     }()
 }

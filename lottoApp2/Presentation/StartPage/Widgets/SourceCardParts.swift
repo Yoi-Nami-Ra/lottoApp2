@@ -59,14 +59,16 @@ struct RefreshButtonStyle: ViewModifier {
 
 // MARK: - Parts
 
-/// The refresh glyph, spinning while a sync runs.
-struct RefreshIcon: View {
-    let isRefreshing: Bool
+/// The sync button's glyph: the action's own while idle — a download arrow for Fetch, the sync arrows for
+/// Refresh — and the spinning sync arrows while any sync runs (spec 008 FR-005, clarification Q2).
+struct SyncIcon: View {
+    let action: SourceEntry.SyncAction
+    let isSyncing: Bool
 
     var body: some View {
-        Image(.refresh)
-            .rotationEffect(.degrees(isRefreshing ? .refreshSpinDegrees : 0))
-            .animation(isRefreshing ? .refreshSpin : .default, value: isRefreshing)
+        Image(isSyncing ? .refresh : ImageType.syncIdle[action, default: .refresh])
+            .rotationEffect(.degrees(isSyncing ? .refreshSpinDegrees : 0))
+            .animation(isSyncing ? .refreshSpin : .default, value: isSyncing)
     }
 }
 
@@ -240,6 +242,8 @@ extension ImageType {
     fileprivate static let lastRecord: Self = .system("clock")
     fileprivate static let lastSync: Self = .system("arrow.trianglehead.2.clockwise.rotate.90")
     fileprivate static let refresh: Self = .system("arrow.trianglehead.2.clockwise.rotate.90")
+    fileprivate static let fetch: Self = .system("arrow.down.circle")
+    fileprivate static let syncIdle: [SourceEntry.SyncAction: Self] = [.fetch: .fetch, .refresh: .refresh]
     fileprivate static let skippedWarning: Self = .system("exclamationmark.triangle.fill")
 }
 
@@ -303,10 +307,13 @@ private struct SourceCardPartsPreview: View {
             RecordDateDetail(kind: .first, date: .previewLastSync)
             RecordDateDetail(kind: .latest, date: nil)
             HStack {
-                RefreshIcon(isRefreshing: false)
+                SyncIcon(action: .fetch, isSyncing: false)
                     .padding(.previewRefreshPadding)
                     .modifier(RefreshButtonStyle(isRefreshing: false))
-                RefreshIcon(isRefreshing: true)
+                SyncIcon(action: .refresh, isSyncing: false)
+                    .padding(.previewRefreshPadding)
+                    .modifier(RefreshButtonStyle(isRefreshing: false))
+                SyncIcon(action: .fetch, isSyncing: true)
                     .padding(.previewRefreshPadding)
                     .modifier(RefreshButtonStyle(isRefreshing: true))
             }

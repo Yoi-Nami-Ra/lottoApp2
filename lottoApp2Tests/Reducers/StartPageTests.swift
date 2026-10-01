@@ -86,7 +86,7 @@ struct StartPage_Tests {
         }
         await store.receive(\.refreshResponse) {
             $0.sources[id: "mbnet"]?.isRefreshing = false
-            $0.sources[id: "mbnet"]?.alert = .syncFailed(.unknown, sourceName: "MBNet Server")
+            $0.sources[id: "mbnet"]?.alert = .syncFailed(.unknown, sourceName: "MBNet Server", action: .refresh)
         }
         #expect(store.state.sources[id: "mbnet"]?.recordsCount == 100)
     }
@@ -107,7 +107,7 @@ struct StartPage_Tests {
         }
         await store.receive(\.refreshResponse) {
             $0.sources[id: "mbnet"]?.isRefreshing = false
-            $0.sources[id: "mbnet"]?.alert = .syncFailed(failure, sourceName: "MBNet Server")
+            $0.sources[id: "mbnet"]?.alert = .syncFailed(failure, sourceName: "MBNet Server", action: .refresh)
         }
         #expect(store.state.sources[id: "mbnet"]?.recordsCount == 100)
     }
@@ -137,7 +137,7 @@ struct StartPage_Tests {
         // FR-020 regression: a reload landing mid-sync must not clear `isRefreshing` (which would drop the
         // child's re-entrancy guard and let a second concurrent sync start) or dismiss an unseen alert.
         var refreshing = seededEntry(isRefreshing: true)
-        refreshing.alert = .syncFailed(.serverError(status: 503), sourceName: "MBNet Server")
+        refreshing.alert = .syncFailed(.serverError(status: 503), sourceName: "MBNet Server", action: .refresh)
 
         let store = TestStore(initialState: StartPage.State(sources: [refreshing])) {
             StartPage()
@@ -147,12 +147,103 @@ struct StartPage_Tests {
         await store.send(.sourcesResponse([.mbnetMock])) {
             $0.sources[id: "mbnet"]?.apply(.mbnetMock, now: .fixedNow)
             $0.sources[id: "mbnet"]?.isRefreshing = true
-            $0.sources[id: "mbnet"]?.alert = .syncFailed(.serverError(status: 503), sourceName: "MBNet Server")
+            $0.sources[id: "mbnet"]?.alert = .syncFailed(.serverError(status: 503), sourceName: "MBNet Server", action: .refresh)
             // New state this response also settles: sole source → chosen, screen → loaded.
             $0.sources[id: "mbnet"]?.isSelected = true
             $0.selectedSourceID = "mbnet"
             $0.hasLoaded = true
         }
+    }
+
+    // MARK: - Fetch or Refresh (spec 008)
+
+    /// A never-synced `mbnet` entry, so a sync answered by the `mbnet` mocks is its first one.
+    private func neverSyncedEntry(isRefreshing: Bool = false) -> SourceEntry.State {
+        SourceEntry.State(id: "mbnet", name: "MBNet Server", isRefreshing: isRefreshing)
+    }
+
+    @MainActor
+    @Test
+    func firstFetch_success_turnsFetchIntoRefresh() async throws {
+        // US1-AS3/AS4: Fetch runs the same sync as Refresh and, once it succeeds, the card offers Refresh.
+        let store = TestStore(initialState: StartPage.State(sources: [neverSyncedEntry()])) {
+            StartPage()
+                .dependency(\.blSources, .mock)
+                .dependency(\.date, .constant(.fixedNow))
+        }
+        #expect(store.state.sources[id: "mbnet"]?.syncAction == .fetch)
+
+        await store.send(.sources(.element(id: "mbnet", action: .refreshButtonTapped)))
+        await store.receive(\.sources[id: "mbnet"].delegate.refreshRequested) {
+            $0.sources[id: "mbnet"]?.isRefreshing = true
+        }
+        await store.receive(\.refreshResponse) {
+            $0.sources[id: "mbnet"]?.isRefreshing = false
+            $0.sources[id: "mbnet"]?.apply(.refreshedMbnetMock, now: .fixedNow)
+        }
+        #expect(store.state.sources[id: "mbnet"]?.syncAction == .refresh)
+    }
+
+    @MainActor
+    @Test
+    func firstFetch_failure_keepsFetch_andUsesFetchWording() async throws {
+        // FR-006/FR-007: a failed first fetch leaves the source without data, so it still offers Fetch, and the
+        // general-purpose message says what was attempted.
+        let store = TestStore(initialState: StartPage.State(sources: [neverSyncedEntry()])) {
+            StartPage()
+                .dependency(\.blSources, .failureMock)
+                .dependency(\.date, .constant(.fixedNow))
+        }
+
+        await store.send(.sources(.element(id: "mbnet", action: .refreshButtonTapped)))
+        await store.receive(\.sources[id: "mbnet"].delegate.refreshRequested) {
+            $0.sources[id: "mbnet"]?.isRefreshing = true
+        }
+        await store.receive(\.refreshResponse) {
+            $0.sources[id: "mbnet"]?.isRefreshing = false
+            $0.sources[id: "mbnet"]?.alert = .syncFailed(.unknown, sourceName: "MBNet Server", action: .fetch)
+        }
+        #expect(store.state.sources[id: "mbnet"]?.syncAction == .fetch)
+    }
+
+    @MainActor
+    @Test
+    func firstFetch_cancelled_keepsFetch() async throws {
+        let store = TestStore(initialState: StartPage.State(sources: [neverSyncedEntry()])) {
+            StartPage()
+                .dependency(\.blSources, .failing(sync: .cancelled))
+                .dependency(\.date, .constant(.fixedNow))
+        }
+
+        await store.send(.sources(.element(id: "mbnet", action: .refreshButtonTapped)))
+        await store.receive(\.sources[id: "mbnet"].delegate.refreshRequested) {
+            $0.sources[id: "mbnet"]?.isRefreshing = true
+        }
+        await store.receive(\.refreshResponse) {
+            $0.sources[id: "mbnet"]?.isRefreshing = false
+        }
+        #expect(store.state.sources[id: "mbnet"]?.syncAction == .fetch)
+    }
+
+    @MainActor
+    @Test
+    func sourcesResponse_midFetch_rederivesTheKind_andKeepsInProgress() async throws {
+        // Edge case: a reload landing mid-fetch follows the reloaded sync state and keeps the spinner
+        // (as `sourcesResponse_preservesInFlightRefreshAndAlert` does for a refresh).
+        let store = TestStore(initialState: StartPage.State(sources: [neverSyncedEntry(isRefreshing: true)])) {
+            StartPage()
+                .dependency(\.date, .constant(.fixedNow))
+        }
+
+        await store.send(.sourcesResponse([.mbnetMock])) {
+            $0.sources[id: "mbnet"]?.apply(.mbnetMock, now: .fixedNow)
+            $0.sources[id: "mbnet"]?.isRefreshing = true
+            $0.sources[id: "mbnet"]?.isSelected = true
+            $0.selectedSourceID = "mbnet"
+            $0.hasLoaded = true
+        }
+        #expect(store.state.sources[id: "mbnet"]?.syncAction == .refresh)
+        #expect(store.state.sources[id: "mbnet"]?.isRefreshing == true)
     }
 
     // MARK: - Compact card details (spec 007)
@@ -237,7 +328,7 @@ struct StartPage_Tests {
         }
         await store.receive(\.refreshResponse) {
             $0.sources[id: "mbnet"]?.isRefreshing = false
-            $0.sources[id: "mbnet"]?.alert = .syncFailed(.unknown, sourceName: "MBNet Server")
+            $0.sources[id: "mbnet"]?.alert = .syncFailed(.unknown, sourceName: "MBNet Server", action: .refresh)
         }
         #expect(store.state.sources[id: "mbnet"]?.isExpanded == true)
     }
@@ -531,7 +622,7 @@ struct StartPage_Tests {
         }
         await failing.receive(\.refreshResponse) {
             $0.sources[id: Source.mbnetMock.name]?.isRefreshing = false
-            $0.sources[id: Source.mbnetMock.name]?.alert = .syncFailed(.unknown, sourceName: Source.mbnetMock.displayName)
+            $0.sources[id: Source.mbnetMock.name]?.alert = .syncFailed(.unknown, sourceName: Source.mbnetMock.displayName, action: .refresh)
         }
         #expect(failing.state.selectedSourceID == Source.lottoMock.name)
     }
@@ -783,7 +874,7 @@ extension StartPage_Tests {
         await store.receive(\.refreshResponse) {
             $0.sources[id: "mbnet"]?.isRefreshing = false
             if failure != .cancelled {
-                $0.sources[id: "mbnet"]?.alert = .syncFailed(failure, sourceName: "MBNet Server")
+                $0.sources[id: "mbnet"]?.alert = .syncFailed(failure, sourceName: "MBNet Server", action: .refresh)
             }
         }
         #expect(store.state.sources[id: "mbnet"]?.skippedInLastSync == 3)

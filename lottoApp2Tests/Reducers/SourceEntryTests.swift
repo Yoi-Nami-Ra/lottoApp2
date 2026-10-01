@@ -110,7 +110,7 @@ struct SourceEntry_Tests {
             lastRecordDate: .fixedNow,
             recordsCount: 100
         )
-        initialState.alert = .syncFailed(.serverUnreachable, sourceName: "MBNet Server")
+        initialState.alert = .syncFailed(.serverUnreachable, sourceName: "MBNet Server", action: .refresh)
 
         let store = TestStore(initialState: initialState) {
             SourceEntry()
@@ -127,7 +127,7 @@ struct SourceEntry_Tests {
         // The in-place update keeps the entry's identity (so `IdentifiedArray` can't trap) while refreshing
         // every displayed field and dismissing a stale failure alert.
         var state = SourceEntry.State(id: "mbnet", name: "Old Name", recordsCount: 1)
-        state.alert = .syncFailed(.serverUnreachable, sourceName: "MBNet Server")
+        state.alert = .syncFailed(.serverUnreachable, sourceName: "MBNet Server", action: .refresh)
 
         state.apply(.refreshedMbnetMock, now: .fixedNow)
 
@@ -254,7 +254,7 @@ extension SourceEntry_Tests {
     @Test
     func everyShownFailure_hasItsOwnMessage_underTheSameTitle() {
         // SC-001 / FR-003: 8 distinct messages; the title stays "Sync failed" for all of them.
-        let alerts = Self.shownFailures.map { AlertState.syncFailed($0, sourceName: "MBNet Server") }
+        let alerts = Self.shownFailures.map { AlertState.syncFailed($0, sourceName: "MBNet Server", action: .refresh) }
 
         for (i, a) in alerts.enumerated() {
             for b in alerts[(i + 1)...] {
@@ -266,14 +266,34 @@ extension SourceEntry_Tests {
     }
 
     @Test
+    func syncFailedFallback_isWordedForTheAction() {
+        // Spec 008 FR-007: only the general-purpose fallback names the kind of sync that failed.
+        let fetch = AlertState.syncFailed(.unknown, sourceName: "MBNet Server", action: .fetch)
+        let refresh = AlertState.syncFailed(.unknown, sourceName: "MBNet Server", action: .refresh)
+
+        #expect(fetch.message == TextState("Couldn't fetch MBNet Server. Try again."))
+        #expect(refresh.message == TextState("Couldn't refresh MBNet Server. Try again."))
+    }
+
+    @Test
+    func everyOtherFailure_readsTheSameForFetchAndRefresh() {
+        // Spec 008 FR-007: the per-failure messages (spec 004) don't depend on the kind of sync.
+        for failure in Self.shownFailures where failure != .unknown {
+            let fetch = AlertState.syncFailed(failure, sourceName: "MBNet Server", action: .fetch)
+            let refresh = AlertState.syncFailed(failure, sourceName: "MBNet Server", action: .refresh)
+            #expect(fetch.message == refresh.message, "\(failure) should not depend on the sync kind")
+        }
+    }
+
+    @Test
     func messagesThatReferToTheSource_nameIt() {
         // FR-005: the sentence names the source where it refers to it — and only there.
         // Offline and storage failures are about this device, not the source.
         let aboutTheDevice: [SyncFailure] = [.offline, .storageFailure]
 
         for failure in Self.shownFailures {
-            let a = AlertState.syncFailed(failure, sourceName: "Source A").message
-            let b = AlertState.syncFailed(failure, sourceName: "Source B").message
+            let a = AlertState.syncFailed(failure, sourceName: "Source A", action: .refresh).message
+            let b = AlertState.syncFailed(failure, sourceName: "Source B", action: .refresh).message
             if !aboutTheDevice.contains(failure) {
                 #expect(a != b, "\(failure) should name the source")
             } else {

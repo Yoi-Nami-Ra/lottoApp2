@@ -98,12 +98,14 @@ struct SourceEntry {
 }
 
 extension AlertState where Action == SourceEntry.Action.Alert {
-    /// The failed-sync alert, worded for why it failed (spec 004 FR-003, contracts §4).
-    static func syncFailed(_ failure: SyncFailure, sourceName: String) -> AlertState {
+    /// The failed-sync alert, worded for why it failed (spec 004 FR-003, contracts §4). `action` is the kind of
+    /// sync that failed; only the general-purpose fallback names it (spec 008 FR-007). Required, so a call site
+    /// can't silently fall back to the refresh wording.
+    static func syncFailed(_ failure: SyncFailure, sourceName: String, action: SourceEntry.SyncAction) -> AlertState {
         AlertState {
             TextState(.syncFailedTitle)
         } message: {
-            TextState(LocalizedStringResource.syncFailedMessage(failure, sourceName: sourceName))
+            TextState(LocalizedStringResource.syncFailedMessage(failure, sourceName: sourceName, action: action))
         }
     }
 }
@@ -170,7 +172,9 @@ extension TimeInterval {
 extension LocalizedStringResource {
     fileprivate static let syncFailedTitle: Self = "Sync failed"
 
-    fileprivate static func syncFailedMessage(_ failure: SyncFailure, sourceName name: String) -> Self {
+    fileprivate static func syncFailedMessage(
+        _ failure: SyncFailure, sourceName name: String, action: SourceEntry.SyncAction
+    ) -> Self {
         switch failure {
         case .offline:
             "Your device appears to be offline. Check your connection and try again."
@@ -188,9 +192,15 @@ extension LocalizedStringResource {
             "The downloaded draws couldn't be saved on this device. Free up some space and try again."
         // `cancelled` never reaches an alert (StartPage drops it); the general wording is only a fallback.
         case .unknown, .cancelled:
-            "Couldn't refresh \(name). Try again."
+            switch action {
+            case .fetch: syncFailedFallbackFetch(name)
+            case .refresh: syncFailedFallbackRefresh(name)
+            }
         }
     }
+
+    fileprivate static func syncFailedFallbackFetch(_ name: String) -> Self { "Couldn't fetch \(name). Try again." }
+    fileprivate static func syncFailedFallbackRefresh(_ name: String) -> Self { "Couldn't refresh \(name). Try again." }
 }
 
 extension Int {
