@@ -201,4 +201,213 @@ struct AddBlock_Tests {
         await store.send(.confirmTapped)
         await store.receive(\.delegate.confirmed, .countUniqueSubCombinations(z: 3))
     }
+
+    // MARK: - Parameter context (spec 006, LTA-33)
+
+    @MainActor
+    @Test
+    func theContext_defaultsToUnknown() {
+        let state = BlockParameters.State(kind: .prefix, mode: .add)
+        #expect(state.context == .unknown)
+        #expect(state.context.parentSize == nil)
+        #expect(state.context.drawSize == nil)
+    }
+
+    @MainActor
+    @Test
+    func choosingAKind_passesTheSheetsContextToTheParameterStep() async {
+        let context = BlockParameters.Context(parentSize: .init(count: 7012, unit: .draws), drawSize: 6)
+        let store = TestStore(
+            initialState: AddBlock.State(
+                parentID: nil, parent: .input(sourceName: "MBNet Server"), parentOutput: .draws, context: context
+            )
+        ) { AddBlock() }
+
+        await store.send(.kindTapped(.prefix)) {
+            $0.parameters = BlockParameters.State(kind: .prefix, mode: .add, context: context)
+        }
+    }
+
+    // MARK: - Hints (spec 006 US1)
+
+    private let sevenThousandDraws = BlockParameters.Context(parentSize: .init(count: 7012, unit: .draws), drawSize: 6)
+
+    @MainActor
+    @Test
+    func aFilter_underAParentOfKnownSize_hintsAtIt() {
+        let state = BlockParameters.State(kind: .prefix, mode: .add, context: sevenThousandDraws)
+        #expect(state.hint == .parentSize(.init(count: 7012, unit: .draws)))
+    }
+
+    @MainActor
+    @Test
+    func aFilter_underCounts_hintsInItems() {
+        let context = BlockParameters.Context(parentSize: .init(count: 49, unit: .items), drawSize: nil)
+        let state = BlockParameters.State(kind: .dropFirst, mode: .add, context: context)
+        #expect(state.hint == .parentSize(.init(count: 49, unit: .items)))
+    }
+
+    @MainActor
+    @Test
+    func aFilter_underAParentOfUnknownSize_hasNoHint() {
+        #expect(BlockParameters.State(kind: .suffix, mode: .add).hint == nil)
+    }
+
+    @MainActor
+    @Test(arguments: [ProcessingBlockKind.sortByCount, .countUniqueSubCombinations, .countUniqueElements])
+    func onlyX_hintsAtTheParentsSize(_ kind: ProcessingBlockKind) {
+        #expect(BlockParameters.State(kind: kind, mode: .add, context: sevenThousandDraws).hint == nil)
+    }
+
+    @MainActor
+    @Test
+    func editing_hintsAtTheOriginalValue_whileItChanges() async {
+        let store = TestStore(
+            initialState: BlockParameters.State(
+                kind: .suffix, mode: .edit(nodeID: UUID(7), original: .suffix(100)), context: sevenThousandDraws
+            )
+        ) { BlockParameters() }
+        #expect(store.state.hint == .was(.suffix(100)))
+
+        await store.send(.countTextChanged("50")) { $0.countText = "50" }
+        #expect(store.state.hint == .was(.suffix(100)))
+    }
+
+    @MainActor
+    @Test
+    func editingASort_hintsAtTheOriginalDirection() {
+        let state = BlockParameters.State(kind: .sortByCount, mode: .edit(nodeID: UUID(7), original: .sortByCount(.descending)))
+        #expect(state.hint == .was(.sortByCount(.descending)))
+    }
+
+    @MainActor
+    @Test
+    func editingABlockWithoutParameters_hasNoHint() {
+        let state = BlockParameters.State(kind: .countUniqueElements, mode: .edit(nodeID: UUID(7), original: .countUniqueElements))
+        #expect(state.hint == nil)
+    }
+
+    // MARK: - Direction preview (spec 006 FR-004)
+
+    @MainActor
+    @Test
+    func sortByCount_previewsFrequency_andFollowsTheDirection() async {
+        let store = TestStore(initialState: BlockParameters.State(kind: .sortByCount, mode: .add)) { BlockParameters() }
+        #expect(store.state.directionPreview == .mostFrequent)
+
+        await store.send(.directionChanged(.ascending)) { $0.direction = .ascending }
+        #expect(store.state.directionPreview == .leastFrequent)
+    }
+
+    @MainActor
+    @Test
+    func sortByDateAndIndex_previewTheirOrder() {
+        var date = BlockParameters.State(kind: .sortByDate, mode: .add)
+        #expect(date.directionPreview == .oldest)
+        date.direction = .descending
+        #expect(date.directionPreview == .newest)
+
+        var index = BlockParameters.State(kind: .sortByIndex, mode: .add)
+        #expect(index.directionPreview == .lowestIndex)
+        index.direction = .descending
+        #expect(index.directionPreview == .highestIndex)
+    }
+
+    @MainActor
+    @Test
+    func nonSorts_haveNoDirectionPreview() {
+        #expect(BlockParameters.State(kind: .prefix, mode: .add).directionPreview == nil)
+        #expect(BlockParameters.State(kind: .countUniqueElements, mode: .add).directionPreview == nil)
+    }
+
+    // MARK: - z bound (spec 006 US2)
+
+    private func zStep(drawSize: Int?, text: String) -> BlockParameters.State {
+        var state = BlockParameters.State(
+            kind: .countUniqueSubCombinations, mode: .add, context: .init(parentSize: nil, drawSize: drawSize)
+        )
+        state.countText = text
+        return state
+    }
+
+    @MainActor
+    @Test
+    func z_belowTheDrawSize_isValid_andCapsTheStepper() {
+        let state = zStep(drawSize: 6, text: "5")
+        #expect(state.isValid)
+        #expect(state.invalidReason == nil)
+        #expect(state.canIncrement == false)
+    }
+
+    @MainActor
+    @Test(arguments: ["6", "7", "1", ""])
+    func z_outsideTwoToDrawSizeMinusOne_isRefused(_ text: String) async {
+        let store = TestStore(initialState: zStep(drawSize: 6, text: text)) { BlockParameters() }
+        #expect(store.state.isValid == false)
+        #expect(store.state.invalidReason == .range(2, 5))
+        await store.send(.confirmTapped)  // refused: nothing is sent
+    }
+
+    @MainActor
+    @Test
+    func theZStepper_stopsBelowTheDrawSize() async {
+        let store = TestStore(initialState: zStep(drawSize: 6, text: "4")) { BlockParameters() }
+        #expect(store.state.canIncrement)
+
+        await store.send(.incrementTapped) { $0.countText = "5" }
+        #expect(store.state.canIncrement == false)
+        await store.send(.incrementTapped)
+    }
+
+    @MainActor
+    @Test
+    func withAnUnknownDrawSize_onlyTwoOrMoreIsChecked() {
+        let large = zStep(drawSize: nil, text: "6")
+        #expect(large.isValid)
+        #expect(large.canIncrement)
+        #expect(zStep(drawSize: nil, text: "1").invalidReason == .atLeast(2))
+    }
+
+    @MainActor
+    @Test(arguments: ["2", "1", "3"])
+    func withDrawsOfTwo_noZFits(_ text: String) {
+        let state = zStep(drawSize: 2, text: text)
+        #expect(state.isValid == false)
+        #expect(state.invalidReason == .drawsTooSmall)
+        #expect(state.canIncrement == false)
+    }
+
+    @MainActor
+    @Test
+    func editingAZAboveTheBound_opensRefused() {
+        let state = BlockParameters.State(
+            kind: .countUniqueSubCombinations, mode: .edit(nodeID: UUID(7), original: .countUniqueSubCombinations(z: 7)),
+            context: .init(parentSize: nil, drawSize: 6)
+        )
+        #expect(state.countText == "7")
+        #expect(state.invalidReason == .range(2, 5))
+    }
+
+    @MainActor
+    @Test
+    func x_ignoresTheDrawSize() {
+        var state = BlockParameters.State(kind: .prefix, mode: .add, context: sevenThousandDraws)
+        state.countText = "-3"
+        #expect(state.invalidReason == .atLeast(0))
+        state.countText = "10000"
+        #expect(state.isValid)
+        #expect(state.canIncrement)
+    }
+
+    @MainActor
+    @Test
+    func aZAboveTheBound_stepsDownIntoRange_andPlusStaysDisabled() async {
+        let store = TestStore(initialState: zStep(drawSize: 6, text: "7")) { BlockParameters() }
+        #expect(store.state.canIncrement == false)
+        #expect(store.state.canDecrement)
+
+        await store.send(.incrementTapped)
+        await store.send(.decrementTapped) { $0.countText = "5" }
+        #expect(store.state.isValid)
+    }
 }

@@ -98,6 +98,13 @@ struct AddBlockView: View {
         }
         .buttonStyle(.plain)
         .disabled(!isAvailable)
+        .accessibilityLabel(Text(unavailableReading(kind, availability)), isEnabled: !isAvailable)
+    }
+
+    /// "<block>, unavailable, <reason>" for a disabled row (spec 006 FR-010).
+    private func unavailableReading(_ kind: ProcessingBlockKind, _ availability: AddBlock.Availability) -> LocalizedStringKey {
+        guard case let .needs(kinds) = availability else { return .blockTitle(kind) }
+        return .unavailableReading(kind, needs: kinds)
     }
 }
 

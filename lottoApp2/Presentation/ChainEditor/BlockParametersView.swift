@@ -10,6 +10,7 @@ import SwiftUI
 
 struct BlockParametersView: View {
     @Bindable var store: StoreOf<BlockParameters>
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     var body: some View {
         List {
@@ -75,28 +76,16 @@ struct BlockParametersView: View {
 
         case .count, .size:
             Section {
-                HStack(spacing: .fieldSpacing) {
-                    Text(store.parameter == .size ? LocalizedStringKey.zLabel : .xLabel)
-                    Spacer()
-                    TextField(LocalizedStringKey.xPlaceholder, text: $store.countText.sending(\.countTextChanged))
-                        #if os(iOS)
-                        .keyboardType(.numberPad)
-                        #endif
-                        .multilineTextAlignment(.trailing)
-                        .monospacedDigit()
-                        .frame(maxWidth: .fieldWidth)
-                    Button { store.send(.decrementTapped) } label: { Image(.minus) }
-                        .buttonStyle(.bordered)
-                        .disabled(!store.canDecrement)
-                    Button { store.send(.incrementTapped) } label: { Image(.plus) }
-                        .buttonStyle(.bordered)
-                }
+                numberControl
             } header: {
                 Text(.parameterHeader)
             } footer: {
-                if store.isValid == false {
-                    Text(store.parameter == .size ? LocalizedStringKey.invalidZ : .invalidX)
+                // A refused value explains itself in place of the hint (spec 006 edge cases).
+                if let reason = store.invalidReason {
+                    Text(.invalidReason(reason))
                         .foregroundStyle(Color.invalid)
+                } else if let hint = store.hint {
+                    hintText(hint)
                 }
             }
 
@@ -108,9 +97,70 @@ struct BlockParametersView: View {
                     }
                 }
                 .pickerStyle(.segmented)
+                if let preview = store.directionPreview {
+                    Text(.directionPreview(preview))
+                        .font(.hint)
+                        .foregroundStyle(Color.secondaryText)
+                }
             } header: {
                 Text(.directionHeader)
+            } footer: {
+                if let hint = store.hint { hintText(hint) }
             }
+        }
+    }
+}
+
+extension BlockParametersView {
+    /// The number field and its stepper: one line, or stacked at accessibility sizes (FR-012). VoiceOver
+    /// adjusts it by swiping, within the same bounds as the buttons (FR-011).
+    private var numberControl: some View {
+        let layout = dynamicTypeSize.isAccessibilitySize
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: .fieldSpacing))
+            : AnyLayout(HStackLayout(spacing: .fieldSpacing))
+        return layout {
+            HStack(spacing: .fieldSpacing) {
+                Text(store.parameter == .size ? LocalizedStringKey.zLabel : .xLabel)
+                Spacer()
+                TextField(LocalizedStringKey.xPlaceholder, text: $store.countText.sending(\.countTextChanged))
+                    #if os(iOS)
+                    .keyboardType(.numberPad)
+                    #endif
+                    .multilineTextAlignment(.trailing)
+                    .monospacedDigit()
+                    .frame(maxWidth: .fieldWidth)
+            }
+            HStack(spacing: .fieldSpacing) {
+                Button { store.send(.decrementTapped) } label: { Image(.minus) }
+                    .buttonStyle(.bordered)
+                    .disabled(!store.canDecrement)
+                Button { store.send(.incrementTapped) } label: { Image(.plus) }
+                    .buttonStyle(.bordered)
+                    .disabled(!store.canIncrement)
+            }
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(Text(store.parameter == .size ? LocalizedStringKey.zLabel : .xLabel))
+        .accessibilityValue(Text(verbatim: store.countText))
+        .accessibilityAdjustableAction { direction in
+            switch direction {
+            case .increment: store.send(.incrementTapped)
+            case .decrement: store.send(.decrementTapped)
+            @unknown default: break
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func hintText(_ hint: BlockParameters.Hint) -> some View {
+        let key: LocalizedStringKey? = switch hint {
+        case .parentSize(let size): .parentSizeHint(size)
+        case .was(let block): .wasHint(block)
+        }
+        if let key {
+            Text(key)
+                .font(.hint)
+                .foregroundStyle(Color.secondaryText)
         }
     }
 }
@@ -133,6 +183,7 @@ extension Font {
     fileprivate static let blockTitle: Self = .title.weight(.semibold)
     fileprivate static let explanation: Self = .subheadline
     fileprivate static let confirm: Self = .headline
+    fileprivate static let hint: Self = .footnote
 }
 
 extension CGFloat {
@@ -163,8 +214,6 @@ extension LocalizedStringKey {
     fileprivate static let xLabel: Self = "x"
     fileprivate static let xPlaceholder: Self = "0"
     fileprivate static let zLabel: Self = "z"
-    fileprivate static let invalidX: Self = "Enter a whole number, 0 or more."
-    fileprivate static let invalidZ: Self = "Enter a whole number, 2 or more."
 
     fileprivate static func directionOption(_ direction: SortDirection) -> Self {
         switch direction {
@@ -218,11 +267,79 @@ extension LocalizedStringKey {
         .preferredColorScheme(.dark)
 }
 
+#Preview("Parameters - filter - parent size - light") {
+    NavigationStack { BlockParametersView(store: .preview(.prefix, context: .previewSevenThousandDraws)) }
+        .preferredColorScheme(.light)
+}
+
+#Preview("Parameters - filter - parent size - dark") {
+    NavigationStack { BlockParametersView(store: .preview(.prefix, context: .previewSevenThousandDraws)) }
+        .preferredColorScheme(.dark)
+}
+
+#Preview("Parameters - edit - was hint - light") {
+    NavigationStack { BlockParametersView(store: .previewEdit) }
+        .preferredColorScheme(.light)
+}
+
+#Preview("Parameters - edit - was hint - dark") {
+    NavigationStack { BlockParametersView(store: .previewEdit) }
+        .preferredColorScheme(.dark)
+}
+
+#Preview("Parameters - sort - direction preview - light") {
+    NavigationStack { BlockParametersView(store: .preview(.sortByCount)) }
+        .preferredColorScheme(.light)
+}
+
+#Preview("Parameters - sort - direction preview - dark") {
+    NavigationStack { BlockParametersView(store: .preview(.sortByCount)) }
+        .preferredColorScheme(.dark)
+}
+
+#Preview("Parameters - z bound - too large - light") {
+    NavigationStack {
+        BlockParametersView(store: .preview(.countUniqueSubCombinations, countText: "6", context: .previewSevenThousandDraws))
+    }
+    .preferredColorScheme(.light)
+}
+
+#Preview("Parameters - z bound - too large - dark") {
+    NavigationStack {
+        BlockParametersView(store: .preview(.countUniqueSubCombinations, countText: "6", context: .previewSevenThousandDraws))
+    }
+    .preferredColorScheme(.dark)
+}
+
+#Preview("Parameters - filter - AX5 - light") {
+    NavigationStack { BlockParametersView(store: .preview(.prefix, context: .previewSevenThousandDraws)) }
+        .dynamicTypeSize(.accessibility5)
+        .preferredColorScheme(.light)
+}
+
+#Preview("Parameters - filter - AX5 - dark") {
+    NavigationStack { BlockParametersView(store: .preview(.prefix, context: .previewSevenThousandDraws)) }
+        .dynamicTypeSize(.accessibility5)
+        .preferredColorScheme(.dark)
+}
+
+extension BlockParameters.Context {
+    fileprivate static let previewSevenThousandDraws = Self(parentSize: .init(count: 7012, unit: .draws), drawSize: 6)
+}
+
 extension StoreOf<BlockParameters> {
     fileprivate static var preview: StoreOf<BlockParameters> { preview(.countUniqueElements) }
 
-    fileprivate static func preview(_ kind: ProcessingBlockKind, countText: String? = nil) -> StoreOf<BlockParameters> {
-        var state = BlockParameters.State(kind: kind, mode: .add)
+    fileprivate static var previewEdit: StoreOf<BlockParameters> {
+        var state = BlockParameters.State(kind: .suffix, mode: .edit(nodeID: UUID(), original: .suffix(100)))
+        state.countText = "50"
+        return Store(initialState: state) { BlockParameters() }
+    }
+
+    fileprivate static func preview(
+        _ kind: ProcessingBlockKind, countText: String? = nil, context: BlockParameters.Context = .unknown
+    ) -> StoreOf<BlockParameters> {
+        var state = BlockParameters.State(kind: kind, mode: .add, context: context)
         if let countText { state.countText = countText }
         return Store(initialState: state) { BlockParameters() }
     }

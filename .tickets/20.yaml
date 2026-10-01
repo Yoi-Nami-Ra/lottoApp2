@@ -25,7 +25,7 @@ description: |
   - Results: each leaf shows a summary and opens its result screen
     (LTA-9, LTA-18).
 platform: ios
-status: ready
+status: done
 phase: MVP
 priority: medium
 parent: null

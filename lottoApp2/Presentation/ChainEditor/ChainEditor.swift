@@ -27,6 +27,8 @@ struct ChainEditor {
         /// Current data state per source id, for judging each result against its own source (R13).
         var dataStates: [String: SourceDataState?] = [:]
         var isRunning = false
+        /// Elements per draw of the chosen source, once its draws have been read; bounds z (spec 006 FR-009).
+        var drawSize: Int?
         /// The stamp of the run in progress or last finished.
         var runStamp: RunStamp?
         /// Nodes whose subtree the outline folds away (LTA-21).
@@ -65,7 +67,9 @@ struct ChainEditor {
         /// Opens a block's parameter step on its own; a block without parameters has nothing to edit.
         mutating func startEditing(_ nodeID: ChainNode.ID) {
             guard isEditable(nodeID), let node = chain.nodes[id: nodeID] else { return }
-            editBlock = BlockParameters.State(kind: node.block.kind, mode: .edit(nodeID: nodeID, original: node.block))
+            editBlock = BlockParameters.State(
+                kind: node.block.kind, mode: .edit(nodeID: nodeID, original: node.block), context: context(under: node.parentID)
+            )
         }
 
         /// Any value result not saved since the last run — what leaving would lose (FR-032). Failures can't be
@@ -91,10 +95,37 @@ struct ChainEditor {
         /// The chosen source's record count, once known.
         var sourceRecordsCount: Int? { dataStates[source.id]??.recordsCount }
 
+        /// How big the parent's output was in its last run — even an out-of-date one — or the source's record
+        /// count directly under it; `nil` when nothing has told us (spec 006 FR-002).
+        func parentSize(of parentID: ChainNode.ID?) -> BlockParameters.ParentSize? {
+            guard let parentID else { return sourceRecordsCount.map { .init(count: $0, unit: .draws) } }
+            guard case let .value(value, _) = results[parentID] else { return nil }
+            switch value {
+            case .draws(let game): return .init(count: game.entries.count, unit: .draws)
+            case .counts(let result): return .init(count: result.counts.count, unit: .items)
+            case .number: return nil
+            }
+        }
+
+        /// What the parameter step for a block under `parentID` should know.
+        func context(under parentID: ChainNode.ID?) -> BlockParameters.Context {
+            BlockParameters.Context(parentSize: parentSize(of: parentID), drawSize: drawSize)
+        }
+
         /// The summary of a node that ran — a leaf or an intermediate block (FR-024).
         func summary(_ nodeID: ChainNode.ID) -> ValueSummary? {
             guard case let .value(value, _) = results[nodeID] else { return nil }
             return ResultSummary.summary(of: value)
+        }
+
+        /// What a row shows — and says — on its right (LTA-21, spec 006 FR-014).
+        func rowStatus(_ nodeID: ChainNode.ID) -> RowStatus {
+            switch results[nodeID] {
+            case .running: .running
+            case .value(let value, _): .value(ResultSummary.summary(of: value), isStale: freshness(nodeID) != .current)
+            case .failed(let failure, _): .failed(failure)
+            case .notRun, nil: .notRun
+            }
         }
 
         /// The chain as an indented outline: every node after its parent, children in insertion order, and
@@ -121,6 +152,13 @@ struct ChainEditor {
         }
     }
 
+    enum RowStatus: Equatable {
+        case notRun
+        case running
+        case value(ValueSummary, isStale: Bool)
+        case failed(BlockFailure)
+    }
+
     struct OutlineRow: Equatable, Identifiable {
         let node: ChainNode
         /// 1 for a block directly under the input.
@@ -131,7 +169,7 @@ struct ChainEditor {
 
     enum Action {
         case onAppear
-        case loaded(savedResults: [SavedResult], draft: ChainDraft?, dataStates: [String: SourceDataState?])
+        case loaded(savedResults: [SavedResult], draft: ChainDraft?, dataStates: [String: SourceDataState?], drawSize: Int?)
         case addTapped(parent: ChainNode.ID?)
         case addBlock(PresentationAction<AddBlock.Action>)
         case nodeTapped(ChainNode.ID)
@@ -185,6 +223,9 @@ struct ChainEditor {
                 // Saved results and a draft can come from other sources than the chosen one; each is judged
                 // against its own source, so read the state of every source involved (R13).
                 return .run { [chainID = state.chain.id, sourceID = state.source.id, blSources, chainsRepo] send in
+                    // The draw size bounds z; a source without stored draws leaves it unknown (spec 006 R1). It
+                    // needs none of the reads below, so it runs alongside them.
+                    async let drawSize = try? blSources.gameFor(sourceID).get().game.type.combinationType.pick
                     let saved = await chainsRepo.listResults(chainID)
                     let draft = await chainsRepo.draft(chainID)
                     var sources: Set<String> = [sourceID]
@@ -192,11 +233,13 @@ struct ChainEditor {
                     sources.formUnion(draft?.results.values.compactMap(\.stamp?.sourceName) ?? [])
                     var states: [String: SourceDataState?] = [:]
                     for source in sources { states[source] = await blSources.dataStateFor(source) }
-                    await send(.loaded(savedResults: saved, draft: draft, dataStates: states))
+                    await send(.loaded(savedResults: saved, draft: draft, dataStates: states, drawSize: await drawSize))
                 }
 
-            case let .loaded(saved, draft, states):
+            case let .loaded(saved, draft, states, drawSize):
                 state.savedResults = IdentifiedArray(uniqueElements: saved)
+                // A run may already have read the draws; a load that couldn't doesn't forget them.
+                if let drawSize { state.drawSize = drawSize }
                 state.dataStates.merge(states) { _, loaded in loaded }
                 if let draft {
                     state.pendingDraft = draft
@@ -212,7 +255,9 @@ struct ChainEditor {
                 } else {
                     .input(sourceName: state.source.name)
                 }
-                state.addBlock = AddBlock.State(parentID: parentID, parent: parent, parentOutput: parentOutput)
+                state.addBlock = AddBlock.State(
+                    parentID: parentID, parent: parent, parentOutput: parentOutput, context: state.context(under: parentID)
+                )
                 return .none
 
             case .addBlock(.presented(.delegate(.added(let block)))):
@@ -288,6 +333,7 @@ struct ChainEditor {
                     chainRevision: state.chain.revision
                 )
                 state.dataStates[state.source.id] = snapshot.dataState
+                state.drawSize = snapshot.game.type.combinationType.pick
                 state.runStamp = stamp
                 state.results = Dictionary(uniqueKeysWithValues: state.chain.nodes.map { ($0.id, .running) })
                 state.savedNodeIDs = []

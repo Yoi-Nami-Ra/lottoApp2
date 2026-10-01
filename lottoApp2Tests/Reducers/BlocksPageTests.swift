@@ -45,6 +45,7 @@ struct BlocksPage_Tests {
         await store.send(.onAppear)
         await store.receive(\.chainsLoaded) {
             $0.chains = [.countOnlyMock]
+            $0.hasLoaded = true
         }
     }
 
@@ -75,15 +76,29 @@ struct BlocksPage_Tests {
         }
     }
 
-    @MainActor
-    @Test
-    func renamingAChain_savesTheNewName_withoutChangingTheRevision() async {
+    // MARK: - Renaming (spec 006 FR-017, FR-020)
+
+    private var oneChain: BlocksPage.State {
         var state = BlocksPage.State(sourceID: "mbnet", sourceName: "MBNet Server")
         state.chains = [.countOnlyMock]
-        let storage = LockIsolated<IdentifiedArrayOf<Chain>>([.countOnlyMock])
-        let store = makeStore(state, storage: storage)
+        return state
+    }
 
-        await store.send(.renameChain(Chain.countOnlyMock.id, "Top numbers")) {
+    @MainActor
+    @Test
+    func renamingFromTheSwipe_savesTheNewName_withoutChangingTheRevision() async {
+        // The leading swipe, the long-press item and the accessibility action all send `renameTapped`.
+        let storage = LockIsolated<IdentifiedArrayOf<Chain>>([.countOnlyMock])
+        let store = makeStore(oneChain, storage: storage)
+
+        await store.send(.renameTapped(Chain.countOnlyMock.id)) {
+            $0.renaming = Chain.countOnlyMock.id
+            $0.renameDraft = Chain.countOnlyMock.name
+        }
+        await store.send(.renameDraftChanged("Top numbers")) { $0.renameDraft = "Top numbers" }
+        await store.send(.renameConfirmed) {
+            $0.renaming = nil
+            $0.renameDraft = ""
             $0.chains[id: Chain.countOnlyMock.id]?.name = "Top numbers"
         }
         await store.finish()
@@ -92,13 +107,86 @@ struct BlocksPage_Tests {
     }
 
     @MainActor
+    @Test(arguments: ["   ", ""])
+    func renamingToBlank_isIgnored(_ draft: String) async {
+        let storage = LockIsolated<IdentifiedArrayOf<Chain>>([.countOnlyMock])
+        var state = oneChain
+        state.renaming = Chain.countOnlyMock.id
+        state.renameDraft = draft
+        let store = makeStore(state, storage: storage)
+
+        await store.send(.renameConfirmed) {
+            $0.renaming = nil
+            $0.renameDraft = ""
+        }
+        #expect(storage.value[id: Chain.countOnlyMock.id]?.name == Chain.countOnlyMock.name)
+    }
+
+    @MainActor
     @Test
-    func renamingToBlank_isIgnored() async {
-        var state = BlocksPage.State(sourceID: "mbnet", sourceName: "MBNet Server")
-        state.chains = [.countOnlyMock]
+    func renamingToTheSameName_isIgnored() async {
+        var state = oneChain
+        state.renaming = Chain.countOnlyMock.id
+        state.renameDraft = " \(Chain.countOnlyMock.name) "
         let store = makeStore(state, storage: .init([.countOnlyMock]))
 
-        await store.send(.renameChain(Chain.countOnlyMock.id, "   "))
+        await store.send(.renameConfirmed) {
+            $0.renaming = nil
+            $0.renameDraft = ""
+        }
+    }
+
+    @MainActor
+    @Test
+    func cancellingARename_changesNothing() async {
+        var state = oneChain
+        state.renaming = Chain.countOnlyMock.id
+        state.renameDraft = "Top numbers"
+        let store = makeStore(state, storage: .init([.countOnlyMock]))
+
+        await store.send(.renameCancelled) {
+            $0.renaming = nil
+            $0.renameDraft = ""
+        }
+    }
+
+    @MainActor
+    @Test
+    func renamingAnUnknownChain_doesNothing() async {
+        let store = makeStore(oneChain, storage: .init([.countOnlyMock]))
+        await store.send(.renameTapped(UUID(99)))
+    }
+
+    @MainActor
+    @Test
+    func confirmingARename_afterTheChainWasDeleted_savesNothing() async {
+        let storage = LockIsolated<IdentifiedArrayOf<Chain>>([])
+        var state = BlocksPage.State(sourceID: "mbnet", sourceName: "MBNet Server")
+        state.renaming = Chain.countOnlyMock.id
+        state.renameDraft = "Top numbers"
+        let store = makeStore(state, storage: storage)
+
+        await store.send(.renameConfirmed) {
+            $0.renaming = nil
+            $0.renameDraft = ""
+        }
+        await store.finish()
+        #expect(storage.value.isEmpty)
+    }
+
+    // MARK: - Empty state (spec 006 FR-016)
+
+    @MainActor
+    @Test
+    func theEmptyState_waitsForTheList_andShowsOnlyWithoutChains() async {
+        let store = makeStore(storage: .init([]))
+        #expect(store.state.showsEmptyState == false)  // not before the chains have been read
+
+        await store.send(.chainsLoaded([])) { $0.hasLoaded = true }
+        #expect(store.state.showsEmptyState)
+
+        await store.send(.chainsLoaded([.countOnlyMock])) { $0.chains = [.countOnlyMock] }
+        #expect(store.state.showsEmptyState == false)
     }
 
     @MainActor
@@ -119,6 +207,23 @@ struct BlocksPage_Tests {
         }
         await store.finish()
         #expect(storage.value.isEmpty)
+        #expect(store.state.showsEmptyState == false)  // this list was never loaded
+    }
+
+    @MainActor
+    @Test
+    func deletingTheLastChain_showsTheEmptyState() async {
+        var state = oneChain
+        state.hasLoaded = true
+        state.alert = .deleteChain(.countOnlyMock, savedCount: 0, hasDraft: false)
+        let store = makeStore(state, storage: .init([.countOnlyMock]))
+
+        await store.send(\.alert.confirmDelete, Chain.countOnlyMock.id) {
+            $0.alert = nil
+            $0.chains = []
+        }
+        #expect(store.state.showsEmptyState)
+        await store.finish()
     }
 
     @MainActor

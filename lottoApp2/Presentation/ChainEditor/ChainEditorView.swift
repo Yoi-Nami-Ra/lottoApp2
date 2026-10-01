@@ -2,7 +2,7 @@
 //  ChainEditorView.swift
 //  lottoApp2
 //
-//  The chain outline, per design/final/chain-builder.html (LTA-21; LTA-33 closes where this still differs).
+//  The chain outline, per design/final/chain-builder.html (LTA-21, with LTA-33's accessibility pass).
 //  Renders `ChainEditor.State` and sends actions — every decision is in the reducer.
 //
 
@@ -12,6 +12,11 @@ import SwiftUI
 struct ChainEditorView: View {
     @Bindable var store: StoreOf<ChainEditor>
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
+    /// At accessibility sizes a row's summary wraps under its title and nesting takes less width (FR-015).
+    private var isAccessibilitySize: Bool { dynamicTypeSize.isAccessibilitySize }
+    private var indentPerLevel: CGFloat { isAccessibilitySize ? .indentPerLevelAccessible : .indentPerLevel }
 
     var body: some View {
         List {
@@ -131,17 +136,21 @@ struct ChainEditorView: View {
     /// The chain's input: always first, never removed.
     private var inputRow: some View {
         HStack(spacing: .rowSpacing) {
-            Image(.chainInput)
-                .foregroundStyle(Color.icon)
-            VStack(alignment: .leading, spacing: .rowVSpacing) {
-                Text(store.source.name)
-                    .foregroundStyle(Color.primaryText)
-                if let count = store.sourceRecordsCount {
-                    Text(.summary(.draws(count: count)))
-                        .font(.rowDetail)
-                        .foregroundStyle(Color.secondaryText)
+            HStack(spacing: .rowSpacing) {
+                Image(.chainInput)
+                    .foregroundStyle(Color.icon)
+                VStack(alignment: .leading, spacing: .rowVSpacing) {
+                    Text(store.source.name)
+                        .foregroundStyle(Color.primaryText)
+                    if let count = store.sourceRecordsCount {
+                        Text(.summary(.draws(count: count)))
+                            .font(.rowDetail)
+                            .foregroundStyle(Color.secondaryText)
+                    }
                 }
             }
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(Text(.sourceRowReading(name: store.source.name, count: store.sourceRecordsCount)))
             Spacer()
             addButton(parent: nil)
         }
@@ -151,29 +160,34 @@ struct ChainEditorView: View {
         HStack(spacing: .rowSpacing) {
             disclosure(row)
             Button { store.send(.nodeTapped(row.id)) } label: {
-                HStack(spacing: .rowSpacing) {
+                HStack(alignment: isAccessibilitySize ? .top : .center, spacing: .rowSpacing) {
                     Image(.block)
                         .foregroundStyle(Color.icon)
-                    VStack(alignment: .leading, spacing: .rowVSpacing) {
-                        Text(.blockTitle(row.node.block.kind))
-                            .foregroundStyle(Color.primaryText)
-                        detail(row)
+                    titleAndStatusLayout {
+                        VStack(alignment: .leading, spacing: .rowVSpacing) {
+                            Text(.blockTitle(row.node.block.kind))
+                                .foregroundStyle(Color.primaryText)
+                            detail(row)
+                        }
+                        if !isAccessibilitySize { Spacer() }
+                        HStack(spacing: .rowSpacing) {
+                            if store.savedNodeIDs.contains(row.id) {
+                                Image(.saved)
+                                    .font(.rowDetail)
+                                    .foregroundStyle(Color.icon)
+                            }
+                            status(row.id)
+                        }
                     }
-                    Spacer()
-                    if store.savedNodeIDs.contains(row.id) {
-                        Image(.saved)
-                            .font(.rowDetail)
-                            .foregroundStyle(Color.icon)
-                            .accessibilityLabel(Text(.savedLabel))
-                    }
-                    status(row.id)
+                    if isAccessibilitySize { Spacer(minLength: 0) }
                 }
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
+            .accessibilityLabel(reading(row))
             addButton(parent: row.id)
         }
-        .padding(.leading, CGFloat(row.depth - 1) * .indentPerLevel)
+        .padding(.leading, CGFloat(row.depth - 1) * indentPerLevel)
         .overlay(alignment: .leading) {
             // Guide lines back to each ancestor level (LTA-21).
             HStack(spacing: .guideSpacing) {
@@ -181,10 +195,39 @@ struct ChainEditorView: View {
                     Rectangle()
                         .fill(Color.guide)
                         .frame(width: .guideWidth)
-                        .frame(maxWidth: .indentPerLevel, alignment: .leading)
+                        .frame(maxWidth: indentPerLevel, alignment: .leading)
                 }
             }
         }
+    }
+
+    /// Title and status side by side, or stacked at accessibility sizes (FR-015).
+    private var titleAndStatusLayout: AnyLayout {
+        isAccessibilitySize
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: .rowVSpacing))
+            : AnyLayout(HStackLayout(spacing: .rowSpacing))
+    }
+
+    /// One spoken sentence per row: "<block>, <parameter>, level <n>, <summary or state>" (FR-014).
+    private func reading(_ row: ChainEditor.OutlineRow) -> Text {
+        var parts = [Text(.blockTitle(row.node.block.kind))]
+        if let parameters = LocalizedStringKey.blockParameters(row.node.block) { parts.append(Text(parameters)) }
+        let hidden = store.state.hiddenCount(row.id)
+        if hidden > 0 { parts.append(Text(.hiddenBlocks(hidden))) }
+        parts.append(Text(.levelReading(row.depth)))
+        switch store.state.rowStatus(row.id) {
+        case .running:
+            parts.append(Text(.runningReading))
+        case let .value(summary, isStale):
+            parts.append(Text(.summary(summary)))
+            if isStale { parts.append(Text(.outOfDate)) }
+        case .failed(let failure):
+            parts.append(Text(.failure(failure)))
+        case .notRun:
+            parts.append(Text(.notRun))
+        }
+        if store.savedNodeIDs.contains(row.id) { parts.append(Text(.savedReading)) }
+        return .reading(parts)
     }
 
     /// A node with a value that hasn't been saved since the last run (FR-027).
@@ -261,35 +304,32 @@ struct ChainEditorView: View {
 
     @ViewBuilder
     private func status(_ nodeID: ChainNode.ID) -> some View {
-        switch store.results[nodeID] {
+        switch store.state.rowStatus(nodeID) {
         case .running:
             ProgressView()
-        case .value:
-            if let summary = store.state.summary(nodeID) {
-                let isStale = store.state.freshness(nodeID) != .current
-                VStack(alignment: .trailing, spacing: .rowVSpacing) {
-                    HStack(spacing: .chevronSpacing) {
-                        Text(.summary(summary))
-                            .strikethrough(isStale)
-                        Image(.chevron)
-                    }
-                    if isStale {
-                        Text(.outOfDate)
-                            .font(.badge)
-                            .padding(.horizontal, .badgeHPadding)
-                            .background(Color.staleBackground)
-                            .cornerRadius(.badgeCorners)
-                    }
+        case let .value(summary, isStale):
+            VStack(alignment: .trailing, spacing: .rowVSpacing) {
+                HStack(spacing: .chevronSpacing) {
+                    Text(.summary(summary))
+                        .strikethrough(isStale)
+                    Image(.chevron)
                 }
-                .font(.rowDetail)
-                .foregroundStyle(Color.secondaryText)
+                if isStale {
+                    Text(.outOfDate)
+                        .font(.badge)
+                        .padding(.horizontal, .badgeHPadding)
+                        .background(Color.staleBackground)
+                        .cornerRadius(.badgeCorners)
+                }
             }
-        case .failed(let failure, _):
+            .font(.rowDetail)
+            .foregroundStyle(Color.secondaryText)
+        case .failed(let failure):
             Text(.failure(failure))
                 .font(.rowDetail)
                 .foregroundStyle(Color.failure)
-                .multilineTextAlignment(.trailing)
-        case .notRun, nil:
+                .multilineTextAlignment(isAccessibilitySize ? .leading : .trailing)
+        case .notRun:
             Text(.notRun)
                 .font(.rowDetail)
                 .foregroundStyle(Color.tertiaryText)
@@ -306,8 +346,16 @@ struct ChainEditorView: View {
                     .foregroundStyle(Color.icon)
             }
             .buttonStyle(.borderless)
-            .accessibilityLabel(Text(.addBlockUnder))
+            .accessibilityLabel(Text(addLabel(parent: parent)))
         }
+    }
+
+    /// "Add block under <block>", or under the source's name (FR-013).
+    private func addLabel(parent: ChainNode.ID?) -> LocalizedStringKey {
+        guard let parent, let node = store.chain.nodes[id: parent] else {
+            return .addBlockUnder(sourceName: store.source.name)
+        }
+        return .addBlockUnder(node.block.kind)
     }
 
     private var emptyState: some View {
@@ -392,6 +440,8 @@ extension CGFloat {
     fileprivate static let chevronSpacing: Self = 4
     /// Outline indent per depth level (LTA-21).
     fileprivate static let indentPerLevel: Self = 22
+    /// The indent at accessibility text sizes (spec 006 FR-015).
+    fileprivate static let indentPerLevelAccessible: Self = 12
     fileprivate static let guideWidth: Self = 1
     fileprivate static let guideSpacing: Self = 0
     fileprivate static let disclosureWidth: Self = 12
@@ -440,7 +490,6 @@ extension LocalizedStringKey {
     fileprivate static let notRun: Self = "Not run"
     fileprivate static let run: Self = "Run"
     fileprivate static let running: Self = "Running…"
-    fileprivate static let addBlockUnder: Self = "Add block"
     fileprivate static let emptyTitle: Self = "No blocks yet"
     fileprivate static let emptyMessage: Self = "Tap + on the source to add the first block."
     fileprivate static let staleBanner: Self = "Results are out of date. Run again to update them."
@@ -449,7 +498,6 @@ extension LocalizedStringKey {
     fileprivate static let edit: Self = "Edit"
     fileprivate static let back: Self = "Chains"
     fileprivate static let saveResult: Self = "Save Result"
-    fileprivate static let savedLabel: Self = "Saved"
     fileprivate static let savedHeader: Self = "Saved results"
     fileprivate static let delete: Self = "Delete"
 
@@ -582,6 +630,26 @@ extension LocalizedStringKey {
             .previewCountOnly, alert: .readFailed(.sourceUnavailable, sourceName: "MBNet Server")
         ))
     }
+    .preferredColorScheme(.dark)
+}
+
+#Preview("Chain - has result - AX5 - light") {
+    NavigationStack {
+        ChainEditorView(store: .preview(
+            .previewCountOnly, results: [.previewCountNode: .value(.previewElementCounts, .previewMock)]
+        ))
+    }
+    .dynamicTypeSize(.accessibility5)
+    .preferredColorScheme(.light)
+}
+
+#Preview("Chain - has result - AX5 - dark") {
+    NavigationStack {
+        ChainEditorView(store: .preview(
+            .previewCountOnly, results: [.previewCountNode: .value(.previewElementCounts, .previewMock)]
+        ))
+    }
+    .dynamicTypeSize(.accessibility5)
     .preferredColorScheme(.dark)
 }
 

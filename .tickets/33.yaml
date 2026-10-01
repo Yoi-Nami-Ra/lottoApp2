@@ -45,7 +45,7 @@ description: |
   - #Previews cover the empty chain list and the new hints, light and
     dark.
 platform: ios
-status: ready
+status: done
 phase: MVP
 priority: medium
 parent: 20

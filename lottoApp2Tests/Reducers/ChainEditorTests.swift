@@ -55,6 +55,7 @@ struct ChainEditor_Tests {
         await store.send(.onAppear)
         await store.receive(\.loaded) {
             $0.dataStates = ["mbnet": .mbnetMock]
+            $0.drawSize = 3
         }
     }
 
@@ -108,6 +109,7 @@ struct ChainEditor_Tests {
         }
         await store.receive(\.gameLoaded) {
             $0.dataStates = ["mbnet": .mbnetMock]  // the run's snapshot keeps the lookup in step with its stamp
+            $0.drawSize = 3
             $0.runStamp = self.stamp
             $0.results = [self.countNode: .running]
         }
@@ -279,6 +281,7 @@ struct ChainEditor_Tests {
         await store.send(.runTapped) { $0.isRunning = true }
         await store.receive(\.gameLoaded) {
             $0.dataStates = ["mbnet": .mbnetMock]
+            $0.drawSize = 3
             $0.runStamp = stamp
             $0.results = [self.filterNode: .running, self.leafA: .running, self.leafB: .running, self.countNode: .running]
         }
@@ -362,7 +365,10 @@ struct ChainEditor_Tests {
         let store = makeStore(try ranChain(), storage: storage)
 
         await store.send(.editTapped(filterNode)) {
-            $0.editBlock = BlockParameters.State(kind: .suffix, mode: .edit(nodeID: self.filterNode, original: .suffix(100)))
+            $0.editBlock = BlockParameters.State(
+                kind: .suffix, mode: .edit(nodeID: self.filterNode, original: .suffix(100)),
+                context: .init(parentSize: .init(count: 3, unit: .draws), drawSize: nil)
+            )
         }
         await store.send(\.editBlock.countTextChanged, "50") { $0.editBlock?.countText = "50" }
         await store.send(\.editBlock.confirmTapped)
@@ -439,6 +445,7 @@ struct ChainEditor_Tests {
         await store.send(.runTapped) { $0.isRunning = true }
         await store.receive(\.gameLoaded) {
             $0.dataStates = ["mbnet": .mbnetMock]
+            $0.drawSize = 3
             $0.runStamp = self.stamp
             $0.results = [self.countNode: .running]
         }
@@ -474,6 +481,7 @@ struct ChainEditor_Tests {
         await store.receive(\.loaded) {
             $0.savedResults = [.mock(1), .mock(2, source: "lotto", state: lottoState)]
             $0.dataStates = ["mbnet": .mbnetMock, "lotto": lottoState]
+            $0.drawSize = 3
         }
     }
 
@@ -559,6 +567,7 @@ struct ChainEditor_Tests {
         await store.send(.runTapped) { $0.isRunning = true }
         await store.receive(\.gameLoaded) {
             $0.dataStates = ["lotto": .mbnetMock]
+            $0.drawSize = 3
             $0.runStamp = stamp
             $0.results = [self.countNode: .running]
         }
@@ -658,6 +667,7 @@ struct ChainEditor_Tests {
         await store.send(.onAppear)
         await store.receive(\.loaded) {
             $0.dataStates = ["mbnet": .mbnetMock]
+            $0.drawSize = 3
             $0.pendingDraft = .mock
             $0.alert = .restoreDraft
         }
@@ -687,5 +697,156 @@ struct ChainEditor_Tests {
         await store.finish()
         #expect(drafts.value.isEmpty)
         #expect(store.state.results.isEmpty)
+    }
+
+    // MARK: - Parameter context (spec 006, LTA-33)
+
+    @MainActor
+    @Test
+    func onAppear_withoutStoredDraws_leavesTheDrawSizeUnknown() async {
+        var sources = SourcesBLogic.failing()
+        sources.dataStateFor = { _ in .mbnetMock }
+        let store = makeStore(ChainEditor.State(chain: .emptyMock, source: source), blSources: sources)
+
+        await store.send(.onAppear)
+        await store.receive(\.loaded) {
+            $0.dataStates = ["mbnet": .mbnetMock]
+        }
+        #expect(store.state.drawSize == nil)
+    }
+
+    @MainActor
+    @Test
+    func aFailedRead_leavesTheDrawSizeAsItWas() async throws {
+        var state = ChainEditor.State(chain: .countOnlyMock, source: source)
+        state.drawSize = 6
+        let store = makeStore(state, blSources: .failing(read: .unreadableStoredDraws))
+
+        await store.send(.runTapped) { $0.isRunning = true }
+        await store.receive(\.gameLoaded) {
+            $0.isRunning = false
+            $0.alert = .readFailed(.unreadableStoredDraws, sourceName: "MBNet Server")
+        }
+    }
+
+    @MainActor
+    @Test
+    func addingUnderTheSource_passesItsRecordCount_andTheDrawSize() async {
+        var state = ChainEditor.State(chain: .emptyMock, source: source)
+        state.dataStates = ["mbnet": .mbnetMock]
+        state.drawSize = 3
+        let store = makeStore(state)
+
+        await store.send(.addTapped(parent: nil)) {
+            $0.addBlock = AddBlock.State(
+                parentID: nil, parent: .input(sourceName: "MBNet Server"), parentOutput: .draws,
+                context: .init(parentSize: .init(count: 3, unit: .draws), drawSize: 3)
+            )
+        }
+    }
+
+    @MainActor
+    @Test
+    func addingUnderABlockWithDraws_passesHowManyDrawsItKept() async throws {
+        var state = try ranChain()
+        state.results[filterNode] = .value(.draws(ReferenceDraws.threeOfFive), stamp)
+        let store = makeStore(state)
+
+        await store.send(.addTapped(parent: filterNode)) {
+            $0.addBlock = AddBlock.State(
+                parentID: self.filterNode, parent: .block(.suffix(100)), parentOutput: .draws,
+                context: .init(parentSize: .init(count: ReferenceDraws.threeOfFive.entries.count, unit: .draws), drawSize: nil)
+            )
+        }
+    }
+
+    @MainActor
+    @Test
+    func addingUnderABlockWithCounts_passesHowManyItemsItCounted() async throws {
+        let store = makeStore(try ranChain())
+
+        await store.send(.addTapped(parent: leafA)) {
+            $0.addBlock = AddBlock.State(
+                parentID: self.leafA, parent: .block(.countUniqueElements), parentOutput: .counts,
+                context: .init(parentSize: .init(count: 5, unit: .items), drawSize: nil)
+            )
+        }
+    }
+
+    @MainActor
+    @Test(arguments: [NodeResult.notRun, .running, .failed(.upstreamFailed, RunStamp(sourceName: "mbnet", sourceDisplayName: "MBNet Server", dataState: .mbnetMock, chainRevision: 3))])
+    func addingUnderABlockWithoutAValue_knowsNoParentSize(_ result: NodeResult) async throws {
+        var state = try ranChain()
+        state.results[filterNode] = result
+        let store = makeStore(state)
+
+        await store.send(.addTapped(parent: filterNode)) {
+            $0.addBlock = AddBlock.State(parentID: self.filterNode, parent: .block(.suffix(100)), parentOutput: .draws)
+        }
+    }
+
+    @MainActor
+    @Test
+    func anOutOfDateParent_stillGivesItsLastKnownSize() async throws {
+        var state = try ranChain()
+        state.chain = try state.chain.updating(filterNode, to: .suffix(50))  // bumps the revision
+        let store = makeStore(state)
+        #expect(store.state.freshness(leafA) == .outOfDate)
+
+        await store.send(.addTapped(parent: leafA)) {
+            $0.addBlock = AddBlock.State(
+                parentID: self.leafA, parent: .block(.countUniqueElements), parentOutput: .counts,
+                context: .init(parentSize: .init(count: 5, unit: .items), drawSize: nil)
+            )
+        }
+    }
+
+    @MainActor
+    @Test
+    func editingABlock_passesItsParentsSize_andTheDrawSize() async throws {
+        let chain = Chain(
+            id: UUID(0), name: "Z", revision: 1,
+            nodes: [
+                ChainNode(id: filterNode, parentID: nil, block: .suffix(100)),
+                ChainNode(id: leafA, parentID: filterNode, block: .countUniqueSubCombinations(z: 2)),
+            ]
+        )
+        var state = ChainEditor.State(chain: chain, source: source)
+        state.results = [filterNode: .value(.draws(ReferenceDraws.threeOfFive), stamp)]
+        state.drawSize = 3
+        let store = makeStore(state)
+
+        await store.send(.editTapped(leafA)) {
+            $0.editBlock = BlockParameters.State(
+                kind: .countUniqueSubCombinations, mode: .edit(nodeID: self.leafA, original: .countUniqueSubCombinations(z: 2)),
+                context: .init(parentSize: .init(count: ReferenceDraws.threeOfFive.entries.count, unit: .draws), drawSize: 3)
+            )
+        }
+    }
+
+    @MainActor
+    @Test
+    func aLateLoadWithoutDraws_keepsTheDrawSizeARunFound() async {
+        var state = ChainEditor.State(chain: .emptyMock, source: source)
+        state.drawSize = 6
+        let store = makeStore(state)
+
+        await store.send(.loaded(savedResults: [], draft: nil, dataStates: [:], drawSize: nil))
+        #expect(store.state.drawSize == 6)
+    }
+
+    @MainActor
+    @Test
+    func eachRow_hasOneStatus_forItsLookAndItsReading() throws {
+        var state = try ranChain()
+        #expect(state.rowStatus(filterNode) == .value(.draws(count: 3), isStale: false))
+        state.results[leafA] = .running
+        #expect(state.rowStatus(leafA) == .running)
+        state.results[leafA] = .failed(.upstreamFailed, stamp)
+        #expect(state.rowStatus(leafA) == .failed(.upstreamFailed))
+        state.results[leafA] = nil
+        #expect(state.rowStatus(leafA) == .notRun)
+        state.chain = try state.chain.updating(filterNode, to: .suffix(50))
+        #expect(state.rowStatus(filterNode) == .value(.draws(count: 3), isStale: true))
     }
 }

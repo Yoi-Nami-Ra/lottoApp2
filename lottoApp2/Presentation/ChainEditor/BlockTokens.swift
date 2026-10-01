@@ -162,6 +162,89 @@ extension LocalizedStringKey {
     }
 }
 
+extension LocalizedStringKey {
+    // MARK: Parameter step hints (spec 006, design/final/add-block-sheet.html)
+
+    /// How big the parent was in its last run, under x (FR-001).
+    static func parentSizeHint(_ size: BlockParameters.ParentSize) -> Self {
+        switch (size.unit, size.count) {
+        case (.draws, 1): "Of 1 draw. A larger x keeps them all."
+        case (.draws, let count): "Of \(count.formatted()) draws. A larger x keeps them all."
+        case (.items, 1): "Of 1 item. A larger x keeps them all."
+        case (.items, let count): "Of \(count.formatted()) items. A larger x keeps them all."
+        }
+    }
+
+    /// The value an edit started from, and what saving does (FR-003); `nil` for a block without parameters.
+    static func wasHint(_ block: Block) -> Self? {
+        switch block {
+        case .dropFirst(let x), .dropLast(let x), .prefix(let x), .suffix(let x):
+            "Was \(x.formatted()). Saving marks this block's results out of date."
+        case .countUniqueSubCombinations(let z):
+            "Was \(z.formatted()). Saving marks this block's results out of date."
+        case .sortByDate(.ascending), .sortByIndex(.ascending), .sortByCount(.ascending):
+            "Was Ascending. Saving marks this block's results out of date."
+        case .sortByDate(.descending), .sortByIndex(.descending), .sortByCount(.descending):
+            "Was Descending. Saving marks this block's results out of date."
+        case .countUniqueElements, .countUniqueCombinations, .countAllElements: nil
+        }
+    }
+
+    /// What the chosen direction means (FR-004).
+    static func directionPreview(_ preview: BlockParameters.DirectionPreview) -> Self {
+        switch preview {
+        case .mostFrequent: "Most frequent first."
+        case .leastFrequent: "Least frequent first."
+        case .oldest: "Oldest first."
+        case .newest: "Newest first."
+        case .lowestIndex: "Lowest index first."
+        case .highestIndex: "Highest index first."
+        }
+    }
+
+    /// Why the typed number is refused (FR-005–FR-008, LTA-22).
+    static func invalidReason(_ reason: BlockParameters.InvalidReason) -> Self {
+        switch reason {
+        case .atLeast(let minimum): "Enter a whole number, \(minimum.formatted()) or more."
+        case let .range(minimum, maximum): "Enter a whole number from \(minimum.formatted()) to \(maximum.formatted())."
+        case .drawsTooSmall: "This source's draws are too small for sub-combinations."
+        }
+    }
+
+    // MARK: Accessibility readings (spec 006 FR-010, FR-013, FR-014)
+
+    /// A disabled catalogue row: "<block>, unavailable, <reason>".
+    static func unavailableReading(_ kind: ProcessingBlockKind, needs kinds: Set<ValueKind>) -> Self {
+        "\(Text(.blockTitle(kind))), unavailable, \(Text(.needs(kinds)))"
+    }
+
+    static func addBlockUnder(_ kind: ProcessingBlockKind) -> Self { "Add block under \(Text(.blockTitle(kind)))" }
+    static func addBlockUnder(sourceName: String) -> Self { "Add block under \(sourceName)" }
+
+    static func levelReading(_ depth: Int) -> Self { "level \(depth.formatted())" }
+
+    static func sourceRowReading(name: String, count: Int?) -> Self {
+        switch count {
+        case .none: "\(name), source"
+        case .some(1): "\(name), source, 1 draw"
+        case .some(let count): "\(name), source, \(count.formatted()) draws"
+        }
+    }
+
+    static let runningReading: Self = "Running"
+    static let savedReading: Self = "Saved"
+    /// Joins the parts of one spoken row.
+    static let readingSeparator: Self = ", "
+}
+
+extension Text {
+    /// One accessibility reading from its parts, in order, separated as a list.
+    static func reading(_ parts: [Text]) -> Text {
+        guard let first = parts.first else { return Text(verbatim: "") }
+        return parts.dropFirst().reduce(first) { $0 + Text(.readingSeparator) + $1 }
+    }
+}
+
 extension LocalizedStringResource {
     /// A block's title as plain text, for places that join several of them (a saved result's path).
     static func blockName(_ kind: ProcessingBlockKind) -> Self {
