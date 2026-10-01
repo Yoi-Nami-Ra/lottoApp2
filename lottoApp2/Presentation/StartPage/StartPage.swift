@@ -81,11 +81,13 @@ struct StartPage {
                     uniqueElements: sources.map { source in
                         var entry = source.sourceEntryState(now: now)
                         // Carry over transient UI state: a reload must not clear an in-flight refresh (which
-                        // would drop the child's FR-020 guard and allow a second concurrent sync) or dismiss
-                        // a failure alert the user hasn't seen yet.
+                        // would drop the child's FR-020 guard and allow a second concurrent sync), dismiss
+                        // a failure alert the user hasn't seen yet, or fold away an open compact card
+                        // (spec 007 US2-AS8 — the reload after returning from the blocks page).
                         if let existing = state.sources[id: entry.id] {
                             entry.isRefreshing = existing.isRefreshing
                             entry.alert = existing.alert
+                            entry.isExpanded = existing.isExpanded
                         }
                         return entry
                     }

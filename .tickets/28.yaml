@@ -30,10 +30,10 @@ description: |
   Done when: an approved file exists in design/final/ and this ticket's
   `designs` points at it.
 platform: ios
-status: ready
+status: done
 phase: Backlog
 priority: low
 parent: 5
 blocked_by: []
 designs:
-  - design/proposal/28-source-cards.html
+  - design/final/source-cards.html

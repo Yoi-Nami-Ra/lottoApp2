@@ -22,9 +22,10 @@ description: |
   Build from the approved file in design/final/ once LTA-28 is
   promoted; add it to `designs` then.
 platform: ios
-status: ready
+status: in-review
 phase: Backlog
 priority: low
 parent: 5
-blocked_by: [28]
-designs: []
+blocked_by: []
+designs:
+  - design/final/source-cards.html

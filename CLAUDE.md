@@ -90,7 +90,9 @@ Never block a thread in a test (spin-waits, `Thread.sleep`, semaphores): suites 
 lottoApp2/
   App/            @main entry — composes the root Store (StartPage)
   Presentation/   UI layer: <Feature>.swift (the @Reducer) + <Feature>View.swift (thin SwiftUI)
-    StartPage/    StartPage reducer + StartPageView; Widgets/ holds child reducers (SourceEntry)
+    StartPage/    StartPage reducer + StartPageView (switches by horizontal size class: compact cards in a List,
+                  full cards in an adaptive LazyVGrid); Widgets/ holds the SourceEntry child reducer, both card
+                  views (SourceEntryView, CompactSourceEntryView) and the parts they share (SourceCardParts)
     BlocksPage/   the chain list (saved chains, new, rename, delete)
     ChainEditor/  ChainEditor (outline, run, results, save, leave warning, draft), AddBlock (catalogue sheet),
                   BlockParameters (parameter step / edit sheet), BlockTokens (shared block copy)

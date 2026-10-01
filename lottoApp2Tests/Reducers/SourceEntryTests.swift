@@ -170,6 +170,42 @@ struct SourceEntry_Tests {
         state.apply(Self.source(skipped: 0), now: .fixedNow)
         #expect(state.skippedInLastSync == nil)
     }
+
+    // MARK: - Compact card details (spec 007 contracts §1)
+
+    @MainActor
+    @Test
+    func action_disclosureButtonTapped_togglesExpanded() async throws {
+        // FR-007: the chevron only shows or hides the details. Exhaustive by construction: a delegate here
+        // (a selection or a refresh) would fail the test, which is what keeps US2-AS4.
+        let store = TestStore(initialState: Self.source(skipped: nil).sourceEntryState(now: .fixedNow)) {
+            SourceEntry()
+        }
+
+        await store.send(.disclosureButtonTapped) {
+            $0.isExpanded = true
+        }
+        await store.send(.disclosureButtonTapped) {
+            $0.isExpanded = false
+        }
+    }
+
+    @Test
+    func sourceEntryState_startsCollapsed() {
+        // FR-010: every card starts collapsed, which is also what a relaunch gives, since nothing stores it.
+        #expect(Source.mbnetMock.sourceEntryState(now: .fixedNow).isExpanded == false)
+    }
+
+    @Test
+    func apply_keepsExpanded() {
+        // FR-010: a finished sync refreshes the analytics in place without folding the card away.
+        var state = Self.source(skipped: nil).sourceEntryState(now: .fixedNow)
+        state.isExpanded = true
+
+        state.apply(.refreshedMbnetMock, now: .fixedNow)
+
+        #expect(state.isExpanded)
+    }
 }
 
 // MARK: - Failure messages (spec 004)

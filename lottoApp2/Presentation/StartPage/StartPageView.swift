@@ -10,6 +10,8 @@ import Dependencies
 import SwiftUI
 
 struct StartPageView: View {
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+
     @Bindable var store: StoreOf<StartPage>
 
     var body: some View {
@@ -49,8 +51,10 @@ struct StartPageView: View {
             loadingState
         } else if store.sources.isEmpty {
             noSourcesState
-        } else {
+        } else if horizontalSizeClass == .compact {
             sourcesList
+        } else {
+            sourcesGrid
         }
     }
 
@@ -75,10 +79,15 @@ struct StartPageView: View {
         .padding(.stateHPadding)
     }
 
+    /// The variant follows the width class, never the platform (spec 007 FR-001), so iPad split view and Mac
+    /// window resizing switch it by themselves. Both variants drive the same store, so a switch keeps the
+    /// selection, a sync in flight and every card's expanded state.
+    ///
+    /// Compact width (iPhone, narrow split view): one compact card per row.
     private var sourcesList: some View {
         List {
             ForEach(store.scope(state: \.sources, action: \.sources)) { sourceStore in
-                SourceEntryView(store: sourceStore)
+                CompactSourceEntryView(store: sourceStore)
                     // `SourceCardStyle` already draws the card; without these the row adds a second
                     // background, its own shadow, and a separator on top of it.
                     .listRowBackground(Color.clear)
@@ -88,6 +97,22 @@ struct StartPageView: View {
         }
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
+    }
+
+    /// Regular width (iPad, Mac): today's full card, as many columns of at least `gridMinColumn` as fit. The
+    /// card's style fills its cell, so the cards in one row share the row's height (spec 007 FR-014).
+    private var sourcesGrid: some View {
+        ScrollView {
+            LazyVGrid(
+                columns: [GridItem(.adaptive(minimum: .gridMinColumn), spacing: .gridSpacing)],
+                spacing: .gridSpacing
+            ) {
+                ForEach(store.scope(state: \.sources, action: \.sources)) { sourceStore in
+                    SourceEntryView(store: sourceStore)
+                }
+            }
+            .padding(.gridPadding)
+        }
     }
 }
 
@@ -118,6 +143,9 @@ extension CGFloat {
     fileprivate static let rowHInset: Self = 16
     fileprivate static let stateSpacing: Self = 12
     fileprivate static let stateHPadding: Self = 32
+    fileprivate static let gridMinColumn: Self = 320
+    fileprivate static let gridSpacing: Self = 16
+    fileprivate static let gridPadding: Self = 16
 }
 
 extension LocalizedStringKey {
@@ -133,6 +161,37 @@ extension LocalizedStringKey {
 #Preview("Start page - light") {
     StartPageView(store: .previewMocked)
         .preferredColorScheme(.light)
+}
+
+#Preview("Start page - compact, four sources - light") {
+    StartPageView(store: .previewFour)
+        .environment(\.horizontalSizeClass, .compact)
+        .preferredColorScheme(.light)
+}
+
+#Preview("Start page - compact, four sources - dark") {
+    StartPageView(store: .previewFour)
+        .environment(\.horizontalSizeClass, .compact)
+        .preferredColorScheme(.dark)
+}
+
+#Preview("Start page - compact, AX5 - light") {
+    StartPageView(store: .previewFour)
+        .environment(\.horizontalSizeClass, .compact)
+        .preferredColorScheme(.light)
+        .dynamicTypeSize(.largestAccessibility)
+}
+
+#Preview("Start page - regular, grid - light", traits: .fixedLayout(width: .previewTabletWidth, height: .previewTabletHeight)) {
+    StartPageView(store: .previewFour)
+        .environment(\.horizontalSizeClass, .regular)
+        .preferredColorScheme(.light)
+}
+
+#Preview("Start page - regular, grid - dark", traits: .fixedLayout(width: .previewTabletWidth, height: .previewTabletHeight)) {
+    StartPageView(store: .previewFour)
+        .environment(\.horizontalSizeClass, .regular)
+        .preferredColorScheme(.dark)
 }
 
 #Preview("Start page - no sources - light") {
@@ -170,6 +229,10 @@ extension StoreOf<StartPage> {
         preview(sources: Source.mocks)
     }
 
+    fileprivate static var previewFour: StoreOf<StartPage> {
+        preview(sources: Source.previewFour)
+    }
+
     fileprivate static var previewEmpty: StoreOf<StartPage> {
         preview(sources: [])
     }
@@ -203,4 +266,14 @@ extension StoreOf<StartPage> {
 
 extension Double {
     fileprivate static let previewNeverFinishes: Self = 3600
+}
+
+extension DynamicTypeSize {
+    fileprivate static let largestAccessibility: Self = .accessibility5
+}
+
+extension CGFloat {
+    /// An 11-inch iPad in landscape: three grid columns (spec 007 SC-005).
+    fileprivate static let previewTabletWidth: Self = 1180
+    fileprivate static let previewTabletHeight: Self = 820
 }

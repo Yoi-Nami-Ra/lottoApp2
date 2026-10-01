@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>LTA-28 Compact and wide source cards — proposal</title>
+<title>LTA-28 Compact and wide source cards</title>
 <style>
   /* Asset-catalog tokens (Assets.xcassets), light and dark. */
   .light {
@@ -81,6 +81,12 @@
     color: var(--sev); background: color-mix(in srgb, var(--sev) calc(var(--tint) * 100%), transparent);
   }
 
+  .note {
+    grid-column: 1 / -1; display: flex; gap: 4px; align-items: baseline; font-size: 12px; padding: 4px 8px;
+    border-radius: 8px; color: var(--textPrimary);
+    background: color-mix(in srgb, var(--warningYellow) calc(var(--tint) * 100%), transparent);
+  }
+  .note .w { color: var(--warningYellow); }
   /* Full card (today's card) */
   .fcard {
     background: var(--backgroundPrimary); border-radius: 12px; padding: 10px 12px; box-shadow: 0 1px 2px var(--shadow);
@@ -113,11 +119,11 @@
 </style>
 </head>
 <body>
-<h1>LTA-28 · Compact and wide source cards — proposal</h1>
+<h1>LTA-28 · Compact and wide source cards</h1>
 <p class="lede">LTA-5: the start page picks the card by horizontal size class. Compact width (iPhone, narrow iPad
 split view) gets a one-row card — severity dot, name, refresh icon — that expands inline to show the details.
 Regular width (iPad, Mac) keeps today's full card, laid out in an adaptive grid. Only MBNet exists today; the other sources are illustrative. Selection, the Next bar and the
-sync behaviour are unchanged. Lo-fi: layout and states, not final visuals.</p>
+sync behaviour are unchanged.</p>
 
 <div class="frames">
 
@@ -147,7 +153,8 @@ sync behaviour are unchanged. Lo-fi: layout and states, not final visuals.</p>
           <div class="crow"><span class="dot"></span><span class="cname">MBNet Server <span class="check">✓</span></span><span class="iconbtn">↻</span><span class="disc">⌃</span></div>
           <div class="cdetails">
             <div><div class="k">Records</div><div class="v big">7,012</div></div>
-            <div><div class="k">Last sync</div><div><span class="badge">↻ 1 day ago</span></div></div>
+            <div><div class="k">Last sync</div><div><span class="badge">↻ Last synced: 30 Sep 2026 at 09:12</span></div></div>
+            <div class="note"><span class="w">⚠</span> 3 records skipped in last sync</div>
             <div><div class="k"><span class="ic-first">▦</span> First Record:</div><div class="v">27.01.1957</div></div>
             <div><div class="k"><span class="ic-last">◷</span> Latest Record:</div><div class="v">27.09.2026</div></div>
           </div>
@@ -157,7 +164,7 @@ sync behaviour are unchanged. Lo-fi: layout and states, not final visuals.</p>
       </div>
       <div class="bar"><div class="next">Next</div></div>
     </div>
-    <figcaption><b>Expanded and selected.</b> The chevron expands the details inline; tapping elsewhere on the card still selects it (border + checkmark).</figcaption>
+    <figcaption><b>Expanded and selected.</b> The chevron expands the details inline; tapping anywhere else on the card — the details included — selects it (border + checkmark). The last sync's skipped-records note, when there is one, is a full-width row between the count / badge and the record dates.</figcaption>
   </figure>
 
   <!-- 3. Compact, refreshing -->
@@ -184,7 +191,7 @@ sync behaviour are unchanged. Lo-fi: layout and states, not final visuals.</p>
           <div class="crow"><span class="dot"></span><span class="cname">MBNet Server <span class="check">✓</span></span><span class="iconbtn">↻</span><span class="disc">⌃</span></div>
           <div class="cdetails">
             <div><div class="k">Records</div><div class="v big">7,012</div></div>
-            <div><div class="k">Last sync</div><div><span class="badge">↻ 1 day ago</span></div></div>
+            <div><div class="k">Last sync</div><div><span class="badge">↻ Last synced: 30 Sep 2026 at 09:12</span></div></div>
             <div><div class="k"><span class="ic-first">▦</span> First Record:</div><div class="v">27.01.1957</div></div>
             <div><div class="k"><span class="ic-last">◷</span> Latest Record:</div><div class="v">27.09.2026</div></div>
           </div>
@@ -205,7 +212,7 @@ sync behaviour are unchanged. Lo-fi: layout and states, not final visuals.</p>
         <div class="grid">
           <div class="fcard sev-low selected">
             <div class="fhead">
-              <div class="ftitle"><div class="n">MBNet Server <span class="check">✓</span></div><span class="badge">↻ Last synced: 1 day ago</span></div>
+              <div class="ftitle"><div class="n">MBNet Server <span class="check">✓</span></div><span class="badge">↻ Last synced: 30 Sep 2026 at 09:12</span></div>
               <div class="frec"><div class="c">▤ 7,012</div><div class="k">records</div></div>
             </div>
             <div class="fdetails">
@@ -216,7 +223,7 @@ sync behaviour are unchanged. Lo-fi: layout and states, not final visuals.</p>
           </div>
           <div class="fcard sev-medium">
             <div class="fhead">
-              <div class="ftitle"><div class="n">EuroJackpot Archive</div><span class="badge">↻ Last synced: 3 days ago</span></div>
+              <div class="ftitle"><div class="n">EuroJackpot Archive</div><span class="badge">↻ Last synced: 28 Sep 2026 at 18:40</span></div>
               <div class="frec"><div class="c">▤ 912</div><div class="k">records</div></div>
             </div>
             <div class="fdetails">
@@ -227,7 +234,7 @@ sync behaviour are unchanged. Lo-fi: layout and states, not final visuals.</p>
           </div>
           <div class="fcard sev-high">
             <div class="fhead">
-              <div class="ftitle"><div class="n">Mini Lotto Mirror</div><span class="badge">↻ Last synced: 9 days ago</span></div>
+              <div class="ftitle"><div class="n">Mini Lotto Mirror</div><span class="badge">↻ Last synced: 22 Sep 2026 at 07:05</span></div>
               <div class="frec"><div class="c">▤ 5,340</div><div class="k">records</div></div>
             </div>
             <div class="fdetails">
@@ -264,7 +271,10 @@ sync behaviour are unchanged. Lo-fi: layout and states, not final visuals.</p>
     <li><b>Expand.</b> The chevron toggles an inline details block: record count, last-sync badge (severity-coloured, as on the full card), first and latest record. Expanded state lives in <code>SourceEntry.State</code> (an <code>isExpanded</code> flag toggled by an action), per TCA; several cards can be expanded at once; collapsed by default and not persisted.</li>
     <li><b>Refresh.</b> Icon-only on compact, labelled "Refresh" / "Refreshing" for VoiceOver; same spin and dimmed styling as the full card's button.</li>
     <li><b>Full card.</b> Unchanged from today, including its accessibility-size reflow. Cards in one grid row share the row's height.</li>
-    <li><b>Accessibility.</b> The dot is decorative; severity is read from the badge text (compact: announced with the name, e.g. "MBNet Server, synced 1 day ago"). The chevron is labelled "Show details" / "Hide details". At accessibility text sizes the compact row lets the name wrap onto two lines before the buttons shrink, and the details grid becomes one column.</li>
+    <li><b>Accessibility.</b> The dot is decorative; severity is read from the badge text (compact: announced with the name, e.g. "MBNet Server, Last synced: 30 Sep 2026 at 09:12", or "Not synced"). The chevron is labelled "Show details" / "Hide details". At accessibility text sizes the compact row lets the name wrap onto two lines before the buttons shrink, and the details grid becomes one column.</li>
+    <li><b>Skipped note.</b> Spec 005's note sits in the compact details as a full-width row between the Records / Last sync row and the First / Latest record row. LTA-4's "~N missing" line, once built, goes in the same details block.</li>
+    <li><b>Expand animation.</b> The chevron animates the change (snappy), and no animation is used when Reduce Motion is on.</li>
+    <li><b>Wide Next bar.</b> At regular width the Next button is 320 pt wide (one grid column) at the trailing edge.</li>
     <li><b>Tokens.</b> New tokens for the dot size, compact row height and padding, and the grid's minimum column width; colours reuse the existing severity and refresh tokens.</li>
   </ul>
 </div>

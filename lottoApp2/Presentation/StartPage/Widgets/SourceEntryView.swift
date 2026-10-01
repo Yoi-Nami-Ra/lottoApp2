@@ -9,7 +9,6 @@ import ComposableArchitecture
 import SwiftUI
 
 struct SourceEntryView: View {
-    @Environment(\.colorScheme) var colorScheme
     @Environment(\.dynamicTypeSize) var dynamicTypeSize
 
     @Bindable var store: StoreOf<SourceEntry>
@@ -18,7 +17,8 @@ struct SourceEntryView: View {
         VStack(alignment: .leading, spacing: .headerDataSpacing) {
             headerRow
             if let count = store.skippedInLastSync {
-                skippedNote(count)
+                // Full width between the header and the details (spec 005 clarification).
+                SkippedRecordsNote(count: count)
             }
             details
         }
@@ -33,7 +33,7 @@ struct SourceEntryView: View {
         .accessibilityElement(children: .contain)
         .accessibilityLabel(Text(store.name))
         .accessibilityAddTraits(store.isSelected ? [.isButton, .isSelected] : [.isButton])
-        .accessibilityAction(named: Text(.chooseSourceAction)) { store.send(.cardTapped) }
+        .accessibilityAction(named: Text(.sourceCardChooseAction)) { store.send(.cardTapped) }
         .alert($store.scope(state: \.alert, action: \.alert))
     }
 
@@ -46,7 +46,7 @@ struct SourceEntryView: View {
             VStack(alignment: .leading, spacing: .headerVSpacing) {
                 titleRow
 
-                syncStatusBadge
+                SyncStatusBadge(lastSync: store.lastSync, severity: store.lastSyncSeverity)
             }
             // Stands in for the `Spacer()` this row used to carry — see the note on `details`.
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -96,9 +96,9 @@ struct SourceEntryView: View {
                 .layoutPriority(.titleOverCheckmark)
 
             if store.isSelected {
-                Image(.selectedCheckmark)
+                Image(.sourceCardCheckmark)
                     .font(.selectedCheckmark)
-                    .foregroundStyle(Color.selectedCheckmark)
+                    .foregroundStyle(Color.sourceCardCheckmark)
                     .fixedSize()
             }
         }
@@ -110,55 +110,8 @@ struct SourceEntryView: View {
         if let count = store.recordsCount {
             Text(count.toString)
         } else {
-            Text(.notAvailable)
+            Text(.sourceCardNotAvailable)
         }
-    }
-
-    private var syncStatusBadge: some View {
-        HStack {
-            Image(.lastSync)
-            if let lastSync = store.lastSync {
-                Text(.lastSynced(lastSync))
-                    .font(.caption)
-            } else {
-                Text(.notSynced)
-            }
-        }
-        .foregroundStyle(lastSyncForeground)
-        .padding(.horizontal, .syncStatusHPadding)
-        .padding(.vertical, .syncStatusVPadding)
-        .background(lastSyncBackground)
-        .cornerRadius(.syncStatusCorners)
-    }
-
-    /// Full width between the header and the details (spec 005 clarification), so it needs no reflow rule of
-    /// its own: at accessibility text sizes it simply wraps, at word boundaries.
-    private func skippedNote(_ count: Int) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: .skippedNoteIconSpacing) {
-            // The icon carries the warning without relying on colour (FR-011); the text already says it all,
-            // so VoiceOver skips the icon and reads the note as its own element inside the card (FR-010).
-            Image(.skippedWarning)
-                .foregroundStyle(Color.skippedNoteIcon)
-                .accessibilityHidden(true)
-            // No `lineLimit` or scale floor: a sentence may wrap, whereas shrinking it would make it unreadable
-            // at the very sizes it has to survive.
-            Text(.skippedInLastSync(count))
-                .font(.skippedNote)
-                .foregroundStyle(Color.skippedNoteText)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, .skippedNoteHPadding)
-        .padding(.vertical, .skippedNoteVPadding)
-        .background(Color.skippedNoteIcon.opacity(colorScheme == .light ? .lightOpacity : .darkOpacity))
-        .cornerRadius(.skippedNoteCorners)
-    }
-
-    private var lastSyncForeground: Color {
-        .syncSeverityForeground(store.lastSyncSeverity)
-    }
-
-    private var lastSyncBackground: Color {
-        lastSyncForeground.opacity(colorScheme == .light ? .lightOpacity : .darkOpacity)
     }
 
     /// Side by side normally, stacked at accessibility text sizes: squeezed into the narrow trailing
@@ -167,18 +120,8 @@ struct SourceEntryView: View {
     private var details: some View {
         detailsLayout {
             VStack(alignment: .leading) {
-                detailRow(
-                    image: .firstRecord,
-                    imageColor: .firstRecordImage,
-                    title: .firstRecordTitle,
-                    date: firstRecordDate
-                )
-                detailRow(
-                    image: .lastRecord,
-                    imageColor: .lastRecordImage,
-                    title: .lastRecordTitle,
-                    date: lastRecordDate
-                )
+                RecordDateDetail(kind: .first, date: store.firstRecordDate)
+                RecordDateDetail(kind: .latest, date: store.lastRecordDate)
             }
             // Replaces the `Spacer()` this row used to carry: it pushes the button to the trailing edge
             // in the horizontal layout *and* gives the column the full width in the stacked one, where a
@@ -196,38 +139,12 @@ struct SourceEntryView: View {
             : AnyLayout(HStackLayout())
     }
 
-    private func detailRow(
-        image: ImageType,
-        imageColor: Color,
-        title: LocalizedStringKey,
-        date: some View
-    ) -> some View {
-        HStack {
-            Image(image)
-                .foregroundStyle(imageColor)
-            VStack(alignment: .leading, spacing: .detailsSpacing) {
-                Text(title)
-                    .font(.firstlastRecordTitle)
-                    .foregroundStyle(Color.firstlastRecordTitle)
-                date
-                    .font(.firstlastRecordDate)
-                    .fontWeight(.firstlastRecordDate)
-                    .foregroundStyle(Color.firstlastRecordDate)
-            }
-        }
-    }
-
     private var refreshButton: some View {
         Button {
             store.send(.refreshButtonTapped)
         } label: {
             HStack(spacing: .refreshIconSpacing) {
-                Image(.refresh)
-                    .rotationEffect(.degrees(store.isRefreshing ? .refreshSpinDegrees : 0))
-                    .animation(
-                        store.isRefreshing ? .refreshSpin : .default,
-                        value: store.isRefreshing
-                    )
+                RefreshIcon(isRefreshing: store.isRefreshing)
                 // One word on one line: allowed to wrap it hyphen-breaks into "Re-" / "fres" / "h" at
                 // accessibility text sizes. The scale floor keeps the longer "Refreshing…" readable
                 // rather than truncated when the card is still narrow.
@@ -237,172 +154,43 @@ struct SourceEntryView: View {
                     .minimumScaleFactor(.refreshLabelScale)
             }
             .font(.refreshLabel)
-            .foregroundStyle(store.isRefreshing ? Color.refreshActiveForeground : .refreshIdleForeground)
             .padding(.horizontal, .refreshHPadding)
             .padding(.vertical, .refreshVPadding)
-            .background(store.isRefreshing ? Color.refreshActiveBackground : .refreshIdleBackground)
-            .cornerRadius(.refreshCorners)
-            .overlay(
-                RoundedRectangle(cornerRadius: .refreshCorners)
-                    .stroke(
-                        store.isRefreshing ? Color.refreshActiveBorder : .refreshIdleBorder,
-                        lineWidth: .refreshBorderWidth
-                    )
-            )
+            .modifier(RefreshButtonStyle(isRefreshing: store.isRefreshing))
         }
         .buttonStyle(PlainButtonStyle())
         .disabled(store.isRefreshing)
     }
-
-    private var firstRecordDate: some View {
-        if let date = store.firstRecordDate {
-            Text(date.formatted(date: .abbreviated, time: .omitted))
-        } else {
-            Text(.notAvailable)
-        }
-    }
-
-    private var lastRecordDate: some View {
-        if let date = store.lastRecordDate {
-            Text(date.formatted(date: .abbreviated, time: .omitted))
-        } else {
-            Text(.notAvailable)
-        }
-    }
-}
-
-// MARK: - Styles
-struct SourceCardStyle: ViewModifier {
-    let isSelected: Bool
-
-    func body(content: Content) -> some View {
-        content
-            .padding(.vertical, .cardVPadding)
-            .padding(.horizontal, .cardHPadding)
-            .background(.backgroundPrimary)
-            .cornerRadius(.cardCorners)
-            .overlay(
-                RoundedRectangle(cornerRadius: .cardCorners)
-                    .stroke(
-                        Color.cardBorder(isSelected: isSelected),
-                        lineWidth: .cardBorderWidth(isSelected: isSelected)
-                    )
-            )
-            .shadow(color: .cardShadow, radius: .shadowRadius, x: .shadowXOffset, y: .shadowYOffset)
-    }
-}
-
-extension ViewModifier where Self == SourceCardStyle {
-    static func sourceCardStyle(isSelected: Bool) -> SourceCardStyle { .init(isSelected: isSelected) }
 }
 
 // MARK: - Resources
-extension Color {
-    fileprivate static var cardShadow: Self { .shadow }
-    /// A `switch` rather than a dictionary lookup with a fallback: adding a severity then fails to compile
-    /// instead of silently rendering as an error colour.
-    fileprivate static func syncSeverityForeground(_ severity: SourceEntry.SyncSeverity) -> Self {
-        switch severity {
-        case .low: .syncSeverityLow
-        case .medium: .syncSeverityMedium
-        case .high: .syncSeverityHigh
-        case .notSynced: .syncSeverityNone
-        }
-    }
-    fileprivate static func cardBorder(isSelected: Bool) -> Self {
-        isSelected ? .cardSelectedBorder : .cardIdleBorder
-    }
-    fileprivate static let cardSelectedBorder: Self = .primaryBlue
-    fileprivate static let cardIdleBorder: Self = .clear
-    fileprivate static let selectedCheckmark: Self = .primaryBlue
-
-    fileprivate static let firstRecordImage: Self = .primaryBlue
-    fileprivate static let firstlastRecordTitle: Self = .textSecondary
-    fileprivate static let firstlastRecordDate: Self = .textPrimary
-
-    fileprivate static let lastRecordImage: Self = .accentPurple
-
-    fileprivate static let syncSeverityLow: Self = .successGreen
-    fileprivate static let syncSeverityMedium: Self = .warningYellow
-    fileprivate static let syncSeverityHigh: Self = .errorRed
-    fileprivate static let syncSeverityNone: Self = .undefinedGrey
-
-    fileprivate static let refreshIdleForeground: Self = .primaryBlue
-    fileprivate static let refreshActiveForeground: Self = .textSecondary
-    fileprivate static let refreshIdleBackground: Self = .primaryBlue.opacity(0.1)
-    fileprivate static let refreshActiveBackground: Self = .undefinedGrey.opacity(0.15)
-    fileprivate static let refreshIdleBorder: Self = .primaryBlue.opacity(0.3)
-    fileprivate static let refreshActiveBorder: Self = .undefinedGrey
-
-    fileprivate static let skippedNoteIcon: Self = .warningYellow
-    fileprivate static let skippedNoteText: Self = .textPrimary
-}
-
 extension Font {
     fileprivate static let selectedCheckmark: Self = .title3
-    fileprivate static let firstlastRecordTitle: Self = .caption
-    fileprivate static let firstlastRecordDate: Self = .subheadline
     fileprivate static let refreshLabel: Self = .caption
-    fileprivate static let skippedNote: Self = .caption
 }
 
 extension Font.Weight {
-    fileprivate static let firstlastRecordDate: Self = .medium
     fileprivate static let refreshLabel: Self = .medium
 }
 
-extension Animation {
-    fileprivate static let refreshSpin: Self = .linear(duration: 1).repeatForever(autoreverses: false)
-}
-
 extension ImageType {
-    fileprivate static let selectedCheckmark: Self = .system("checkmark.circle.fill")
-    fileprivate static let firstRecord: Self = .system("calendar")
     fileprivate static let records: Self = .system("square.3.layers.3d")
-    fileprivate static let lastRecord: Self = .system("clock")
-    fileprivate static let lastSync: Self = .system("arrow.trianglehead.2.clockwise.rotate.90")
-    fileprivate static let refresh: Self = .system("arrow.trianglehead.2.clockwise.rotate.90")
-    fileprivate static let skippedWarning: Self = .system("exclamationmark.triangle.fill")
 }
 
 extension CGFloat {
-    fileprivate static func cardBorderWidth(isSelected: Bool) -> Self {
-        isSelected ? .cardSelectedBorderWidth : .cardIdleBorderWidth
-    }
-    fileprivate static let cardSelectedBorderWidth: Self = 2
-    fileprivate static let cardIdleBorderWidth: Self = 0
     fileprivate static let titleCheckSpacing: Self = 6
     fileprivate static let recordsCountScale: Self = 0.5
 
     fileprivate static let headerDataSpacing: Self = 16
-    fileprivate static let cardCorners: Self = 12
-    fileprivate static let cardVPadding: Self = 8
-    fileprivate static let cardHPadding: Self = 10
 
-    fileprivate static let shadowRadius: Self = 2
-    fileprivate static let shadowXOffset: Self = 0
-    fileprivate static let shadowYOffset: Self = 1
-
-    fileprivate static let detailsSpacing: Self = 2
     fileprivate static let detailsStackSpacing: Self = 12
     fileprivate static let headerStackSpacing: Self = 8
     fileprivate static let headerVSpacing: Self = 4
 
-    fileprivate static let syncStatusHPadding: Self = 8
-    fileprivate static let syncStatusVPadding: Self = 4
-    fileprivate static let syncStatusCorners: Self = 12
-
     fileprivate static let refreshIconSpacing: Self = 4
     fileprivate static let refreshHPadding: Self = 12
     fileprivate static let refreshVPadding: Self = 6
-    fileprivate static let refreshCorners: Self = 8
-    fileprivate static let refreshBorderWidth: Self = 1
     fileprivate static let refreshLabelScale: Self = 0.7
-
-    fileprivate static let skippedNoteHPadding: Self = 8
-    fileprivate static let skippedNoteVPadding: Self = 4
-    fileprivate static let skippedNoteCorners: Self = 8
-    fileprivate static let skippedNoteIconSpacing: Self = 4
 }
 
 extension DynamicTypeSize {
@@ -419,28 +207,12 @@ extension Int {
 extension Double {
     fileprivate static let titleOverCheckmark: Self = 1
     fileprivate static let refreshOverDetails: Self = 1
-    fileprivate static let lightOpacity: Self = 0.15
-    fileprivate static let darkOpacity: Self = 0.35
-
-    fileprivate static let refreshSpinDegrees: Self = 360
 }
 
 extension LocalizedStringKey {
-    fileprivate static let chooseSourceAction: Self = "Choose this source"
-    fileprivate static let firstRecordTitle: Self = "First Record:"
-    fileprivate static let lastRecordTitle: Self = "Latest Record:"
-    fileprivate static func lastSynced(_ date: Date) -> Self { "Last synced: \(date.formatted(date: .abbreviated, time: .shortened))" }
-    fileprivate static let notSynced: Self = "Not synced"
     fileprivate static let records: Self = "records"
-    fileprivate static let notAvailable: Self = "N/A"
     fileprivate static let refresh: Self = "Refresh"
     fileprivate static let refreshing: Self = "Refreshing…"
-    /// Grouped per locale ("1,204"), singular for exactly one (spec 005 FR-008, R5).
-    fileprivate static func skippedInLastSync(_ count: Int) -> Self {
-        count == 1
-            ? "\(count.formatted()) record skipped in last sync"
-            : "\(count.formatted()) records skipped in last sync"
-    }
 }
 
 #Preview("Dark Mode - none") {
