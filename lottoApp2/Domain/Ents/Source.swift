@@ -18,6 +18,9 @@ nonisolated struct Source: Equatable, Sendable {
     /// Records the last successful sync skipped, because they couldn't be read or broke the game rules
     /// (spec 005). `nil` until the first successful sync, like the other analytics.
     let lastSyncSkipped: Int?
+    /// How often the source publishes, measured at its last successful sync (spec 009). `nil` before the first
+    /// sync, for metadata written before the cadence existed, and when the history is too short to measure.
+    let cadence: DrawCadence?
 
     init(
         name: String,
@@ -26,7 +29,8 @@ nonisolated struct Source: Equatable, Sendable {
         recordsCount: Int? = nil,
         latestRecord: Date? = nil,
         firstRecord: Date? = nil,
-        lastSyncSkipped: Int? = nil
+        lastSyncSkipped: Int? = nil,
+        cadence: DrawCadence? = nil
     ) {
         self.name = name
         self.displayName = displayName
@@ -35,5 +39,6 @@ nonisolated struct Source: Equatable, Sendable {
         self.latestRecord = latestRecord
         self.firstRecord = firstRecord
         self.lastSyncSkipped = lastSyncSkipped
+        self.cadence = cadence
     }
 }

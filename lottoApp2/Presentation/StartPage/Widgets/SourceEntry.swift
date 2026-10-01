@@ -40,6 +40,10 @@ struct SourceEntry {
         var recordsCount: Int?
         /// The count shown in the skipped-records note. `nil` means no note; it is never `0` (spec 005 §3).
         var skippedInLastSync: Int?
+        /// Draws probably published since `lastRecordDate` (spec 009): `nil` when the source has no cadence or
+        /// no latest record. Like the severity it drives, it is stored and re-derived from the injected clock on
+        /// every load and refresh, never read from the wall clock.
+        var missingEstimate: Int?
         var isRefreshing: Bool = false
         /// Mirrors the parent's `selectedSourceID` so the card can draw itself. The parent is the only
         /// writer — see `StartPage.State.applySelectionRules()`; nothing in this reducer touches it.
@@ -111,6 +115,25 @@ extension AlertState where Action == SourceEntry.Action.Alert {
 }
 
 extension SourceEntry.SyncSeverity {
+    /// The estimate decides when there is one (spec 009 FR-005); otherwise the day-based rule (FR-006).
+    init(lastSync: Date?, missingEstimate: Int?, now: Date) {
+        guard let lastSync else {
+            self = .notSynced
+            return
+        }
+        guard let missingEstimate else {
+            self.init(lastSync: lastSync, now: now)
+            return
+        }
+        if missingEstimate < .missingForMedium {
+            self = .low
+        } else if missingEstimate < .missingForHigh {
+            self = .medium
+        } else {
+            self = .high
+        }
+    }
+
     /// How stale `lastSync` is as of `now`. Thresholds are days since the last successful sync.
     init(lastSync: Date, now: Date) {
         let interval = abs(now.timeIntervalSince(lastSync))
@@ -132,12 +155,20 @@ extension Source {
             id: name,
             name: displayName,
             lastSync: lastSync,
-            lastSyncSeverity: lastSync.map { .init(lastSync: $0, now: now) } ?? .notSynced,
+            lastSyncSeverity: .init(lastSync: lastSync, missingEstimate: missingEstimate(now: now), now: now),
             firstRecordDate: firstRecord,
             lastRecordDate: latestRecord,
             recordsCount: recordsCount,
-            skippedInLastSync: skippedNoteCount
+            skippedInLastSync: skippedNoteCount,
+            missingEstimate: missingEstimate(now: now)
         )
+    }
+
+    /// Both mappings below go through this, so a load and a refresh can't disagree about the estimate. A
+    /// never-synced source has none, whatever else it carries (contracts §3).
+    fileprivate func missingEstimate(now: Date) -> Int? {
+        guard lastSync != nil, let cadence, let latestRecord else { return nil }
+        return cadence.missing(since: latestRecord, now: now)
     }
 
     /// A note only for a sync that actually skipped something: never synced and 0 both mean no note (FR-009).
@@ -154,7 +185,8 @@ extension SourceEntry.State {
     mutating func apply(_ source: Source, now: Date) {
         name = source.displayName
         lastSync = source.lastSync
-        lastSyncSeverity = source.lastSync.map { .init(lastSync: $0, now: now) } ?? .notSynced
+        missingEstimate = source.missingEstimate(now: now)
+        lastSyncSeverity = .init(lastSync: source.lastSync, missingEstimate: missingEstimate, now: now)
         firstRecordDate = source.firstRecord
         lastRecordDate = source.latestRecord
         recordsCount = source.recordsCount
@@ -167,6 +199,12 @@ extension SourceEntry.State {
 extension TimeInterval {
     fileprivate static let lowSeverityLimit: Self = 2.days
     fileprivate static let mediumSeverityLimit: Self = 4.days
+}
+
+extension Int {
+    /// One probably-missing draw turns the card yellow, two turn it red (spec 009 FR-005).
+    fileprivate static let missingForMedium = 1
+    fileprivate static let missingForHigh = 2
 }
 
 extension LocalizedStringResource {

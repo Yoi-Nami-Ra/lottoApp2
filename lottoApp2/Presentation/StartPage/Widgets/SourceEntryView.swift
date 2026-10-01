@@ -121,7 +121,7 @@ struct SourceEntryView: View {
         detailsLayout {
             VStack(alignment: .leading) {
                 RecordDateDetail(kind: .first, date: store.firstRecordDate)
-                RecordDateDetail(kind: .latest, date: store.lastRecordDate)
+                RecordDateDetail(kind: .latest, date: store.lastRecordDate, missing: store.missingEstimate)
             }
             // Replaces the `Spacer()` this row used to carry: it pushes the button to the trailing edge
             // in the horizontal layout *and* gives the column the full width in the stacked one, where a
@@ -438,6 +438,64 @@ extension LocalizedStringKey {
         .dynamicTypeSize(.largestAccessibility)
 }
 
+#Preview("Light Mode - estimate, nothing missing") {
+    SourceEntryView(store: Store(initialState: .mock1estimateNone) { SourceEntry() })
+        .padding()
+        .background(.backgroundSecondary)
+        .preferredColorScheme(.light)
+}
+
+#Preview("Dark Mode - estimate, nothing missing") {
+    SourceEntryView(store: Store(initialState: .mock1estimateNone) { SourceEntry() })
+        .padding()
+        .background(.backgroundSecondary)
+        .preferredColorScheme(.dark)
+}
+
+#Preview("Light Mode - estimate, one missing") {
+    SourceEntryView(store: Store(initialState: .mock1estimateOne) { SourceEntry() })
+        .padding()
+        .background(.backgroundSecondary)
+        .preferredColorScheme(.light)
+}
+
+#Preview("Dark Mode - estimate, one missing") {
+    SourceEntryView(store: Store(initialState: .mock1estimateOne) { SourceEntry() })
+        .padding()
+        .background(.backgroundSecondary)
+        .preferredColorScheme(.dark)
+}
+
+#Preview("Light Mode - estimate, several missing") {
+    SourceEntryView(store: Store(initialState: .mock1estimateMany) { SourceEntry() })
+        .padding()
+        .background(.backgroundSecondary)
+        .preferredColorScheme(.light)
+}
+
+#Preview("Dark Mode - estimate, several missing") {
+    SourceEntryView(store: Store(initialState: .mock1estimateMany) { SourceEntry() })
+        .padding()
+        .background(.backgroundSecondary)
+        .preferredColorScheme(.dark)
+}
+
+#Preview("Light Mode - AX5 several missing") {
+    SourceEntryView(store: Store(initialState: .mock1estimateMany) { SourceEntry() })
+        .padding()
+        .background(.backgroundSecondary)
+        .preferredColorScheme(.light)
+        .dynamicTypeSize(.largestAccessibility)
+}
+
+#Preview("Dark Mode - AX5 several missing") {
+    SourceEntryView(store: Store(initialState: .mock1estimateManySelected) { SourceEntry() })
+        .padding()
+        .background(.backgroundSecondary)
+        .preferredColorScheme(.dark)
+        .dynamicTypeSize(.largestAccessibility)
+}
+
 extension SourceEntry.State {
     static let mock1n: Self = .init(
         id: "mbtn",
@@ -448,6 +506,23 @@ extension SourceEntry.State {
         lastRecordDate: Date(timeIntervalSinceNow: -180_000),
         recordsCount: 15_847
     )
+
+    /// Spec 009: the estimate decides the colour. No line at 0; a sync long ago doesn't matter.
+    static let mock1estimateNone: Self = estimate(0, .low, from: mock1s)
+    static let mock1estimateOne: Self = estimate(1, .medium, from: mock1n)
+    static let mock1estimateMany: Self = estimate(3, .high, from: mock1n)
+    static let mock1estimateManySelected: Self = {
+        var state = mock1estimateMany
+        state.isSelected = true
+        return state
+    }()
+
+    private static func estimate(_ missing: Int, _ severity: SourceEntry.SyncSeverity, from state: Self) -> Self {
+        var state = state
+        state.missingEstimate = missing
+        state.lastSyncSeverity = severity
+        return state
+    }
 
     static let mock1m: Self = .init(
         id: "mbtn",

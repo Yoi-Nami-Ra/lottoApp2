@@ -130,7 +130,8 @@ nonisolated extension SourceMeta {
             recordsCount: recordsCount,
             latestRecord: latestRecord,
             firstRecord: firstRecord,
-            lastSyncSkipped: lastSyncSkipped
+            lastSyncSkipped: lastSyncSkipped,
+            cadence: drawsInWindow.flatMap { $0 > 0 ? DrawCadence(drawsInWindow: $0) : nil }
         )
     }
 }

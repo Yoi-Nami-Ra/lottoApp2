@@ -130,7 +130,8 @@ struct SkippedRecordsNote: View {
     }
 }
 
-/// "First Record:" or "Latest Record:" with its icon and date, "N/A" when there is none.
+/// "First Record:" or "Latest Record:" with its icon and date, "N/A" when there is none — and, under the
+/// latest one, the "~N missing" estimate when it is above zero (spec 009 FR-007).
 struct RecordDateDetail: View {
     enum Kind {
         case first
@@ -139,6 +140,7 @@ struct RecordDateDetail: View {
 
     let kind: Kind
     let date: Date?
+    var missing: Int? = nil
 
     var body: some View {
         HStack {
@@ -152,8 +154,25 @@ struct RecordDateDetail: View {
                     .font(.recordDate)
                     .fontWeight(.recordDate)
                     .foregroundStyle(Color.recordDate)
+                if let missing, missing > 0 {
+                    missingLine(missing)
+                }
             }
         }
+    }
+
+    /// Neutral text: the badge already carries the severity colour. The icon and the words say it without
+    /// colour, and VoiceOver hears "about N missing" rather than a tilde (FR-008). No `lineLimit`: it wraps.
+    private func missingLine(_ count: Int) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: .missingIconSpacing) {
+            Image(.missingRecords)
+                .accessibilityHidden(true)
+            Text(.missingRecords(count))
+        }
+        .font(.missingRecords)
+        .foregroundStyle(Color.missingRecords)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text(.missingRecordsSpoken(count)))
     }
 
     private var dateText: Text {
@@ -221,12 +240,14 @@ extension Color {
 
     fileprivate static let skippedNoteIcon: Self = .warningYellow
     fileprivate static let skippedNoteText: Self = .textPrimary
+    fileprivate static let missingRecords: Self = .textSecondary
 }
 
 extension Font {
     fileprivate static let recordDateTitle: Self = .caption
     fileprivate static let recordDate: Self = .subheadline
     fileprivate static let skippedNote: Self = .caption
+    fileprivate static let missingRecords: Self = .caption
 }
 
 extension Font.Weight {
@@ -245,6 +266,7 @@ extension ImageType {
     fileprivate static let fetch: Self = .system("arrow.down.circle")
     fileprivate static let syncIdle: [SourceEntry.SyncAction: Self] = [.fetch: .fetch, .refresh: .refresh]
     fileprivate static let skippedWarning: Self = .system("exclamationmark.triangle.fill")
+    fileprivate static let missingRecords: Self = .system("exclamationmark.circle")
 }
 
 extension CGFloat {
@@ -274,6 +296,7 @@ extension CGFloat {
     fileprivate static let skippedNoteVPadding: Self = 4
     fileprivate static let skippedNoteCorners: Self = 8
     fileprivate static let skippedNoteIconSpacing: Self = 4
+    fileprivate static let missingIconSpacing: Self = 4
     fileprivate static let previewSpacing: Self = 12
     fileprivate static let previewRefreshPadding: Self = 8
 }
@@ -287,6 +310,9 @@ extension Double {
 extension LocalizedStringKey {
     fileprivate static let firstRecordTitle: Self = "First Record:"
     fileprivate static let lastRecordTitle: Self = "Latest Record:"
+    /// Grouped per locale ("~1,204 missing"); the tilde marks it as an estimate (spec 009).
+    fileprivate static func missingRecords(_ count: Int) -> Self { "~\(count.formatted()) missing" }
+    fileprivate static func missingRecordsSpoken(_ count: Int) -> Self { "about \(count.formatted()) missing" }
     /// Grouped per locale ("1,204"), singular for exactly one (spec 005 FR-008, R5).
     fileprivate static func skippedInLastSync(_ count: Int) -> Self {
         count == 1
@@ -306,6 +332,8 @@ private struct SourceCardPartsPreview: View {
             SkippedRecordsNote(count: 3)
             RecordDateDetail(kind: .first, date: .previewLastSync)
             RecordDateDetail(kind: .latest, date: nil)
+            RecordDateDetail(kind: .latest, date: .previewLastSync, missing: 3)
+            RecordDateDetail(kind: .latest, date: .previewLastSync, missing: 1204)
             HStack {
                 SyncIcon(action: .fetch, isSyncing: false)
                     .padding(.previewRefreshPadding)

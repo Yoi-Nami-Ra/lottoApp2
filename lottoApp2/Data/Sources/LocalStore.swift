@@ -36,11 +36,14 @@ nonisolated struct SourceMeta: Codable, Equatable, Sendable {
     /// Records the last successful sync skipped — unreadable rows plus draws that break the game rules
     /// (spec 005 FR-003). 0 for a `meta.json` written before the count existed (FR-013).
     var lastSyncSkipped: Int = 0
+    /// The draws in the cadence window at the last successful sync (spec 009 FR-003): `DrawCadence` measured
+    /// over the merged set. `nil` without enough history, and for a `meta.json` written before it existed.
+    var drawsInWindow: Int? = nil
 }
 
 nonisolated extension SourceMeta {
     private enum CodingKeys: String, CodingKey {
-        case name, lastSync, recordsCount, latestRecord, firstRecord, contentDigest, lastSyncSkipped
+        case name, lastSync, recordsCount, latestRecord, firstRecord, contentDigest, lastSyncSkipped, drawsInWindow
     }
 
     init(from decoder: any Decoder) throws {
@@ -52,7 +55,8 @@ nonisolated extension SourceMeta {
             latestRecord: try container.decodeIfPresent(Date.self, forKey: .latestRecord),
             firstRecord: try container.decodeIfPresent(Date.self, forKey: .firstRecord),
             contentDigest: try container.decodeIfPresent(String.self, forKey: .contentDigest) ?? "",
-            lastSyncSkipped: try container.decodeIfPresent(Int.self, forKey: .lastSyncSkipped) ?? 0
+            lastSyncSkipped: try container.decodeIfPresent(Int.self, forKey: .lastSyncSkipped) ?? 0,
+            drawsInWindow: try container.decodeIfPresent(Int.self, forKey: .drawsInWindow)
         )
     }
 }
@@ -106,7 +110,9 @@ extension LocalStore {
             latestRecord: draws.map(\.date).max(),
             firstRecord: draws.map(\.date).min(),
             contentDigest: digest(of: draws),
-            lastSyncSkipped: skipped
+            lastSyncSkipped: skipped,
+            // Measured once here, at save, so listing never has to read the draws (spec 009 clarification 1).
+            drawsInWindow: DrawCadence.measure(drawDates: draws.map(\.date), calendar: .drawWeeks)?.drawsInWindow
         )
     }
 }

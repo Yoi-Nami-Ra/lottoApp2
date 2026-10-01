@@ -205,6 +205,90 @@ struct SourceEntry_Tests {
         #expect(state.syncAction == .refresh)
     }
 
+    // MARK: - Missing records estimate (spec 009 contracts §3)
+
+    /// Six draws a fortnight: ⌊6/14 × days⌋ missing — 1 at 2.5 days, 2 at 5, 3 at 7, 5 at 12.
+    private static func source(
+        lastSync: Date? = .fixedNow,
+        latestDaysAgo: Double? = nil,
+        cadence: DrawCadence? = DrawCadence(drawsInWindow: 6)
+    ) -> Source {
+        Source(
+            name: "mbnet", displayName: "MBNet Server", lastSync: lastSync, recordsCount: 7380,
+            latestRecord: latestDaysAgo.map { Date.fixedNow.addingTimeInterval(-$0 * 86_400) },
+            cadence: cadence
+        )
+    }
+
+    @Test(arguments: [
+        (1.0, 0, SourceEntry.SyncSeverity.low),
+        (2.5, 1, .medium),
+        (5.0, 2, .high),
+        (12.0, 5, .high),
+    ])
+    func theEstimateDecidesTheSeverity(_ latestDaysAgo: Double, _ missing: Int, _ severity: SourceEntry.SyncSeverity) {
+        // FR-005: 0 → green, 1 → yellow, 2+ → red — here with a sync seconds ago, which the day rule calls green.
+        let state = Self.source(latestDaysAgo: latestDaysAgo).sourceEntryState(now: .fixedNow)
+
+        #expect(state.missingEstimate == missing)
+        #expect(state.lastSyncSeverity == severity)
+    }
+
+    @Test
+    func noMissingDraws_isGreenHoweverOldTheSync() {
+        // US2-AS1: a source synced 10 days ago whose latest draw was yesterday is complete.
+        let state = Self.source(lastSync: .fixedNow.addingTimeInterval(-10 * 86_400), latestDaysAgo: 1)
+            .sourceEntryState(now: .fixedNow)
+
+        #expect(state.missingEstimate == 0)
+        #expect(state.lastSyncSeverity == .low)
+    }
+
+    @Test(arguments: [
+        (0.0, SourceEntry.SyncSeverity.low),
+        (2.0, .medium),
+        (4.0, .high),
+    ])
+    func withoutACadence_theDayRuleStillApplies(_ syncDaysAgo: Double, _ severity: SourceEntry.SyncSeverity) {
+        // FR-006 / SC-003: no estimate, no change — the old thresholds, to the second.
+        let state = Self.source(
+            lastSync: .fixedNow.addingTimeInterval(-syncDaysAgo * 86_400), latestDaysAgo: 30, cadence: nil
+        ).sourceEntryState(now: .fixedNow)
+
+        #expect(state.missingEstimate == nil)
+        #expect(state.lastSyncSeverity == severity)
+    }
+
+    @Test
+    func aCadenceWithoutALatestRecord_fallsBackToTheDayRule() {
+        let state = Self.source(lastSync: .fixedNow.addingTimeInterval(-5 * 86_400))
+            .sourceEntryState(now: .fixedNow)
+
+        #expect(state.missingEstimate == nil)
+        #expect(state.lastSyncSeverity == .high)
+    }
+
+    @Test
+    func aNeverSyncedSource_staysNotSynced() {
+        let state = Self.source(lastSync: nil, latestDaysAgo: 30).sourceEntryState(now: .fixedNow)
+
+        #expect(state.missingEstimate == nil)
+        #expect(state.lastSyncSeverity == .notSynced)
+    }
+
+    @Test
+    func apply_recomputesTheEstimateAndTheSeverity() {
+        // FR-009 / US2-AS6: a sync that brings the missing draws in turns the card green again.
+        var state = Self.source(latestDaysAgo: 7).sourceEntryState(now: .fixedNow)
+        #expect(state.missingEstimate == 3)
+        #expect(state.lastSyncSeverity == .high)
+
+        state.apply(Self.source(latestDaysAgo: 0.5), now: .fixedNow)
+
+        #expect(state.missingEstimate == 0)
+        #expect(state.lastSyncSeverity == .low)
+    }
+
     // MARK: - Compact card details (spec 007 contracts §1)
 
     @MainActor
