@@ -64,19 +64,19 @@ that matches what has shipped.
 **Independent Test**: quickstart §5. `docc convert` gives no warnings, there are 0 `START_MENU_TOKEN`s, every
 `++` line names a spec, and no open line copies a `.tickets/` title.
 
-- [ ] T007 [P] [US2] In lottoApp2/Documentation.docc/Documentation.md, replace the `<!--@START_MENU_TOKEN@-->Summary<!--@END_MENU_TOKEN@-->` line with a one-sentence summary of the app: it syncs lottery draw history from sources and runs chains of processing blocks over it (FR-007).
-- [ ] T008 [US2] In the same file's S01 scenario, fix the spelling and do not rewrite it (FR-009):
+- [X] T007 [P] [US2] In lottoApp2/Documentation.docc/Documentation.md, replace the `<!--@START_MENU_TOKEN@-->Summary<!--@END_MENU_TOKEN@-->` line with a one-sentence summary of the app: it syncs lottery draw history from sources and runs chains of processing blocks over it (FR-007).
+- [X] T008 [US2] In the same file's S01 scenario, fix the spelling and do not rewrite it (FR-009):
   - "alunched" → "launched", "highlite" → "highlight", "les than" → "less than", "it's form" → "its form".
   - Mark option `(o1) - basic` as shipped before spec 001 (the initial start page).
   - Mark option `(o2) - update 01` as shipped in spec 009 (missing-records estimate).
   - Mark the never-synced blue state as shown by the "Fetch" button, shipped in spec 008.
-- [ ] T009 [US2] In the same file, rebuild the `## TODO` list in its `++` / `-+` / `--` outline style (FR-008, research R4):
+- [X] T009 [US2] In the same file, rebuild the `## TODO` list in its `++` / `-+` / `--` outline style (FR-008, research R4):
   - one `++` line per shipped spec, each naming it: 001 MBNet source, 002 blocks page navigation, 003 block pipeline, 004 sync error details, 005 skipped rows note, 006 chain-builder design gaps, 007 source cards, 008 Fetch on never-synced sources, 009 missing records estimate;
   - a `++` line for UI automation tests (an XCUITest happy path in `lottoApp2UITests`, LTA-23);
   - a closing line that points to `.tickets/` (LTA-N) for open feature work, including linting and view snapshot tests.
 
   Remove the stale startPage `--`/`-+` items, which have all shipped, and do not copy any backlog ticket.
-- [ ] T010 [US2] Validate the page per quickstart §5:
+- [X] T010 [US2] Validate the page per quickstart §5:
   - Run `xcrun docc convert lottoApp2/Documentation.docc --output-path "$TMPDIR/lta17.doccarchive"` and require no warnings.
   - Check that `grep -c START_MENU_TOKEN` prints 0.
   - Check that every `++` line names a spec or ticket (SC-003, SC-004).
@@ -117,3 +117,4 @@ Task: T007 DocC summary line
 - Baseline (T001): `iPhone 17 Pro` simulator (iOS 27.0), `xcresulttool` summary: totalTestCount 348, passed 348 (408 including parameterized-argument runs), 0 failed, 0 skipped. `** TEST SUCCEEDED **`.
 - Deviation (T005): research R2 missed three Swift hits, because the first grep's output was cut short by `head`. They were the header comments of both renamed files (`//  SorcesRepo.swift`, `//  SorcesRepoImpTests.swift`) and the test suite type `SorcesRepoImp_Tests`. Under FR-006 all three were fixed, and the suite became `SourcesRepoImpl_Tests`, matching the `<Type>_Tests` convention. Renaming the suite changes test identifiers but no behaviour. The test count is unchanged.
 - T006: after the rename, 348 tests ran and 348 passed (408 with parameterized runs), 0 failed, on the same destination. That equals the baseline (SC-002).
+- T010: `docc convert` gives 1 warning, both before and after: "No symbol matched 'lottoApp2'". A standalone convert has no symbol graph, so the warning is not new. US2-AS4 asks for "no new warnings", and that holds. `START_MENU_TOKEN` count: 0. Every `++` line names a spec (001–009) or a ticket (LTA-23), and the open line points to `.tickets/` without copying any ticket.
