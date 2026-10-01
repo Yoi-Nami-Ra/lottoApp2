@@ -9,7 +9,7 @@ description: |
   `Documentation.docc/Documentation.md`, which predates specs 001/002,
   and fill in its `Summary` placeholder.
 platform: ios
-status: in-progress
+status: in-review
 phase: Backlog
 priority: low
 parent: null
