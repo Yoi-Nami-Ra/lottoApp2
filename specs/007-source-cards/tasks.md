@@ -50,22 +50,22 @@ description: "Task list for 007 — compact and wide source cards (LTA-28 + LTA-
 
 ### Tests (write first, see them fail)
 
-- [ ] T004 [P] Add a failing test `action_disclosureButtonTapped_togglesExpanded` in `lottoApp2Tests/Reducers/SourceEntryTests.swift`. Send `.disclosureButtonTapped` twice from a collapsed state and assert `isExpanded` goes `true` then `false`, with no received actions (contracts §1: "`disclosureButtonTapped` changes only `isExpanded`. It never emits a delegate.").
-- [ ] T005 [P] Add failing tests in `lottoApp2Tests/Reducers/SourceEntryTests.swift`:
+- [X] T004 [P] Add a failing test `action_disclosureButtonTapped_togglesExpanded` in `lottoApp2Tests/Reducers/SourceEntryTests.swift`. Send `.disclosureButtonTapped` twice from a collapsed state and assert `isExpanded` goes `true` then `false`, with no received actions (contracts §1: "`disclosureButtonTapped` changes only `isExpanded`. It never emits a delegate.").
+- [X] T005 [P] Add failing tests in `lottoApp2Tests/Reducers/SourceEntryTests.swift`:
   - `sourceEntryState_startsCollapsed`: `Source.mbnetMock.sourceEntryState(now:)` has `isExpanded == false`;
   - `apply_keepsExpanded`: an expanded state stays expanded after `apply(.refreshedMbnetMock, now:)` ("`apply(_:now:)` never writes `isExpanded`").
 
 ### Implementation
 
-- [ ] T006 Add `var isExpanded: Bool = false` to `SourceEntry.State` and the `disclosureButtonTapped` case to `SourceEntry.Action` in `lottoApp2/Presentation/StartPage/Widgets/SourceEntry.swift`. The reducer handles it with `state.isExpanded.toggle(); return .none`. Add a doc comment: compact card only, never persisted. T004 and T005 now pass.
-- [ ] T007 Create `lottoApp2/Presentation/StartPage/Widgets/SourceCardParts.swift` (research R4, contracts §5). Move `SourceCardStyle` out of `SourceEntryView.swift` unchanged. Extract three parts from `SourceEntryView`'s current code with the same look and accessibility:
+- [X] T006 Add `var isExpanded: Bool = false` to `SourceEntry.State` and the `disclosureButtonTapped` case to `SourceEntry.Action` in `lottoApp2/Presentation/StartPage/Widgets/SourceEntry.swift`. The reducer handles it with `state.isExpanded.toggle(); return .none`. Add a doc comment: compact card only, never persisted. T004 and T005 now pass.
+- [X] T007 Create `lottoApp2/Presentation/StartPage/Widgets/SourceCardParts.swift` (research R4, contracts §5). Move `SourceCardStyle` out of `SourceEntryView.swift` unchanged. Extract three parts from `SourceEntryView`'s current code with the same look and accessibility:
   - `SyncStatusBadge(lastSync: Date?, severity: SourceEntry.SyncSeverity)`;
   - `SkippedRecordsNote(count: Int)`;
   - `RefreshButtonStyle(isRefreshing: Bool)`, a `ViewModifier` for the foreground, background, border and corners; plus a `RefreshIcon(isRefreshing:)` view for the spinning image.
 
   Move the tokens both cards need (the severity colour switch, refresh colours, light/dark tint opacities, card colours and metrics, the refresh spin animation, and the copy "Not synced", "N/A", "First Record:", "Latest Record:", `lastSynced(_:)`, `skippedInLastSync(_:)`) to `internal` statics under `// MARK: - Resources`. Give the parts their own light/dark `#Preview`s.
-- [ ] T008 Refactor `lottoApp2/Presentation/StartPage/Widgets/SourceEntryView.swift` to use `SyncStatusBadge`, `SkippedRecordsNote`, `RefreshButtonStyle`/`RefreshIcon` and the shared tokens. Remove its now-duplicated `fileprivate` tokens. Its layout, accessibility, previews and mocks stay unchanged.
-- [ ] T009 Build and run the full unit suite (test command above). Everything is green, and the `SourceEntryView` previews look the same as before.
+- [X] T008 Refactor `lottoApp2/Presentation/StartPage/Widgets/SourceEntryView.swift` to use `SyncStatusBadge`, `SkippedRecordsNote`, `RefreshButtonStyle`/`RefreshIcon` and the shared tokens. Remove its now-duplicated `fileprivate` tokens. Its layout, accessibility, previews and mocks stay unchanged.
+- [X] T009 Build and run the full unit suite (test command above). Everything is green, and the `SourceEntryView` previews look the same as before.
 
 **Checkpoint**: The flag exists and is tested, and the parts are shared. Commit: `feat(007): add the expand flag and share the source card parts`.
 

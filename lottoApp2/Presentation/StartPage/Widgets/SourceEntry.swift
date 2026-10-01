@@ -37,12 +37,16 @@ struct SourceEntry {
         /// Mirrors the parent's `selectedSourceID` so the card can draw itself. The parent is the only
         /// writer — see `StartPage.State.applySelectionRules()`; nothing in this reducer touches it.
         var isSelected: Bool = false
+        /// Whether the compact card shows its details (spec 007). Screen state only: the full card ignores it,
+        /// it is never persisted, and the parent carries it over a reload so a card doesn't fold away.
+        var isExpanded: Bool = false
         @Presents var alert: AlertState<Action.Alert>?
     }
 
     enum Action {
         case refreshButtonTapped
         case cardTapped
+        case disclosureButtonTapped
         case delegate(Delegate)
         case alert(PresentationAction<Alert>)
 
@@ -68,6 +72,12 @@ struct SourceEntry {
                 // FR-019 makes a source choosable whatever its data or sync state. Whether the choice may
                 // move is a list-level question, so it belongs to the parent.
                 return .send(.delegate(.selectionRequested))
+
+            case .disclosureButtonTapped:
+                // Only shows or hides the details: no delegate, so it can never select or refresh (FR-007).
+                state.isExpanded.toggle()
+                return .none
+
             case .delegate, .alert:
                 return .none
             }
