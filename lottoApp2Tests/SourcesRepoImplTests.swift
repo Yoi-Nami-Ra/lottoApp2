@@ -1,5 +1,5 @@
 //
-//  SorcesRepoImpTests.swift
+//  SourcesRepoImplTests.swift
 //  lottoApp2Tests
 //
 //  Created by Jarosław Wojtasik on 30/07/2026.
@@ -11,7 +11,7 @@ import Testing
 
 @testable import lottoApp2
 
-struct SorcesRepoImp_Tests {
+struct SourcesRepoImpl_Tests {
 
     private func tempRoot() -> URL {
         FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)

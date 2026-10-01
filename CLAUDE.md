@@ -16,7 +16,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 4. **Dependency Injection via swift-dependencies** — every cross-boundary collaborator is a `struct` of `@Sendable` closures conforming to `DependencyKey`, exposed via a `DependencyValues` computed property, consumed with `@Dependency`. Never construct collaborators directly in reducers/views. Provide `liveValue`; override with mocks in tests/previews. Concurrency-crossing types are `Sendable`.
 5. **Declarative Views with Design Tokens** — no inline literals for colors/fonts/spacing/radii/opacity/image names/copy. Define them as named, typed token extensions (`Color`, `Font`, `CGFloat`, `ImageType`, `LocalizedStringKey`) grouped under `// MARK: - Resources` / `Styles`. Every view ships `#Preview`s covering `.light` and `.dark` plus meaningful state variants.
 
-Correct existing typos in new code; do not propagate them. `firstRecrd` has been fixed to `firstRecord` everywhere; `SorcesRepoImp.swift` / `SorcesRepoImpTests.swift` are still misspelled *filenames* (the types inside are `SourcesRepoImpl`) — match those only where already referenced, don't invent new ones.
+Correct existing typos in new code; do not propagate them. `firstRecrd` has been fixed to `firstRecord` everywhere, and the misspelled sources-repo filenames to `SourcesRepoImpl.swift` / `SourcesRepoImplTests.swift` (suite `SourcesRepoImpl_Tests`); specs 001–009 still cite the old names as history.
 
 ## Domain model & block pipeline
 
@@ -110,7 +110,7 @@ lottoApp2/
     BLogic/       Business logic (SourcesBLogic, ChainRules, BlockEvaluator, ChainRunner, Freshness,
                   ResultSummary) — depends on repo contracts, not impls
   Data/           Outer layer — implements Domain contracts
-    Repos/        SorcesRepoImp (SourcesRepo.live), ChainsRepoImpl, source modules (SourceModule/SourceRegistry)
+    Repos/        SourcesRepoImpl (SourcesRepo.live), ChainsRepoImpl, source modules (SourceModule/SourceRegistry)
     Sources/      RemoteSources / LocalStore / NetworkClient / MBNetParser — I/O-facing collaborators
 lottoApp2Tests/
   Domain/         pure-rule tests over the hand-computed ReferenceDraws fixture
