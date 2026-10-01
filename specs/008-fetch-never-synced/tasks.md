@@ -108,10 +108,10 @@ No setup is needed: there are no new dependencies, targets or files beyond the s
 
 ## Phase 6: Polish & Cross-Cutting Concerns
 
-- [ ] T013 Run the full unit suite (`xcodebuild test … -destination 'platform=macOS,arch=arm64' -only-testing:lottoApp2Tests -skipMacroValidation`) and make sure it is green (SC-004).
-- [ ] T014 [P] Visual check per quickstart "Visual checks": render the never-synced full and compact cards in light and dark, idle and fetching, with a throwaway `ImageRenderer` test, and delete it afterwards.
-- [ ] T015 [P] In `lottoApp2/Documentation.docc/Documentation.md`, mark TODO item 003's "Fetch" button sub-item as done, matching how other finished items are marked.
-- [ ] T016 Once T001–T015 are complete, move LTA-3 from `in-progress` to `in-review` in `.tickets/3.yaml` (implementation done, not yet merged).
+- [X] T013 Run the full unit suite (`xcodebuild test … -destination 'platform=macOS,arch=arm64' -only-testing:lottoApp2Tests -skipMacroValidation`) and make sure it is green (SC-004).
+- [X] T014 [P] Visual check per quickstart "Visual checks": render the never-synced full and compact cards in light and dark, idle and fetching, with a throwaway `ImageRenderer` test, and delete it afterwards.
+- [X] T015 [P] In `lottoApp2/Documentation.docc/Documentation.md`, mark TODO item 003's "Fetch" button sub-item as done, matching how other finished items are marked.
+- [X] T016 Once T001–T015 are complete, move LTA-3 from `in-progress` to `in-review` in `.tickets/3.yaml` (implementation done, not yet merged).
 
 ---
 
