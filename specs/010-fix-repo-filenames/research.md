@@ -12,7 +12,7 @@
 
 ## R2 — Does any content reference the old names?
 
-- **Decision**: Only `CLAUDE.md` (lines 19 and 113) and the historical specs mention them. No Swift file does.
+- **Decision**: Only `CLAUDE.md` (lines 19 and 113) and the historical specs mention them. No Swift file does. *(Corrected during implementation: both files' header comments and the suite type `SorcesRepoImp_Tests` also did. See the tasks.md Notes.)*
 - **Rationale**: `grep -rn Sorces` over `*.swift`, `*.pbxproj`, `*.md` and `*.yaml` outside `specs/` matched
   only `CLAUDE.md` and `.tickets/17.yaml`. The ticket's text describes its own task and stays (spec Edge
   Cases). Test names such as `SourcesRepoImplTests` are not derived from the filename, because swift-testing

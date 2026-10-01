@@ -44,13 +44,13 @@ None. The two stories touch disjoint files.
 **Independent Test**: `git grep -n "Sorces" -- ':!specs/' ':!.tickets/17.yaml'` prints nothing. The build and
 tests are green with the T001 count (quickstart §2, §4).
 
-- [ ] T002 [P] [US1] Rename lottoApp2/Data/Repos/SorcesRepoImp.swift to lottoApp2/Data/Repos/SourcesRepoImpl.swift with `git mv`, changing no content (FR-001, FR-003, research R1).
-- [ ] T003 [P] [US1] Rename lottoApp2Tests/SorcesRepoImpTests.swift to lottoApp2Tests/SourcesRepoImplTests.swift with `git mv`, changing no content (FR-002, FR-003).
-- [ ] T004 [US1] Edit CLAUDE.md in two places (FR-005):
+- [X] T002 [P] [US1] Rename lottoApp2/Data/Repos/SorcesRepoImp.swift to lottoApp2/Data/Repos/SourcesRepoImpl.swift with `git mv`, changing no content (FR-001, FR-003, research R1).
+- [X] T003 [P] [US1] Rename lottoApp2Tests/SorcesRepoImpTests.swift to lottoApp2Tests/SourcesRepoImplTests.swift with `git mv`, changing no content (FR-002, FR-003).
+- [X] T004 [US1] Edit CLAUDE.md in two places (FR-005):
   - Line 19: drop the clause about `SorcesRepoImp.swift` / `SorcesRepoImpTests.swift` still being misspelled filenames. Keep the general "correct existing typos, don't propagate them" rule and the `firstRecord` note.
   - Line 113: change the layout entry `SorcesRepoImp (SourcesRepo.live)` to `SourcesRepoImpl (SourcesRepo.live)`.
-- [ ] T005 [US1] Run `git grep -n "Sorces" -- ':!specs/' ':!.tickets/17.yaml'` and fix any remaining hit outside the historical specs (FR-006, SC-001). Leave `specs/001…009` untouched (FR-010).
-- [ ] T006 [US1] Build and run the unit tests with the T001 command and destination. Require 0 failures and a count equal to the T001 baseline. Confirm with `git log --follow` that both renamed files' history reaches back past the rename (SC-002, SC-005; quickstart §3–4).
+- [X] T005 [US1] Run `git grep -n "Sorces" -- ':!specs/' ':!.tickets/17.yaml'` and fix any remaining hit outside the historical specs (FR-006, SC-001). Leave `specs/001…009` untouched (FR-010).
+- [X] T006 [US1] Build and run the unit tests with the T001 command and destination. Require 0 failures and a count equal to the T001 baseline. Confirm with `git log --follow` that both renamed files' history reaches back past the rename (SC-002, SC-005; quickstart §3–4).
 
 **Checkpoint**: US1 is complete and can be committed on its own.
 
@@ -115,3 +115,5 @@ Task: T007 DocC summary line
 ## Notes
 
 - Baseline (T001): `iPhone 17 Pro` simulator (iOS 27.0), `xcresulttool` summary: totalTestCount 348, passed 348 (408 including parameterized-argument runs), 0 failed, 0 skipped. `** TEST SUCCEEDED **`.
+- Deviation (T005): research R2 missed three Swift hits, because the first grep's output was cut short by `head`. They were the header comments of both renamed files (`//  SorcesRepo.swift`, `//  SorcesRepoImpTests.swift`) and the test suite type `SorcesRepoImp_Tests`. Under FR-006 all three were fixed, and the suite became `SourcesRepoImpl_Tests`, matching the `<Type>_Tests` convention. Renaming the suite changes test identifiers but no behaviour. The test count is unchanged.
+- T006: after the rename, 348 tests ran and 348 passed (408 with parameterized runs), 0 failed, on the same destination. That equals the baseline (SC-002).
