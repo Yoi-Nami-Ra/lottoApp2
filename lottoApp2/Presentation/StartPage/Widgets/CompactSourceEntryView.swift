@@ -84,19 +84,25 @@ struct CompactSourceEntryView: View {
         }
     }
 
+    /// Spoken as Fetch / Fetching for a never-synced source, Refresh / Refreshing once it has synced (spec 008 FR-004).
+    private var syncLabel: LocalizedStringKey {
+        let labels = store.isRefreshing ? LocalizedStringKey.syncingLabel : LocalizedStringKey.syncIdleLabel
+        return labels[store.syncAction, default: .refreshLabel]
+    }
+
     /// Icon only; the spin, the dimming and the ignored taps while syncing are the full card's (FR-005).
     private var refreshButton: some View {
         Button {
             store.send(.refreshButtonTapped)
         } label: {
-            SyncIcon(action: .refresh, isSyncing: store.isRefreshing)
+            SyncIcon(action: store.syncAction, isSyncing: store.isRefreshing)
                 .font(.compactRefreshIcon)
                 .frame(width: .refreshWidth, height: .refreshHeight)
                 .modifier(RefreshButtonStyle(isRefreshing: store.isRefreshing))
         }
         .buttonStyle(PlainButtonStyle())
         .disabled(store.isRefreshing)
-        .accessibilityLabel(Text(store.isRefreshing ? .refreshingLabel : .refreshLabel))
+        .accessibilityLabel(Text(syncLabel))
     }
 
     private var syncStatus: LocalizedStringKey {
@@ -238,8 +244,12 @@ extension DynamicTypeSize {
 extension LocalizedStringKey {
     fileprivate static let recordsTitle: Self = "Records"
     fileprivate static let lastSyncTitle: Self = "Last sync"
+    fileprivate static let fetchLabel: Self = "Fetch"
+    fileprivate static let fetchingLabel: Self = "Fetching"
     fileprivate static let refreshLabel: Self = "Refresh"
     fileprivate static let refreshingLabel: Self = "Refreshing"
+    fileprivate static let syncIdleLabel: [SourceEntry.SyncAction: Self] = [.fetch: .fetchLabel, .refresh: .refreshLabel]
+    fileprivate static let syncingLabel: [SourceEntry.SyncAction: Self] = [.fetch: .fetchingLabel, .refresh: .refreshingLabel]
     fileprivate static let showDetails: Self = "Show details"
     fileprivate static let hideDetails: Self = "Hide details"
 }
@@ -317,6 +327,20 @@ extension CGFloat {
 
 #Preview("Compact - never synced - dark") {
     CompactSourceEntryView(store: Store(initialState: .mock1e) { SourceEntry() })
+        .padding()
+        .background(.backgroundSecondary)
+        .preferredColorScheme(.dark)
+}
+
+#Preview("Compact - never synced - fetching - light") {
+    CompactSourceEntryView(store: Store(initialState: .mock1eFetching) { SourceEntry() })
+        .padding()
+        .background(.backgroundSecondary)
+        .preferredColorScheme(.light)
+}
+
+#Preview("Compact - never synced - fetching - dark") {
+    CompactSourceEntryView(store: Store(initialState: .mock1eFetching) { SourceEntry() })
         .padding()
         .background(.backgroundSecondary)
         .preferredColorScheme(.dark)

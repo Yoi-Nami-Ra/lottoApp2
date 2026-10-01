@@ -89,10 +89,10 @@ No setup is needed: there are no new dependencies, targets or files beyond the s
 
 **Independent Test**: the compact never-synced previews show the download glyph, and the VoiceOver label follows contracts §4.
 
-- [ ] T010 [US2] In `lottoApp2/Presentation/StartPage/Widgets/CompactSourceEntryView.swift` `refreshButton`:
+- [X] T010 [US2] In `lottoApp2/Presentation/StartPage/Widgets/CompactSourceEntryView.swift` `refreshButton`:
   - use `SyncIcon(action: store.syncAction, isSyncing: store.isRefreshing)`
   - set `.accessibilityLabel` from `LocalizedStringKey` dictionaries keyed by `SyncAction`: idle `[.fetch: "Fetch", .refresh: "Refresh"]`, syncing `[.fetch: "Fetching", .refresh: "Refreshing"]`. They replace the `refreshLabel` / `refreshingLabel` tokens (FR-004).
-- [ ] T011 [US2] In `lottoApp2/Presentation/StartPage/Widgets/CompactSourceEntryView.swift`, add the compact previews "never synced - fetching" in light and dark, using a `mock1e` copy with `isRefreshing = true`. Check that the existing never-synced compact previews show the fetch glyph.
+- [X] T011 [US2] In `lottoApp2/Presentation/StartPage/Widgets/CompactSourceEntryView.swift`, add the compact previews "never synced - fetching" in light and dark, using a `mock1e` copy with `isRefreshing = true`. Check that the existing never-synced compact previews show the fetch glyph.
 
 **Checkpoint**: both card variants make the distinction.
 
