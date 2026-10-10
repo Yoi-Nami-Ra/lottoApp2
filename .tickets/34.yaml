@@ -1,0 +1,29 @@
+id: 34
+title: "Add app icon"
+type: task
+description: |
+  The app has no icon yet: `Assets.xcassets/AppIcon.appiconset` holds only
+  an empty `Contents.json`. Add a proper app icon.
+
+  Scope:
+  1. A 1024x1024 PNG, full-bleed square, no alpha channel, no rounded
+     corners, no text.
+  2. Concept: three overlapping lottery balls (gold, coral, teal) over a
+     thin chain of connected nodes (the block pipeline), on an
+     indigo-to-violet gradient. A first generated draft exists and matches
+     this concept.
+  3. Fill the AppIcon set (single-size universal icon) so the app builds
+     with it on every platform in `project.yaml` that Xcode requires.
+  4. Dark and tinted iOS 18 variants of the icon.
+
+  Out of scope: launch screen, in-app logo, marketing artwork.
+
+  Done when: the icon shows on the simulator home screen, is readable at
+  small sizes, and the build has no missing-icon warnings.
+platform: ios
+status: ready
+phase: Backlog
+priority: low
+parent: null
+blocked_by: []
+designs: []
