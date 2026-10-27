@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="@BG0@"/>
+      <stop offset="1" stop-color="@BG1@"/>
+    </linearGradient>
+    <radialGradient id="gold" cx="0.35" cy="0.3" r="0.8"><stop offset="0" stop-color="@GOLD0@"/><stop offset="1" stop-color="@GOLD1@"/></radialGradient>
+    <radialGradient id="coral" cx="0.35" cy="0.3" r="0.8"><stop offset="0" stop-color="@CORAL0@"/><stop offset="1" stop-color="@CORAL1@"/></radialGradient>
+    <radialGradient id="teal" cx="0.35" cy="0.3" r="0.8"><stop offset="0" stop-color="@TEAL0@"/><stop offset="1" stop-color="@TEAL1@"/></radialGradient>
+  </defs>
+  <rect width="1024" height="1024" fill="url(#bg)"/>
+  <!-- chain of connected nodes (the block pipeline) -->
+  <g stroke="@CHAIN@" stroke-width="12" stroke-linecap="round" fill="none" opacity="@CHAINOP@">
+    <polyline points="90,760 270,860 470,790 680,880 850,800 950,860"/>
+  </g>
+  <g fill="@CHAIN@" opacity="@CHAINOP@">
+    <circle cx="90" cy="760" r="26"/><circle cx="270" cy="860" r="26"/><circle cx="470" cy="790" r="26"/>
+    <circle cx="680" cy="880" r="26"/><circle cx="850" cy="800" r="26"/><circle cx="950" cy="860" r="26"/>
+  </g>
+  <!-- balls -->
+  <circle cx="370" cy="400" r="215" fill="url(#gold)"/>
+  <circle cx="650" cy="400" r="215" fill="url(#coral)"/>
+  <circle cx="510" cy="580" r="215" fill="url(#teal)"/>
+  <!-- highlights -->
+  <g fill="#fff" opacity="@HLOP@">
+    <ellipse cx="300" cy="320" rx="62" ry="38" transform="rotate(-35 300 320)"/>
+    <ellipse cx="580" cy="320" rx="62" ry="38" transform="rotate(-35 580 320)"/>
+    <ellipse cx="440" cy="500" rx="62" ry="38" transform="rotate(-35 440 500)"/>
+  </g>
+</svg>

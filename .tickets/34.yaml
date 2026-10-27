@@ -21,7 +21,7 @@ description: |
   Done when: the icon shows on the simulator home screen, is readable at
   small sizes, and the build has no missing-icon warnings.
 platform: ios
-status: ready
+status: in-review
 phase: Backlog
 priority: low
 parent: null
