@@ -7,7 +7,7 @@ description: |
   draws — index, date and numbers — and decide the ordering and where it
   is reached from.
 platform: ios
-status: idea
+status: refine
 phase: Backlog
 priority: medium
 parent: null

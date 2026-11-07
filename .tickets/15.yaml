@@ -7,7 +7,7 @@ description: |
   for each PR. Note the project currently builds against an Xcode 27 Beta
   toolchain, which constrains runner choice.
 platform: ios
-status: idea
+status: refine
 phase: Backlog
 priority: medium
 parent: null

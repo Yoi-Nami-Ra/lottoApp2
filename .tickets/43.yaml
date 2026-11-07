@@ -1,0 +1,32 @@
+id: 43
+title: "Update iOS app icons to new artwork"
+type: task
+description: |
+  Replace the iOS app icons (default, dark, tinted) with the new artwork
+  supplied by the user: numbered lottery balls (7, 21, 49) feeding a chain of
+  glass blocks that ends in a glowing amber badge. The image shows the three
+  variants side by side: indigo-to-teal gradient (default), near-black
+  (dark), grayscale on black (tinted).
+
+  Source: the reference image is saved at
+  `design/app-icon/icon-v2-reference.png` (all three variants in one image,
+  not yet cropped to 1024x1024 masters). It is provided, not generated.
+
+  Scope: crop/export three 1024x1024 sRGB masters (no transparency, no
+  rounded corners) and replace `AppIcon.png`, `AppIcon-Dark.png` and
+  `AppIcon-Tinted.png` in `lottoApp2/Assets.xcassets/AppIcon.appiconset`.
+  Update `design/app-icon/generate.sh` / `icon.svg.tmpl` or retire them if
+  the artwork is no longer generated from the template. The macOS icons
+  (`mac-*.png`) are out of scope here; the reference image has no squircle
+  version, so they stay as is unless the user asks. Follows LTA-34, which
+  added the current icon.
+
+  Done when the three variants render correctly on the simulator home
+  screen in light, dark and tinted mode, and stay legible at 29 pt.
+platform: ios
+status: ready
+phase: Backlog
+priority: low
+parent: null
+blocked_by: []
+designs: []

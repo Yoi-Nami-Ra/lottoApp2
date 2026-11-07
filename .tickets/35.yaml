@@ -1,0 +1,12 @@
+id: 35
+title: "auto sync into applications after each green build"
+type: feature
+description: |
+  Pulled from Obsidian (Tickets/lottoApp2/Inbox/auto sync into applications after each green build) on 2026-10-15.
+platform: macos
+status: idea
+phase: Backlog
+priority: medium
+parent: null
+blocked_by: []
+designs: []

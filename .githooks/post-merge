@@ -1,0 +1,3 @@
+#!/bin/bash
+# fast-forward merges/pulls on main don't fire post-commit
+exec "$(dirname "$0")/post-commit"

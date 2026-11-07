@@ -1,0 +1,18 @@
+id: 42
+title: "Fix refresh icon floating sideways on press"
+type: bug
+description: |
+  Pressing Refresh on a source card plays a broken animation: the refresh
+  icon floats sideways instead of spinning in place. Likely an implicit
+  animation applied to the icon's position/layout (for example the Fetch/
+  Refresh label swap from LTA-3 or the in-progress state change) rather than
+  only its rotation. Needs a check on both the compact and full cards.
+  Done when the icon stays put (rotates in place, if animated at all) on
+  both cards, in light and dark.
+platform: ios
+status: refine
+phase: Backlog
+priority: medium
+parent: null
+blocked_by: []
+designs: []

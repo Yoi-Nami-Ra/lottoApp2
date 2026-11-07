@@ -1,0 +1,22 @@
+id: 39
+title: "chain split"
+type: feature
+description: |
+  - I'm starting with a source - this gives me a collection of draws of given type
+  - I wan't to split it into two parts
+  	- first draw from that collection
+  	- the rest of that collection
+  - then I want to connect another block that has only a single input in a form of a collection of draws
+  - then I want to connect another block that has two input params
+  	- collection of draws
+  	- single draw
+  - it should capture the collection from the output of the last block and the single draw from that block earlier
+
+  Pulled from Obsidian (Tickets/lottoApp2/Inbox/chain split) on 2026-10-18.
+platform: ios
+status: idea
+phase: Backlog
+priority: medium
+parent: null
+blocked_by: []
+designs: []

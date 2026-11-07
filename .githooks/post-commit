@@ -1,0 +1,13 @@
+#!/bin/bash
+# On every commit to main, ship a fresh build to /Applications/Yois (background, never blocks the commit).
+[ "$(git symbolic-ref --short HEAD 2>/dev/null)" = "main" ] || exit 0
+REPO="$(git rev-parse --show-toplevel)"
+LOG="$HOME/Library/Logs/lottoApp2-ship.log"
+# serialize builds; a newer commit waits for the running one
+( cd "$REPO" && nohup /bin/bash -c '
+  LOCK=/tmp/lottoApp2-ship.lock
+  while ! mkdir "$LOCK" 2>/dev/null; do sleep 5; done
+  trap "rmdir $LOCK" EXIT
+  scripts/ship-to-applications.sh
+' >>"$LOG" 2>&1 </dev/null & )
+exit 0

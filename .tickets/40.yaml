@@ -1,0 +1,18 @@
+id: 40
+title: "Count balls"
+type: feature
+description: |
+  I want a block.
+  Input:
+  - collection of draws
+  Output:
+  - collection of all unique balls and their count
+
+  Pulled from Obsidian (Tickets/lottoApp2/Inbox/Count balls) on 2026-10-18.
+platform: ios
+status: idea
+phase: Backlog
+priority: medium
+parent: null
+blocked_by: []
+designs: []

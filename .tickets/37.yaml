@@ -1,0 +1,63 @@
+id: 37
+title: "Name chains at creation and rename in editor"
+type: feature
+description: |
+  Pulled from Obsidian (Tickets/lottoApp2/Inbox/It needs a wat to change chains name (and set it at start)) on 2026-10-15.
+
+  Already in place
+  The chains list renames a chain through a swipe right, the long-press
+  menu or an accessibility action. Each one opens the rename alert
+  (`BlocksPage` `renameTapped`/`renameConfirmed`). That flow trims the name,
+  ignores a blank or unchanged one, and saves through `Chain.renamed`, which
+  keeps `revision` unchanged. Chain deletion was LTA-36, dropped because it
+  was already built. Today `newChainTapped` creates a chain named "New
+  chain" (`BlocksPage.defaultChainName`), saves it and opens it in the editor
+  at once, which matches design/final/chain-list.html. ChainEditor shows the
+  name as its `navigationTitle` and reports edits to the list through
+  `.delegate(.chainChanged)`.
+
+  Scope
+  1. Name at creation. Tapping "New chain" opens the same name alert,
+     pre-filled with "New chain". Create builds the chain, saves it and
+     opens the editor. Cancel creates nothing. A blank name falls back to
+     "New chain". Reuse the existing alert state rather than adding a
+     second one.
+  2. Rename in the editor. Bind ChainEditor's navigation title
+     (`navigationTitle(_: Binding)` with `.toolbarRole(.editor)`), so the
+     system title menu offers Rename. The name is trimmed when committed.
+     A blank or unchanged name is ignored and the title reverts. A rename
+     saves the chain and reaches the list through `.delegate(.chainChanged)`.
+     Like any rename it does not bump `revision`, so results stay fresh
+     (Freshness.swift).
+  3. Designs. Amend design/final/chain-list.html with a figure showing the
+     New chain name alert, and correct the New chain caption. Amend
+     design/final/chain-builder.html with the title rename menu.
+  4. Duplicate names stay allowed. The list already sorts by name, with the
+     id breaking ties (ChainsRepo).
+
+  Out of scope
+  - Deleting chains: already built (LTA-36).
+  - Making swipe and long-press actions easier to find.
+
+  Done when
+  - BlocksPage TestStore tests cover: New chain opens the alert without
+    creating a chain; Create with a typed name creates, saves and opens the
+    editor; Create with a blank name gives "New chain"; Cancel leaves the
+    chains unchanged and makes no save.
+  - ChainEditor TestStore tests cover: a rename saves and sends
+    `.delegate(.chainChanged)` with the new name and the same revision; a
+    blank or unchanged rename makes no save and keeps the old title.
+  - The existing BlocksPage rename tests still pass.
+  - The ChainEditorView and BlocksPageView previews show the new states in
+    light and dark mode, with all copy defined as design tokens.
+  - Both design files are updated.
+platform: ios
+status: ready
+phase: Backlog
+priority: high
+parent: null
+blocked_by: []
+designs:
+  - design/final/chain-list.html
+  - design/final/chain-builder.html
+quest: main

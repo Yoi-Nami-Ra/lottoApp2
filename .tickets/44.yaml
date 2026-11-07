@@ -1,0 +1,31 @@
+id: 44
+title: "Update macOS app icons to new artwork"
+type: task
+description: |
+  Replace the macOS app icons with the new artwork supplied by the user:
+  the same balls-into-block-chain design as the iOS update (LTA-43), drawn
+  as a macOS squircle on a 1024x1024 canvas with a soft shadow and a glowing
+  amber chip at the end of the chain.
+
+  Source: provided, not generated. Saved at
+  `design/app-icon/icon-v2-macos-reference.webp`. Caveat: the checkerboard
+  in the image is baked into the pixels, not real transparency, so the
+  squircle must be cut out (and the shadow rebuilt or kept with true alpha)
+  before export.
+
+  Scope: export a 1024x1024 PNG master with real transparency, then
+  regenerate the ten `mac-16`...`mac-512` files (1x and 2x) in
+  `lottoApp2/Assets.xcassets/AppIcon.appiconset`. Check that `Contents.json`
+  still maps them. Keep the squircle margin (~100 px) so the icon matches
+  other Dock icons. Update or retire `design/app-icon/generate.sh` and
+  `icon.svg.tmpl` together with LTA-43. The iOS icons are LTA-43.
+
+  Done when the icon shows correctly in the Dock and Finder at 16, 32, 128
+  and 512 pt, with no checkerboard or white fringe, in light and dark.
+platform: macos
+status: ready
+phase: Backlog
+priority: low
+parent: null
+blocked_by: []
+designs: []

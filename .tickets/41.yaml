@@ -1,0 +1,19 @@
+id: 41
+title: "Fix yellow status shown right after fresh sync"
+type: bug
+description: |
+  After a successful, fresh sync the source card status still shows yellow
+  instead of green. Expected: a just-synced source is green (severity is
+  derived from the injected clock, so elapsed time and the missing-records
+  estimate from LTA-4 should both be zero/low right after a sync).
+  Likely suspects: the missing-records estimate (`SourceEntry.missingEstimate`)
+  or the day-based severity rule being evaluated against the latest draw's
+  date rather than the sync time. Needs a reproduction (which source, which
+  state) before fixing; start with a failing regression test.
+platform: ios
+status: refine
+phase: Backlog
+priority: medium
+parent: null
+blocked_by: []
+designs: []

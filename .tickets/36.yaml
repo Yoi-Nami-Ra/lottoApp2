@@ -1,0 +1,14 @@
+id: 36
+title: "I want to be able to delete chains"
+type: feature
+description: |
+  Pulled from Obsidian (Tickets/lottoApp2/Inbox/I want to be able to delete chains) on 2026-10-15.
+
+  Dropped 2026-10-18: Already implemented in spec 003/006 — swipe, context menu and accessibility delete with confirmation on the chains page (BlocksPageView).
+platform: ios
+status: dropped
+phase: Backlog
+priority: high
+parent: null
+blocked_by: []
+designs: []
