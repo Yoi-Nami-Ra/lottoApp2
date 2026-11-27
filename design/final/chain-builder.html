@@ -128,6 +128,7 @@
   }
   .menu div { padding: 12px 16px; display: flex; justify-content: space-between; border-bottom: 1px solid var(--borderSecondary); }
   .menu div:last-child { border-bottom: 0; color: var(--errorRed); }
+  .navbar.beside-back { justify-content: flex-start; padding-left: 88px; }
   .menu.title-menu { top: 88px; left: 62px; }
   .menu.title-menu div { color: var(--textPrimary); }
 
@@ -680,7 +681,7 @@ Any block's output can be saved and is listed under the outline. Rev. 2 follows 
   <figure>
     <div class="phone light">
       <div class="status"></div>
-      <div class="navbar"><span class="back">‹ Chains</span>Hot numbers ⌄</div>
+      <div class="navbar beside-back"><span class="back">‹ Chains</span>Hot numbers ⌄</div>
       <div class="header"><div class="caption">Source</div><div class="name">MBNet Server</div></div>
       <div class="content">
         <div class="node">
@@ -697,7 +698,7 @@ Any block's output can be saved and is listed under the outline. Rev. 2 follows 
       <div class="menu title-menu"><div><span>Rename</span><span>✎</span></div></div>
       <div class="bar"><div class="run disabled">Run</div></div>
     </div>
-    <figcaption><b>Rename from the title.</b> The system title menu. Rename edits the name in place; it is trimmed when committed, and a blank or unchanged name is ignored.</figcaption>
+    <figcaption><span class="new">NEW</span><b>Rename from the title.</b> The system title menu. Rename edits the name in place; it is trimmed when committed, and a blank or unchanged name is ignored.</figcaption>
   </figure>
 
 </div>
