@@ -114,8 +114,7 @@ struct BlocksPage {
                 state.nameDraft = ""
                 switch prompt {
                 case .newChain:
-                    let name = draft.trimmingCharacters(in: .whitespacesAndNewlines)
-                    let chain = Chain.empty(id: uuid(), name: name.isEmpty ? Self.defaultChainName : name)
+                    let chain = Chain.empty(id: uuid(), name: Chain.typedName(draft) ?? Self.defaultChainName)
                     state.chains.append(chain)
                     state.editor = ChainEditor.State(chain: chain, source: state.source)
                     return save(chain)

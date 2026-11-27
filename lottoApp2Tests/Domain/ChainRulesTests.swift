@@ -166,6 +166,13 @@ struct ChainRulesTests {
         #expect(chain.renamed(typed: " \(chain.name) ") == nil)
     }
 
+    @Test
+    func typedName_trims_andIsNilWhenBlank() {
+        #expect(Chain.typedName("  Top 10\n") == "Top 10")
+        #expect(Chain.typedName("") == nil)
+        #expect(Chain.typedName(" \n ") == nil)
+    }
+
     // MARK: - Queries
 
     @Test
