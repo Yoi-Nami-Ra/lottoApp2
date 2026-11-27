@@ -20,6 +20,8 @@ extension Chain {
     func updating(_ nodeID: ChainNode.ID, to block: Block) throws(ChainError) -> Chain
     func removingSubtree(_ nodeID: ChainNode.ID) throws(ChainError) -> (Chain, removed: Int)
     func renamed(_ name: String) -> Chain                                // does not bump revision
+    static func typedName(_ text: String) -> String?                    // trimmed; nil when blank
+    func renamed(typed text: String) -> Chain?                          // nil when blank or unchanged
     func children(of nodeID: ChainNode.ID?) -> [ChainNode]
     func path(to nodeID: ChainNode.ID) -> [Block]                       // root → node
     var leaves: [ChainNode] { get }
@@ -101,9 +103,12 @@ nonisolated struct ChainsRepo: Sendable {
 | Action | Effect |
 |---|---|
 | `onAppear` | `chainsRepo.listChains` → `chainsLoaded` |
-| `newChainTapped` | creates an empty named chain, saves it, presents `editor` |
+| `newChainTapped` | shows the name prompt, pre-filled with "New chain"; creates nothing (LTA-37) |
 | `chainTapped(Chain.ID)` | presents `editor` for that chain |
-| `renameChain(Chain.ID, String)` | saves the chain |
+| `renameTapped(Chain.ID)` | shows the name prompt with the chain's name |
+| `nameDraftChanged(String)` | keeps the typed name |
+| `nameConfirmed` | new chain: creates it under `typedName` ("New chain" when blank), saves it, presents `editor`; rename: `renamed(typed:)` → saves it, or nothing when blank or unchanged |
+| `nameCancelled` | closes the prompt; nothing is created or renamed |
 | `deleteChainTapped(Chain.ID)` | loads its saved-result count and `draft(id)` → alert naming both ("Delete chain, N saved results and its unsaved results?") → `deleteChain`; no save option (FR-017, FR-032) |
 | `editor(.dismiss)` / editor sends `dismiss` | `ifLet` cancels the editor's in-flight run — tested here, not in `ChainEditor` (research R11) |
 | `editor(.presented(.delegate(.chainChanged(Chain))))` | replaces the row |
@@ -113,6 +118,7 @@ nonisolated struct ChainsRepo: Sendable {
 | Action | Behaviour |
 |---|---|
 | `onAppear` | loads saved results and the draft, then `dataStateFor` once per distinct source among the chosen source, saved results and draft (`dataStates`, research R13); if a draft exists → restore alert |
+| `titleRenamed(String)` | from the title's Rename (LTA-37): `renamed(typed:)` → save chain; nothing when blank or unchanged |
 | `addTapped(parent: ChainNode.ID?)` | presents `AddBlock` with the parent's output kind |
 | `addBlock(.presented(.delegate(.added(Block))))` | `attaching` → save chain; new leaf `.notRun` |
 | `nodeTapped(ChainNode.ID)` | any node that ran (leaf or intermediate, FR-024) → push `result` with its value, stamp and freshness; not run → nothing |

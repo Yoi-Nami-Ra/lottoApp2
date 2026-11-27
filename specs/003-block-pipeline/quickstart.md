@@ -37,7 +37,7 @@ Expected: all green. The suites that cover this spec (fixtures from `Domain/Refe
 
 Run the app (`xcodebuild build …` then launch, or Xcode ▶).
 
-1. **Top 10 (US1–US3, SC-006)**: choose MBNet → Next → New chain → + on the input → Suffix 100 →
+1. **Top 10 (US1–US3, SC-006)**: choose MBNet → Next → New chain → Create → + on the input → Suffix 100 →
    + → Count Unique Elements → + → Sort by Count, descending → + → Prefix 10 → Run.
    Expect: progress while running; the leaf summary shows 10 elements; opening it lists 10 numbers,
    highest count first, ties by number ascending. The intermediate Count Unique Elements row also has a

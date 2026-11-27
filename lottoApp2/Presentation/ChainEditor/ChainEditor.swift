@@ -169,6 +169,8 @@ struct ChainEditor {
 
     enum Action {
         case onAppear
+        /// From the navigation title's Rename (LTA-37).
+        case titleRenamed(String)
         case loaded(savedResults: [SavedResult], draft: ChainDraft?, dataStates: [String: SourceDataState?], drawSize: Int?)
         case addTapped(parent: ChainNode.ID?)
         case addBlock(PresentationAction<AddBlock.Action>)
@@ -235,6 +237,12 @@ struct ChainEditor {
                     for source in sources { states[source] = await blSources.dataStateFor(source) }
                     await send(.loaded(savedResults: saved, draft: draft, dataStates: states, drawSize: await drawSize))
                 }
+
+            case .titleRenamed(let name):
+                // A blank or unchanged name is ignored; the view then puts the old one back in the title.
+                guard let renamed = state.chain.renamed(typed: name) else { return .none }
+                state.chain = renamed
+                return saveChain(renamed)
 
             case let .loaded(saved, draft, states, drawSize):
                 state.savedResults = IdentifiedArray(uniqueElements: saved)

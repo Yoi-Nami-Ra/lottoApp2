@@ -78,6 +78,19 @@ nonisolated extension Chain {
         return chain
     }
 
+    /// A name the person typed, trimmed. `nil` when it is blank.
+    static func typedName(_ text: String) -> String? {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? nil : trimmed
+    }
+
+    /// Renames to a name the person typed, trimmed. `nil` when it is blank or unchanged, so there is nothing
+    /// to save.
+    func renamed(typed text: String) -> Chain? {
+        guard let typed = Self.typedName(text), typed != name else { return nil }
+        return renamed(typed)
+    }
+
     // MARK: - Queries
 
     /// The nodes directly under `nodeID` (`nil` = the input), in insertion order.

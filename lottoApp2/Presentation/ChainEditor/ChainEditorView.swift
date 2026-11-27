@@ -13,6 +13,14 @@ struct ChainEditorView: View {
     @Bindable var store: StoreOf<ChainEditor>
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    /// What the system title field just committed, held until the reducer has had it.
+    @State private var typedTitle: String?
+
+    /// The title field changes the bar by itself, so a name the reducer rejects has to pass through the view
+    /// and out again; otherwise nothing changes and the rejected text stays on screen.
+    private var title: Binding<String> {
+        Binding(get: { typedTitle ?? store.chain.name }, set: { typedTitle = $0 })
+    }
 
     /// At accessibility sizes a row's summary wraps under its title and nesting takes less width (FR-015).
     private var isAccessibilitySize: Bool { dynamicTypeSize.isAccessibilitySize }
@@ -89,7 +97,15 @@ struct ChainEditorView: View {
             }
         }
         .safeAreaInset(edge: .bottom) { runBar }
-        .navigationTitle(store.chain.name)
+        // A bound title in the editor role gives the system title menu its Rename (LTA-37).
+        .navigationTitle(title)
+        .onChange(of: typedTitle) { _, typed in
+            guard let typed else { return }
+            store.send(.titleRenamed(typed))
+            // One update later: cleared at once, SwiftUI sees no change and leaves the typed text in the bar.
+            Task { typedTitle = nil }
+        }
+        .toolbarRole(.editor)
         // The system back button can't ask first, so the editor owns the way out (FR-032, R11). Hiding it
         // also disables swipe-back.
         .navigationBarBackButtonHidden(true)
@@ -534,6 +550,16 @@ extension LocalizedStringKey {
         .preferredColorScheme(.dark)
 }
 
+#Preview("Chain - renamed, long title - light") {
+    NavigationStack { ChainEditorView(store: .preview(Chain.previewCountOnly.renamed(.previewLongName))) }
+        .preferredColorScheme(.light)
+}
+
+#Preview("Chain - renamed, long title - dark") {
+    NavigationStack { ChainEditorView(store: .preview(Chain.previewCountOnly.renamed(.previewLongName))) }
+        .preferredColorScheme(.dark)
+}
+
 #Preview("Chain - not run - light") {
     NavigationStack { ChainEditorView(store: .preview(.previewCountOnly)) }
         .preferredColorScheme(.light)
@@ -660,6 +686,10 @@ extension LocalizedStringKey {
         ))
     }
     .preferredColorScheme(.dark)
+}
+
+extension String {
+    fileprivate static let previewLongName = "Hot numbers of the last hundred draws"
 }
 
 extension Chain {

@@ -128,6 +128,9 @@
   }
   .menu div { padding: 12px 16px; display: flex; justify-content: space-between; border-bottom: 1px solid var(--borderSecondary); }
   .menu div:last-child { border-bottom: 0; color: var(--errorRed); }
+  .navbar.beside-back { justify-content: flex-start; padding-left: 88px; }
+  .menu.title-menu { top: 88px; left: 62px; }
+  .menu.title-menu div { color: var(--textPrimary); }
 
   /* Bottom action bar */
   .bar {
@@ -310,7 +313,7 @@ Any block's output can be saved and is listed under the outline. Rev. 2 follows 
       </div>
       <div class="bar"><div class="run disabled">Run</div></div>
     </div>
-    <figcaption><b>Empty.</b> A new chain opens here straight from the chain list. Only the source row; Run is disabled until the chain has a block.</figcaption>
+    <figcaption><b>Empty.</b> A new chain opens here once it is named in the chain list. Only the source row; Run is disabled until the chain has a block.</figcaption>
   </figure>
 
   <!-- 5. Failed -->
@@ -674,12 +677,36 @@ Any block's output can be saved and is listed under the outline. Rev. 2 follows 
     <figcaption><b>Collapsed branch.</b> The chevron folds a subtree; the row says how many blocks it hides.</figcaption>
   </figure>
 
+  <!-- 15. Title rename menu -->
+  <figure>
+    <div class="phone light">
+      <div class="status"></div>
+      <div class="navbar beside-back"><span class="back">‹ Chains</span>Hot numbers ⌄</div>
+      <div class="header"><div class="caption">Source</div><div class="name">MBNet Server</div></div>
+      <div class="content">
+        <div class="node">
+          <span class="icon source">▤</span>
+          <div class="label"><div class="title">MBNet Server</div><div class="param">7,012 draws</div></div>
+          <span class="add">+</span>
+        </div>
+        <div class="empty">
+          <div class="big">ƒ</div>
+          <p><b>No blocks yet</b></p>
+          <p>Tap + on the source to add the first block.</p>
+        </div>
+      </div>
+      <div class="menu title-menu"><div><span>Rename</span><span>✎</span></div></div>
+      <div class="bar"><div class="run disabled">Run</div></div>
+    </div>
+    <figcaption><span class="new">NEW</span><b>Rename from the title.</b> The system title menu. Rename edits the name in place; it is trimmed when committed, and a blank or unchanged name is ignored.</figcaption>
+  </figure>
+
 </div>
 
 <div class="notes">
   <h2>Notes for the implementer</h2>
   <ul>
-    <li><b>Title area.</b> The chain's name is the navigation title; "Source" and the source's name sit under it. The back button reads "Chains" and belongs to the screen, not the system, so it can ask before leaving (FR-032); swipe-back is off.</li>
+    <li><b>Title area.</b> The chain's name is the navigation title, in the editor toolbar role (on iPhone it sits beside the back button), and its system menu offers Rename; "Source" and the source's name sit under it. A rename doesn't mark results out of date. The back button reads "Chains" and belongs to the screen, not the system, so it can ask before leaving (FR-032); swipe-back is off.</li>
     <li><b>Structure.</b> A native <code>List</code>, one row per node, indented 22 pt per depth with a guide line to the parent. The source row is always first, can't be removed and has no fold chevron.</li>
     <li><b>Adding.</b> "+" on a row opens the add-block sheet (LTA-22) with that row as parent. It shows on the source and every block except Count All Elements, whose single number ends a branch. Adding under a node that already has a child creates a branch.</li>
     <li><b>Tapping a row.</b> A block that has a value opens its output (the result page); a block without one (not run, running or failed) opens the edit sheet. Edit is always in the long-press menu, so a block with a result can still be changed.</li>

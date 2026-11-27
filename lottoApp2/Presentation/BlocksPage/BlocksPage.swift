@@ -12,7 +12,7 @@ import Foundation
 /// chain pushes its editor, which runs against the source chosen on the start page.
 @Reducer
 struct BlocksPage {
-    /// The name a new chain starts with; the person can rename it.
+    /// The name offered for a new chain, and the one it gets when the name is left blank.
     static let defaultChainName = String(localized: "New chain")
 
     @ObservableState
@@ -24,9 +24,9 @@ struct BlocksPage {
         var chains: IdentifiedArrayOf<Chain> = []
         /// Whether the saved chains have been read, so the empty state never flashes before them (spec 006).
         var hasLoaded = false
-        /// The chain whose rename alert is showing, and the name being typed (spec 006 FR-020).
-        var renaming: Chain.ID?
-        var renameDraft = ""
+        /// What the name alert is asking for while it shows, and the name being typed (spec 006 FR-020, LTA-37).
+        var namePrompt: NamePrompt?
+        var nameDraft = ""
         @Presents var editor: ChainEditor.State?
         @Presents var alert: AlertState<Action.Alert>?
 
@@ -41,6 +41,11 @@ struct BlocksPage {
         var showsEmptyState: Bool { hasLoaded && chains.isEmpty }
     }
 
+    enum NamePrompt: Equatable {
+        case newChain
+        case rename(Chain.ID)
+    }
+
     enum Action {
         case onAppear
         case chainsLoaded([Chain])
@@ -48,9 +53,9 @@ struct BlocksPage {
         case chainTapped(Chain.ID)
         /// From the leading swipe, the long-press menu or the accessibility action alike.
         case renameTapped(Chain.ID)
-        case renameDraftChanged(String)
-        case renameConfirmed
-        case renameCancelled
+        case nameDraftChanged(String)
+        case nameConfirmed
+        case nameCancelled
         case deleteChainTapped(Chain.ID)
         case deleteConfirmationLoaded(Chain.ID, savedCount: Int, hasDraft: Bool)
         case saveFailed
@@ -78,10 +83,9 @@ struct BlocksPage {
                 return .none
 
             case .newChainTapped:
-                let chain = Chain.empty(id: uuid(), name: Self.defaultChainName)
-                state.chains.append(chain)
-                state.editor = ChainEditor.State(chain: chain, source: state.source)
-                return save(chain)
+                state.namePrompt = .newChain
+                state.nameDraft = Self.defaultChainName
+                return .none
 
             case .chainTapped(let id):
                 guard let chain = state.chains[id: id] else { return .none }
@@ -90,29 +94,40 @@ struct BlocksPage {
 
             case .renameTapped(let id):
                 guard let chain = state.chains[id: id] else { return .none }
-                state.renaming = id
-                state.renameDraft = chain.name
+                state.namePrompt = .rename(id)
+                state.nameDraft = chain.name
                 return .none
 
-            case .renameDraftChanged(let draft):
-                state.renameDraft = draft
+            case .nameDraftChanged(let draft):
+                state.nameDraft = draft
                 return .none
 
-            case .renameCancelled:
-                state.renaming = nil
-                state.renameDraft = ""
+            case .nameCancelled:
+                state.namePrompt = nil
+                state.nameDraft = ""
                 return .none
 
-            case .renameConfirmed:
-                let id = state.renaming
-                let trimmed = state.renameDraft.trimmingCharacters(in: .whitespacesAndNewlines)
-                state.renaming = nil
-                state.renameDraft = ""
-                // A blank or unchanged name is ignored, as is a chain deleted meanwhile.
-                guard let id, !trimmed.isEmpty, let chain = state.chains[id: id], chain.name != trimmed else { return .none }
-                let renamed = chain.renamed(trimmed)
-                state.chains[id: id] = renamed
-                return save(renamed)
+            case .nameConfirmed:
+                let prompt = state.namePrompt
+                let draft = state.nameDraft
+                state.namePrompt = nil
+                state.nameDraft = ""
+                switch prompt {
+                case .newChain:
+                    let chain = Chain.empty(id: uuid(), name: Chain.typedName(draft) ?? Self.defaultChainName)
+                    state.chains.append(chain)
+                    state.editor = ChainEditor.State(chain: chain, source: state.source)
+                    return save(chain)
+
+                case .rename(let id):
+                    // A blank or unchanged name is ignored, as is a chain deleted meanwhile.
+                    guard let renamed = state.chains[id: id]?.renamed(typed: draft) else { return .none }
+                    state.chains[id: id] = renamed
+                    return save(renamed)
+
+                case nil:
+                    return .none
+                }
 
             case .deleteChainTapped(let id):
                 // The confirmation names what goes with the chain: its saved results, and unsaved ones when it
