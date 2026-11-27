@@ -239,7 +239,7 @@ struct ChainEditor {
                 }
 
             case .titleRenamed(let name):
-                // Ignoring it leaves the title bound to the old name, so it reverts.
+                // A blank or unchanged name is ignored; the view then puts the old one back in the title.
                 guard let renamed = state.chain.renamed(typed: name) else { return .none }
                 state.chain = renamed
                 return saveChain(renamed)
