@@ -131,7 +131,7 @@ what the build in LTA-23 doesn't have yet (LTA-33). Approved 2026-09-30.</p>
         <div class="row newchain"><span class="plus">+</span><div class="label"><div class="title">New chain</div></div></div>
       </div>
     </div>
-    <figcaption><b>Chains.</b> Sorted by name. Each row: name and block count. "New chain" is always the last row; it creates "New chain" and opens it empty in the editor.</figcaption>
+    <figcaption><b>Chains.</b> Sorted by name. Each row: name and block count. "New chain" is always the last row; it asks for a name first.</figcaption>
   </figure>
 
   <!-- 2. Empty -->
@@ -250,7 +250,30 @@ what the build in LTA-23 doesn't have yet (LTA-33). Approved 2026-09-30.</p>
     <figcaption><b>Rename.</b> The current name, ready to edit. A blank or unchanged name is ignored.</figcaption>
   </figure>
 
-  <!-- 8. Dark -->
+  <!-- 8. New chain name alert -->
+  <figure>
+    <div class="phone light">
+      <div class="status"></div>
+      <div class="navbar"><span class="back">‹ Sources</span>Processing Blocks</div>
+      <div class="header"><div class="caption">Source</div><div class="name">MBNet Server</div></div>
+      <div class="content">
+        <div class="row"><span class="icon">ƒ</span><div class="label"><div class="title">Hot numbers</div><div class="sub">3 blocks</div></div><span class="chev">›</span></div>
+        <div class="row newchain"><span class="plus">+</span><div class="label"><div class="title">New chain</div></div></div>
+      </div>
+      <div class="overlay" style="place-items: start center; padding-top: 170px;">
+        <div class="alert">
+          <div class="t">New chain</div>
+          <div class="m"></div>
+          <div class="field">New chain<span class="caret"></span></div>
+          <div class="btns"><div>Cancel</div><div class="bold">Create</div></div>
+        </div>
+      </div>
+      <div class="keyboard"></div>
+    </div>
+    <figcaption><b>New chain name.</b> Pre-filled with "New chain". Create saves the chain and opens it empty in the editor; a blank name gives "New chain". Cancel creates nothing.</figcaption>
+  </figure>
+
+  <!-- 9. Dark -->
   <figure>
     <div class="phone dark">
       <div class="status"></div>
@@ -272,7 +295,7 @@ what the build in LTA-23 doesn't have yet (LTA-33). Approved 2026-09-30.</p>
   <ul>
     <li><b>Header.</b> Unchanged: "Source" and the source's name only, shrinking rather than truncating for long names (down to 60 %, up to three lines). Record counts and sync state stay on the start page, so nothing here refreshes while the page is open (FR-024).</li>
     <li><b>Rows.</b> Chain name and "N blocks" ("1 block"). No last-run, saved-result or out-of-date details: those live in the editor (LTA-21). Chains are sorted by name, case-insensitive.</li>
-    <li><b>New chain.</b> Always the last row. It creates a chain named "New chain" and opens it in the editor straight away.</li>
+    <li><b>New chain.</b> Always the last row. It opens the name alert, pre-filled with "New chain". Create saves the chain and opens it in the editor, using "New chain" when the name is blank; Cancel creates nothing. Duplicate names are allowed.</li>
     <li><b>Empty state.</b> <span class="new">NEW</span> With no chains, "No chains yet" and one line of explanation sit above the New chain row.</li>
     <li><b>Rename.</b> <span class="new">NEW</span> A leading swipe "Rename" (primaryBlue) next to the long-press item, both opening the same alert with the current name. A blank or unchanged name is ignored.</li>
     <li><b>Delete.</b> Trailing swipe, and <span class="new">NEW</span> in the long-press menu. It always asks first; the message names the saved results and the draft that go with the chain.</li>

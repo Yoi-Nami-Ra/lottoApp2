@@ -93,6 +93,34 @@ struct ChainEditor_Tests {
         #expect(store.state.results[UUID(0)] == nil)  // reads as not run
     }
 
+    // MARK: - Renaming from the title (LTA-37)
+
+    @MainActor
+    @Test
+    func renamingFromTheTitle_savesTrimmed_tellsTheList_andKeepsTheRevision() async {
+        let storage = LockIsolated<IdentifiedArrayOf<Chain>>([.countOnlyMock])
+        let store = makeStore(ChainEditor.State(chain: .countOnlyMock, source: source), storage: storage)
+        var expected = Chain.countOnlyMock
+        expected.name = "Top numbers"
+
+        await store.send(.titleRenamed("  Top numbers \n")) { $0.chain = expected }
+        await store.receive(\.delegate.chainChanged, expected)
+        await store.finish()
+        #expect(storage.value[id: expected.id] == expected)
+        #expect(store.state.chain.revision == Chain.countOnlyMock.revision)
+    }
+
+    @MainActor
+    @Test(arguments: ["", "   ", Chain.countOnlyMock.name, " \(Chain.countOnlyMock.name) "])
+    func aBlankOrUnchangedTitle_isIgnored(_ title: String) async {
+        let storage = LockIsolated<IdentifiedArrayOf<Chain>>([])
+        let store = makeStore(ChainEditor.State(chain: .countOnlyMock, source: source), storage: storage)
+
+        await store.send(.titleRenamed(title))
+        await store.finish()
+        #expect(storage.value.isEmpty)  // no save, and the old title stays
+    }
+
     // MARK: - Running (FR-018, FR-021)
 
     @MainActor

@@ -52,7 +52,7 @@ description: |
     light and dark mode, with all copy defined as design tokens.
   - Both design files are updated.
 platform: ios
-status: ready
+status: in-progress
 phase: Backlog
 priority: high
 parent: null

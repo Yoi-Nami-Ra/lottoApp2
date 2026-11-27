@@ -78,6 +78,13 @@ nonisolated extension Chain {
         return chain
     }
 
+    /// Renames to a name the person typed, trimmed. `nil` when it is blank or unchanged, so there is nothing
+    /// to save.
+    func renamed(typed name: String) -> Chain? {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty || trimmed == self.name ? nil : renamed(trimmed)
+    }
+
     // MARK: - Queries
 
     /// The nodes directly under `nodeID` (`nil` = the input), in insertion order.

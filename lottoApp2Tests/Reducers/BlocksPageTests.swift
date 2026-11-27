@@ -49,19 +49,64 @@ struct BlocksPage_Tests {
         }
     }
 
+    // MARK: - Naming a new chain (LTA-37)
+
+    private var namingANewChain: BlocksPage.State {
+        var state = BlocksPage.State(sourceID: "mbnet", sourceName: "MBNet Server")
+        state.namePrompt = .newChain
+        state.nameDraft = BlocksPage.defaultChainName
+        return state
+    }
+
     @MainActor
     @Test
-    func newChain_isCreatedSavedAndOpened() async {
+    func newChainTapped_asksForAName_withoutCreatingAChain() async {
         let storage = LockIsolated<IdentifiedArrayOf<Chain>>([])
         let store = makeStore(storage: storage)
-        let created = Chain.empty(id: UUID(0), name: BlocksPage.defaultChainName)
 
         await store.send(.newChainTapped) {
+            $0.namePrompt = .newChain
+            $0.nameDraft = BlocksPage.defaultChainName
+        }
+        await store.finish()
+        #expect(storage.value.isEmpty)
+    }
+
+    @MainActor
+    @Test(arguments: [
+        ("  Hot numbers ", "Hot numbers"),
+        ("New chain", "New chain"),
+        ("   ", "New chain"),
+        ("", "New chain"),
+    ])
+    func creatingANewChain_savesAndOpensIt(draft: String, name: String) async {
+        // A blank name falls back to the default one.
+        let storage = LockIsolated<IdentifiedArrayOf<Chain>>([])
+        var state = namingANewChain
+        state.nameDraft = draft
+        let store = makeStore(state, storage: storage)
+        let created = Chain.empty(id: UUID(0), name: name)
+
+        await store.send(.nameConfirmed) {
+            $0.namePrompt = nil
+            $0.nameDraft = ""
             $0.chains = [created]
             $0.editor = ChainEditor.State(chain: created, source: self.source)
         }
         await store.finish()
-        #expect(storage.value[id: created.id] == created)
+        #expect(storage.value == [created])
+    }
+
+    @MainActor
+    @Test
+    func cancellingANewChain_createsNothing() async {
+        // An unstubbed save would fail the test, so this also shows that none is made.
+        let store = TestStore(initialState: namingANewChain) { BlocksPage() }
+
+        await store.send(.nameCancelled) {
+            $0.namePrompt = nil
+            $0.nameDraft = ""
+        }
     }
 
     @MainActor
@@ -92,13 +137,13 @@ struct BlocksPage_Tests {
         let store = makeStore(oneChain, storage: storage)
 
         await store.send(.renameTapped(Chain.countOnlyMock.id)) {
-            $0.renaming = Chain.countOnlyMock.id
-            $0.renameDraft = Chain.countOnlyMock.name
+            $0.namePrompt = .rename(Chain.countOnlyMock.id)
+            $0.nameDraft = Chain.countOnlyMock.name
         }
-        await store.send(.renameDraftChanged("Top numbers")) { $0.renameDraft = "Top numbers" }
-        await store.send(.renameConfirmed) {
-            $0.renaming = nil
-            $0.renameDraft = ""
+        await store.send(.nameDraftChanged("Top numbers")) { $0.nameDraft = "Top numbers" }
+        await store.send(.nameConfirmed) {
+            $0.namePrompt = nil
+            $0.nameDraft = ""
             $0.chains[id: Chain.countOnlyMock.id]?.name = "Top numbers"
         }
         await store.finish()
@@ -111,13 +156,13 @@ struct BlocksPage_Tests {
     func renamingToBlank_isIgnored(_ draft: String) async {
         let storage = LockIsolated<IdentifiedArrayOf<Chain>>([.countOnlyMock])
         var state = oneChain
-        state.renaming = Chain.countOnlyMock.id
-        state.renameDraft = draft
+        state.namePrompt = .rename(Chain.countOnlyMock.id)
+        state.nameDraft = draft
         let store = makeStore(state, storage: storage)
 
-        await store.send(.renameConfirmed) {
-            $0.renaming = nil
-            $0.renameDraft = ""
+        await store.send(.nameConfirmed) {
+            $0.namePrompt = nil
+            $0.nameDraft = ""
         }
         #expect(storage.value[id: Chain.countOnlyMock.id]?.name == Chain.countOnlyMock.name)
     }
@@ -126,13 +171,13 @@ struct BlocksPage_Tests {
     @Test
     func renamingToTheSameName_isIgnored() async {
         var state = oneChain
-        state.renaming = Chain.countOnlyMock.id
-        state.renameDraft = " \(Chain.countOnlyMock.name) "
+        state.namePrompt = .rename(Chain.countOnlyMock.id)
+        state.nameDraft = " \(Chain.countOnlyMock.name) "
         let store = makeStore(state, storage: .init([.countOnlyMock]))
 
-        await store.send(.renameConfirmed) {
-            $0.renaming = nil
-            $0.renameDraft = ""
+        await store.send(.nameConfirmed) {
+            $0.namePrompt = nil
+            $0.nameDraft = ""
         }
     }
 
@@ -140,13 +185,13 @@ struct BlocksPage_Tests {
     @Test
     func cancellingARename_changesNothing() async {
         var state = oneChain
-        state.renaming = Chain.countOnlyMock.id
-        state.renameDraft = "Top numbers"
+        state.namePrompt = .rename(Chain.countOnlyMock.id)
+        state.nameDraft = "Top numbers"
         let store = makeStore(state, storage: .init([.countOnlyMock]))
 
-        await store.send(.renameCancelled) {
-            $0.renaming = nil
-            $0.renameDraft = ""
+        await store.send(.nameCancelled) {
+            $0.namePrompt = nil
+            $0.nameDraft = ""
         }
     }
 
@@ -162,13 +207,13 @@ struct BlocksPage_Tests {
     func confirmingARename_afterTheChainWasDeleted_savesNothing() async {
         let storage = LockIsolated<IdentifiedArrayOf<Chain>>([])
         var state = BlocksPage.State(sourceID: "mbnet", sourceName: "MBNet Server")
-        state.renaming = Chain.countOnlyMock.id
-        state.renameDraft = "Top numbers"
+        state.namePrompt = .rename(Chain.countOnlyMock.id)
+        state.nameDraft = "Top numbers"
         let store = makeStore(state, storage: storage)
 
-        await store.send(.renameConfirmed) {
-            $0.renaming = nil
-            $0.renameDraft = ""
+        await store.send(.nameConfirmed) {
+            $0.namePrompt = nil
+            $0.nameDraft = ""
         }
         await store.finish()
         #expect(storage.value.isEmpty)

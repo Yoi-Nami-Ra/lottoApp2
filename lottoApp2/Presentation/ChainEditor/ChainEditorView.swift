@@ -89,7 +89,9 @@ struct ChainEditorView: View {
             }
         }
         .safeAreaInset(edge: .bottom) { runBar }
-        .navigationTitle(store.chain.name)
+        // A bound title in the editor role gives the system title menu its Rename (LTA-37).
+        .navigationTitle($store.chain.name.sending(\.titleRenamed))
+        .toolbarRole(.editor)
         // The system back button can't ask first, so the editor owns the way out (FR-032, R11). Hiding it
         // also disables swipe-back.
         .navigationBarBackButtonHidden(true)
@@ -534,6 +536,16 @@ extension LocalizedStringKey {
         .preferredColorScheme(.dark)
 }
 
+#Preview("Chain - renamed, long title - light") {
+    NavigationStack { ChainEditorView(store: .preview(Chain.previewCountOnly.renamed(.previewLongName))) }
+        .preferredColorScheme(.light)
+}
+
+#Preview("Chain - renamed, long title - dark") {
+    NavigationStack { ChainEditorView(store: .preview(Chain.previewCountOnly.renamed(.previewLongName))) }
+        .preferredColorScheme(.dark)
+}
+
 #Preview("Chain - not run - light") {
     NavigationStack { ChainEditorView(store: .preview(.previewCountOnly)) }
         .preferredColorScheme(.light)
@@ -660,6 +672,10 @@ extension LocalizedStringKey {
         ))
     }
     .preferredColorScheme(.dark)
+}
+
+extension String {
+    fileprivate static let previewLongName = "Hot numbers of the last hundred draws"
 }
 
 extension Chain {

@@ -30,17 +30,25 @@ struct BlocksPageView: View {
             ChainEditorView(store: editor)
         }
         .alert($store.scope(state: \.alert, action: \.alert))
-        .alert(LocalizedStringKey.renameTitle, isPresented: isRenaming) {
-            TextField(LocalizedStringKey.renamePlaceholder, text: $store.renameDraft.sending(\.renameDraftChanged))
-            Button(LocalizedStringKey.renameConfirm) { store.send(.renameConfirmed) }
-            Button(LocalizedStringKey.cancel, role: .cancel) { store.send(.renameCancelled) }
+        .alert(nameAlertTitle, isPresented: isNaming) {
+            TextField(LocalizedStringKey.namePlaceholder, text: $store.nameDraft.sending(\.nameDraftChanged))
+            Button(nameAlertConfirm) { store.send(.nameConfirmed) }
+            Button(LocalizedStringKey.cancel, role: .cancel) { store.send(.nameCancelled) }
         }
     }
 
-    /// Shown while the reducer has a rename in progress. Both buttons end it through an action, so the
+    /// Shown while the reducer is asking for a name. Both buttons end it through an action, so the
     /// alert's own dismissal has nothing left to report.
-    private var isRenaming: Binding<Bool> {
-        Binding(get: { store.renaming != nil }, set: { _ in })
+    private var isNaming: Binding<Bool> {
+        Binding(get: { store.namePrompt != nil }, set: { _ in })
+    }
+
+    private var nameAlertTitle: LocalizedStringKey {
+        store.namePrompt == .newChain ? .newChainTitle : .renameTitle
+    }
+
+    private var nameAlertConfirm: LocalizedStringKey {
+        store.namePrompt == .newChain ? .createConfirm : .renameConfirm
     }
 
     /// The name only — record counts and sync status stay on the screen the person just left, so nothing
@@ -248,7 +256,9 @@ extension LocalizedStringKey {
     fileprivate static let delete: Self = "Delete"
     fileprivate static let rename: Self = "Rename"
     fileprivate static let renameTitle: Self = "Rename chain"
-    fileprivate static let renamePlaceholder: Self = "Name"
+    fileprivate static let newChainTitle: Self = "New chain"
+    fileprivate static let createConfirm: Self = "Create"
+    fileprivate static let namePlaceholder: Self = "Name"
     fileprivate static let renameConfirm: Self = "Save"
     fileprivate static let cancel: Self = "Cancel"
     fileprivate static let emptyTitle: Self = "No chains yet"
@@ -293,6 +303,24 @@ extension LocalizedStringKey {
     .preferredColorScheme(.dark)
 }
 
+#Preview("Blocks page - new chain name alert - light") {
+    NavigationStack {
+        BlocksPageView(store: .preview(
+            sourceName: .previewName, namePrompt: .newChain, nameDraft: BlocksPage.defaultChainName
+        ))
+    }
+    .preferredColorScheme(.light)
+}
+
+#Preview("Blocks page - new chain name alert - dark") {
+    NavigationStack {
+        BlocksPageView(store: .preview(
+            sourceName: .previewName, namePrompt: .newChain, nameDraft: BlocksPage.defaultChainName
+        ))
+    }
+    .preferredColorScheme(.dark)
+}
+
 #Preview("Blocks page - long source name - light") {
     NavigationStack {
         BlocksPageView(store: .preview(sourceName: .previewLongName))
@@ -301,8 +329,13 @@ extension LocalizedStringKey {
 }
 
 extension StoreOf<BlocksPage> {
-    fileprivate static func preview(sourceName: String, chains: [Chain] = []) -> StoreOf<BlocksPage> {
-        Store(initialState: BlocksPage.State(sourceID: "mbnet", sourceName: sourceName)) {
+    fileprivate static func preview(
+        sourceName: String, chains: [Chain] = [], namePrompt: BlocksPage.NamePrompt? = nil, nameDraft: String = ""
+    ) -> StoreOf<BlocksPage> {
+        var state = BlocksPage.State(sourceID: "mbnet", sourceName: sourceName)
+        state.namePrompt = namePrompt
+        state.nameDraft = nameDraft
+        return Store(initialState: state) {
             BlocksPage()
         } withDependencies: {
             $0.chainsRepo = .inMemory(seed: chains)

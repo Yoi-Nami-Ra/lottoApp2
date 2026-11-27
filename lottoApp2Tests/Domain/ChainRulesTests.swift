@@ -150,6 +150,22 @@ struct ChainRulesTests {
         #expect(renamed.revision == chain.revision)
     }
 
+    @Test
+    func renamedTyped_trimsTheTypedName() {
+        let chain = tree([(a, nil)])
+        let renamed = chain.renamed(typed: "  Top 10\n")
+        #expect(renamed?.name == "Top 10")
+        #expect(renamed?.revision == chain.revision)
+    }
+
+    @Test
+    func renamedTyped_ignoresABlankOrUnchangedName() {
+        let chain = tree([(a, nil)])
+        #expect(chain.renamed(typed: "") == nil)
+        #expect(chain.renamed(typed: " \n ") == nil)
+        #expect(chain.renamed(typed: " \(chain.name) ") == nil)
+    }
+
     // MARK: - Queries
 
     @Test
