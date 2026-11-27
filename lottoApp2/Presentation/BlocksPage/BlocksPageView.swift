@@ -44,7 +44,7 @@ struct BlocksPageView: View {
     }
 
     private var nameAlertTitle: LocalizedStringKey {
-        store.namePrompt == .newChain ? .newChainTitle : .renameTitle
+        store.namePrompt == .newChain ? .newChain : .renameTitle
     }
 
     private var nameAlertConfirm: LocalizedStringKey {
@@ -256,7 +256,6 @@ extension LocalizedStringKey {
     fileprivate static let delete: Self = "Delete"
     fileprivate static let rename: Self = "Rename"
     fileprivate static let renameTitle: Self = "Rename chain"
-    fileprivate static let newChainTitle: Self = "New chain"
     fileprivate static let createConfirm: Self = "Create"
     fileprivate static let namePlaceholder: Self = "Name"
     fileprivate static let renameConfirm: Self = "Save"
